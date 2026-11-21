@@ -81,7 +81,7 @@ public class PackagedAppLaunchTests
         _windowWait.Object,
         appsWrapper: withApps ? _apps.Object : null,
         installedApps: withApps ? _installed.Object : null,
-        activationTimeout: activationTimeout ?? ProcessService.DefaultActivationTimeout);
+        activationTimeout: activationTimeout ?? ApplicationLauncher.DefaultActivationTimeout);
 
     private void WaitFinds(WindowWaitOutcome outcome, WindowInfo? window) =>
         _windowWait.Setup(w => w.WaitForNewWindowAsync(It.IsAny<WindowBaseline>(), It.IsAny<Func<WindowCandidate, bool>>(),
@@ -526,7 +526,7 @@ public class PackagedAppLaunchTests
             });
         var sut = CreateSut(activationTimeout: TimeSpan.FromMilliseconds(30));
 
-        for (var i = 0; i < ProcessService.MaxHungActivations; i++)
+        for (var i = 0; i < ApplicationLauncher.MaxHungActivations; i++)
         {
             (await sut.LaunchApplicationAsync(new LaunchRequest(Calculator), false, 5000)).Status.Should().Be(LaunchStatus.TimedOut);
         }
@@ -534,7 +534,7 @@ public class PackagedAppLaunchTests
         var refused = await sut.LaunchApplicationAsync(new LaunchRequest(Calculator), false, 5000);
         refused.ErrorCode.Should().Be(nameof(LaunchErrorCode.ActivationFailed));
         refused.ErrorMessage.Should().Contain("still");
-        _apps.Verify(a => a.ActivateApplication(It.IsAny<string>(), It.IsAny<string?>()), Times.Exactly(ProcessService.MaxHungActivations));
+        _apps.Verify(a => a.ActivateApplication(It.IsAny<string>(), It.IsAny<string?>()), Times.Exactly(ApplicationLauncher.MaxHungActivations));
 
         // Once they return, activations run again
         release.Set();

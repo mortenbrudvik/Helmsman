@@ -21,7 +21,7 @@ public interface ILaunchPlanner
     ElevationPreview PreviewElevation(LaunchRequest request);
 
     /// <summary>
-    /// Plans a request as <see cref="IProcessService.LaunchApplicationAsync(LaunchRequest, bool, int, CancellationToken)"/>
+    /// Plans a request as <see cref="IApplicationLauncher.LaunchApplicationAsync(LaunchRequest, bool, int, CancellationToken)"/>
     /// would, without starting anything (roadmap M6.8, review #3): the file system and the installed apps are only read. Null
     /// when the launch would be planned; otherwise the error code and message the launch would fail with (ScriptFile,
     /// InterpreterWithArguments, UnsafeChromiumSwitch, ExecutableNotFound, ...). apply_layout's dry run reports it, and a

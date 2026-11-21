@@ -84,12 +84,12 @@ src/win-desktop-mcp/Native/NativeKeyboardLayoutWrapper.cs -> Services.SystemKeyb
 src/win-desktop-mcp/Native/ScreenCaptureWrapper.cs -> Services.CaptureMethods
 
 ## Services -> Native: use the ports instead of the concrete wrappers' static helpers, and move UiaControlTypes and the NativeEnums values the logic needs to Models
+Services.ApplicationLauncher -> Native.NativeProcessWrapper  # moved out of ProcessService when it was split; the same dependency it had
+Services.ApplicationLauncher -> Native.NativeWindowWrapper  # moved out of ProcessService when it was split; the same dependency it had
 Services.ElementCriteria -> Native.UiaControlTypes
 Services.InterpreterGuard -> Native.NativeMethods
 Services.MonitorService -> Native.NativeMonitorWrapper
 Services.ProcessListingService -> Native.NativeProcessWrapper  # moved out of ProcessService when it was split; the same dependency it had
-Services.ProcessService -> Native.NativeProcessWrapper
-Services.ProcessService -> Native.NativeWindowWrapper
 Services.UIElementService -> Native.UiaControlTypes
 Services.UiaConditionEvaluator -> Native.UiaControlTypes
 Services.WindowService -> Native.NativeEnums

@@ -102,7 +102,7 @@ public class ServerHarnessTests : IDisposable
     public void TheWalk_FindsTheWrappersServicesCreateThemselves()
     {
         // Arrange - built the way the container would build them if the wrappers were not registered
-        var processService = new ProcessService(
+        var launcher = new ApplicationLauncher(
             new LaunchPlanner(
                 Mock.Of<IInputValidationService>(MockBehavior.Strict),
                 Mock.Of<IBrowserDetectionService>(MockBehavior.Strict),
@@ -111,19 +111,16 @@ public class ServerHarnessTests : IDisposable
                 new InterpreterGuard(),
                 new ChromiumSwitchGuard(),
                 Mock.Of<IProcessSecurityProbe>()),
-            Mock.Of<IProcessListing>(),
-            Mock.Of<IProcessTermination>(),
             Mock.Of<IWindowService>(MockBehavior.Strict),
-            Mock.Of<IHostGuard>(),
-            new DebugBrowserLocator(),
             Mock.Of<IProcessSecurityProbe>());
         var monitorService = new MonitorService();
 
         // Act
-        var processLeaks = NativeReferenceWalker.FindUnguardedWrappers(processService, nameof(ProcessService));
+        var processLeaks = NativeReferenceWalker.FindUnguardedWrappers(launcher, nameof(ApplicationLauncher));
         var monitorLeaks = NativeReferenceWalker.FindUnguardedWrappers(monitorService, nameof(MonitorService));
 
-        // Assert - without IWindowWaitService, ProcessService builds a WindowWaitService over a NativeWindowWrapper of its own
+        // Assert - without IWindowWaitService, ApplicationLauncher (the launches ProcessService hands on) builds a
+        // WindowWaitService over a NativeWindowWrapper of its own
         processLeaks.Should().HaveCount(2);
         processLeaks.Should().ContainSingle(leak => leak.Contains(nameof(NativeProcessWrapper)));
         processLeaks.Should().ContainSingle(leak => leak.Contains(nameof(NativeWindowWrapper)));
