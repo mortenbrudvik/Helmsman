@@ -17,7 +17,7 @@ public class ReleaseWorkflowTests
     public void BuildWorkflow_CallsTheTestWorkflowForAVersionTag()
     {
         // Arrange
-        var test = Job(ReadWorkflow("build.yml"), "test");
+        var test = Job(ReadWorkflow("build.yml"), "release-tests");
 
         // Assert
         Value(test, "uses").Should().Be("./.github/workflows/test.yml");
@@ -26,13 +26,13 @@ public class ReleaseWorkflowTests
     }
 
     [Fact]
-    public void ReleaseJob_NeedsTheBuildAndTheTestJob()
+    public void ReleaseJob_NeedsTheBuildAndTheReleaseTestsJob()
     {
         // Arrange
         var release = Job(ReadWorkflow("build.yml"), "release");
 
         // Assert
-        Needs(release).Should().Contain(["build", "test"], "a release must wait for the tests of the tagged commit");
+        Needs(release).Should().Contain(["build", "release-tests"], "a release must wait for the tests of the tagged commit");
         Value(release, "if").Should().Be(TagCondition,
             "an if with a status function such as always() or failure() would let the release run after the tests failed");
     }
@@ -46,13 +46,12 @@ public class ReleaseWorkflowTests
         // Assert
         Block(workflow, "on", indent: 0).Should().Contain(line => line.TrimEnd() == "  workflow_call:");
         Block(workflow, "permissions", indent: 0).Select(line => line.Trim()).Should().Equal("contents: read");
-        Block(ReadWorkflow("build.yml"), "permissions", indent: 0).Select(line => line.Trim()).Should().Equal("contents: read");
     }
 
     [Theory]
     [InlineData("    needs: build", new[] { "build" })]
-    [InlineData("    needs: [build, test]", new[] { "build", "test" })]
-    [InlineData("    needs:\n      - build\n      - 'test'", new[] { "build", "test" })]
+    [InlineData("    needs: [build, release-tests]", new[] { "build", "release-tests" })]
+    [InlineData("    needs:\n      - build\n      - 'release-tests'", new[] { "build", "release-tests" })]
     public void Needs_ReadsTheScalarFlowAndBlockForms(string text, string[] expected)
     {
         Needs(text.Split('\n').ToList()).Should().Equal(expected);

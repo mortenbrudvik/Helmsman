@@ -3437,8 +3437,8 @@ server:
 ### Continuous Integration
 
 `.github/workflows/test.yml` runs the suite on every push and pull request to `main`, and
-`.github/workflows/build.yml` calls it for a `v*` tag: its release job needs that run, so a tag whose
-tests fail is not released. It runs
+`.github/workflows/build.yml` calls it for a `v*` tag (job `release-tests`): its release job needs
+that run, so a tag whose tests fail is not released. It runs
 every test project, leaves desktop tests out, kills a test that hangs for 5 minutes, caps the job
 at 20 minutes, and enforces a line-coverage threshold. A second step then runs only the desktop
 tests with both opt-in variables unset and fails unless every one of them is reported as skipped,

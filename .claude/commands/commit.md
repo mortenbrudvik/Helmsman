@@ -34,7 +34,7 @@ Create a versioned release commit with tag for the Windows App Manager plugin.
   warning.
 - The release job creates the GitHub release with the GitHub CLI (`gh release create`), not a
   third-party action, because it runs with a token that can write to the repository.
-- The release job also needs the `test` job, which runs `test.yml` for the tag, so a tag whose
+- The release job also needs the `release-tests` job, which runs `test.yml` for the tag, so a tag whose
   tests fail gets no release.
 - The GitHub release asset is **not** the committed exe. The tag build runs its own
   `dotnet publish` on the CI runner and the release job zips that output. It is built from the same
