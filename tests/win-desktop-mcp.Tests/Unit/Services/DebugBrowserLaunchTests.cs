@@ -123,16 +123,13 @@ public sealed class DebugBrowserLaunchTests : IDisposable
         _ => string.Empty
     };
 
-    private ProcessService CreateSut(DebugBrowserLocator? locator = null, IDebugBrowserReadiness? readiness = null) => new(
+    private WiredProcessService CreateSut(DebugBrowserLocator? locator = null, IDebugBrowserReadiness? readiness = null) => WiredProcessService.Create(
         _windows.Object, _validation.Object, TestDataFactory.CreateMockBrowserDetectionService().Object,
         _resolver.Object, Permissive.TargetPolicy, Permissive.HostGuard, new ChromiumPrograms(),
         new InterpreterGuard(),
         locator ?? new DebugBrowserLocator(path => path == Chrome, _ => [Chrome], FakeFolder),
         Permissive.SecurityProbe, new ChromiumSwitchGuard(), _processes.Object, _windowWait.Object, readiness,
-        _profiles)
-    {
-        DevToolsPortTimeout = TimeSpan.FromMilliseconds(300)
-    };
+        _profiles, devToolsPortTimeout: TimeSpan.FromMilliseconds(300));
 
     private DebugBrowserLaunchRequest Request(int port = 0, string? url = null, string? executablePath = null) =>
         new(DebugBrowser.Chrome, url, port, _profile, executablePath);

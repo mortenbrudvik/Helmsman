@@ -65,7 +65,7 @@ public class PackagedAppLaunchTests
         _windowWait.Setup(w => w.TakeBaseline()).Returns(new WindowBaseline(new Dictionary<nint, string>(), nint.Zero));
     }
 
-    private ProcessService CreateSut(bool withApps = true, TimeSpan? activationTimeout = null) => new(
+    private WiredProcessService CreateSut(bool withApps = true, TimeSpan? activationTimeout = null) => WiredProcessService.Create(
         _windows.Object,
         new InputValidationService(ProtocolAllowlist.BuiltIn),
         TestDataFactory.CreateMockBrowserDetectionService().Object,
@@ -80,10 +80,8 @@ public class PackagedAppLaunchTests
         _processes.Object,
         _windowWait.Object,
         appsWrapper: withApps ? _apps.Object : null,
-        installedApps: withApps ? _installed.Object : null)
-    {
-        ActivationTimeout = activationTimeout ?? ProcessService.DefaultActivationTimeout
-    };
+        installedApps: withApps ? _installed.Object : null,
+        activationTimeout: activationTimeout ?? ProcessService.DefaultActivationTimeout);
 
     private void WaitFinds(WindowWaitOutcome outcome, WindowInfo? window) =>
         _windowWait.Setup(w => w.WaitForNewWindowAsync(It.IsAny<WindowBaseline>(), It.IsAny<Func<WindowCandidate, bool>>(),

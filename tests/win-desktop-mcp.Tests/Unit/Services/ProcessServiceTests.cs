@@ -66,7 +66,7 @@ public class ProcessServiceTests
             .Returns(new WindowBaseline(new Dictionary<nint, string>(), nint.Zero));
     }
 
-    private ProcessService CreateSut(IBrowserDetectionService? browserDetection = null) => new(
+    private WiredProcessService CreateSut(IBrowserDetectionService? browserDetection = null) => WiredProcessService.Create(
         _mockWindowService.Object,
         _mockValidationService.Object,
         browserDetection ?? _mockBrowserDetection.Object,
@@ -358,13 +358,10 @@ public class ProcessServiceTests
             });
         var released = new TaskCompletionSource();
         _mockLaunchedProcess.Setup(p => p.Dispose()).Callback(() => released.TrySetResult());
-        var sut = new ProcessService(_mockWindowService.Object, _mockValidationService.Object, _mockBrowserDetection.Object,
+        var sut = WiredProcessService.Create(_mockWindowService.Object, _mockValidationService.Object, _mockBrowserDetection.Object,
             _mockResolver.Object, Permissive.TargetPolicy, Permissive.HostGuard, new ChromiumPrograms(),
             new InterpreterGuard(), new DebugBrowserLocator(), Permissive.SecurityProbe, new ChromiumSwitchGuard(),
-            _mockProcessWrapper.Object, _mockWindowWait.Object)
-        {
-            StartTimeout = TimeSpan.FromMilliseconds(100)
-        };
+            _mockProcessWrapper.Object, _mockWindowWait.Object, startTimeout: TimeSpan.FromMilliseconds(100));
 
         // Act
         var result = await sut.LaunchApplicationAsync("setup.exe", waitForWindow: true);
@@ -995,20 +992,11 @@ public class ProcessServiceTests
         _ => new(processId, level, null, null, "access denied")
     };
 
-    private ProcessService CreateListingSut(ITargetPolicy? targetPolicy = null) => new(
+    private ProcessListingService CreateListingSut(ITargetPolicy? targetPolicy = null) => new(
         _mockWindowService.Object,
-        _mockValidationService.Object,
-        _mockBrowserDetection.Object,
-        _mockResolver.Object,
-        targetPolicy ?? Permissive.TargetPolicy,
-        Permissive.HostGuard,
-        new ChromiumPrograms(),
-        new InterpreterGuard(),
-        new DebugBrowserLocator(),
-        _mockSecurityProbe.Object,
-        new ChromiumSwitchGuard(),
         _mockProcessWrapper.Object,
-        _mockWindowWait.Object);
+        targetPolicy ?? Permissive.TargetPolicy,
+        _mockSecurityProbe.Object);
 
     [Fact]
     public void GetRunningProcesses_ByDefault_SortsByNameIgnoringCase_ThenByProcessId()

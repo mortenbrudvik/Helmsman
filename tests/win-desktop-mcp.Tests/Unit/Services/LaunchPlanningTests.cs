@@ -15,7 +15,7 @@ public class LaunchPlanningTests
     private readonly Mock<IExecutableResolver> _mockResolver = new();
     private readonly Mock<IBrowserDetectionService> _mockBrowserDetection = TestDataFactory.CreateMockBrowserDetectionService();
 
-    private ProcessService CreateSut() => new(
+    private WiredProcessService CreateSut() => WiredProcessService.Create(
         TestDataFactory.CreateMockWindowService().Object,
         new InputValidationService(ProtocolAllowlist.BuiltIn),
         _mockBrowserDetection.Object,
@@ -445,7 +445,7 @@ public class LaunchPlanningTests
                 Environment.SystemDirectory,
                 () => plantDir,
                 () => Environment.GetEnvironmentVariable("PATHEXT"));
-            var sut = new ProcessService(
+            var sut = WiredProcessService.Create(
                 TestDataFactory.CreateMockWindowService().Object,
                 new InputValidationService(ProtocolAllowlist.BuiltIn),
                 _mockBrowserDetection.Object,

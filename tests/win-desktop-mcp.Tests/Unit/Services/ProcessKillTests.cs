@@ -24,7 +24,7 @@ public class ProcessKillTests
         _hostGuard.Setup(g => g.IsHostProcess(It.IsAny<int>())).Returns(false);
     }
 
-    private ProcessService CreateSut(bool withHostGuard = true) => new(
+    private WiredProcessService CreateSut(bool withHostGuard = true) => WiredProcessService.Create(
         TestDataFactory.CreateMockWindowService().Object,
         new Mock<IInputValidationService>().Object,
         TestDataFactory.CreateMockBrowserDetectionService().Object,

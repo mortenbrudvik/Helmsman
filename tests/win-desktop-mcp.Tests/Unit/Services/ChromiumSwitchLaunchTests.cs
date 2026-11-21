@@ -36,7 +36,7 @@ public class ChromiumSwitchLaunchTests
         _installed.Setup(i => i.FindByName(It.IsAny<string>())).Returns([]);
     }
 
-    private ProcessService CreateSut() => new(
+    private WiredProcessService CreateSut() => WiredProcessService.Create(
         TestDataFactory.CreateMockWindowService().Object,
         new InputValidationService(ProtocolAllowlist.BuiltIn),
         TestDataFactory.CreateMockBrowserDetectionService().Object,

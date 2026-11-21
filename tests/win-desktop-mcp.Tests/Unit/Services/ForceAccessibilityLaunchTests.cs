@@ -54,7 +54,7 @@ public class ForceAccessibilityLaunchTests
                 path.Equals(@"C:\Apps\VS Code\resources.pak", StringComparison.OrdinalIgnoreCase),
         _ => []);
 
-    private ProcessService CreateSut() => new(
+    private WiredProcessService CreateSut() => WiredProcessService.Create(
         _windows.Object, _validation.Object, TestDataFactory.CreateMockBrowserDetectionService().Object,
         _resolver.Object, Permissive.TargetPolicy, Permissive.HostGuard, FileSystem(), new InterpreterGuard(),
         new DebugBrowserLocator(), Permissive.SecurityProbe, new ChromiumSwitchGuard(), _processes.Object,

@@ -87,6 +87,7 @@ src/win-desktop-mcp/Native/ScreenCaptureWrapper.cs -> Services.CaptureMethods
 Services.ElementCriteria -> Native.UiaControlTypes
 Services.InterpreterGuard -> Native.NativeMethods
 Services.MonitorService -> Native.NativeMonitorWrapper
+Services.ProcessListingService -> Native.NativeProcessWrapper  # moved out of ProcessService when it was split; the same dependency it had
 Services.ProcessService -> Native.NativeProcessWrapper
 Services.ProcessService -> Native.NativeWindowWrapper
 Services.UIElementService -> Native.UiaControlTypes
@@ -150,9 +151,10 @@ Services.FileDialogService -> Infrastructure.AuditScope
 Services.FileDialogService -> Infrastructure.InputGateToolFilter
 Services.FileDialogService -> Infrastructure.ToolErrorException
 Services.PopupService -> Infrastructure.AppText
+Services.ProcessListingService -> Infrastructure.AppText  # moved out of ProcessService when it was split; the same dependency it had
+Services.ProcessListingService -> Infrastructure.CommandLineRedactor  # moved out of ProcessService when it was split; the same dependency it had
+Services.ProcessListingService -> Infrastructure.RedactedCommandLine  # moved out of ProcessService when it was split; the same dependency it had
 Services.ProcessService -> Infrastructure.AppText
-Services.ProcessService -> Infrastructure.CommandLineRedactor
-Services.ProcessService -> Infrastructure.RedactedCommandLine
 Services.ServerInfoService -> Infrastructure.AppText
 Services.ServerInfoService -> Infrastructure.ToolsetCatalog
 Services.ServerInfoService -> Infrastructure.ToolsetSelection

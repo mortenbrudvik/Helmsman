@@ -20,7 +20,7 @@ public class LayoutLaunchPlanningTests : IDisposable
 
     private LayoutService CreateSut()
     {
-        var processService = new ProcessService(
+        var processService = WiredProcessService.Create(
             _windows.Object,
             new InputValidationService(ProtocolAllowlist.BuiltIn),
             TestDataFactory.CreateMockBrowserDetectionService().Object,

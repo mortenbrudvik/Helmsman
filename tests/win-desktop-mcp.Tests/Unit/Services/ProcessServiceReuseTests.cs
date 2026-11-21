@@ -33,7 +33,7 @@ public class ProcessServiceReuseTests
         _windowWait.Setup(w => w.TakeBaseline()).Returns(new WindowBaseline(new Dictionary<nint, string>(), nint.Zero));
     }
 
-    private ProcessService CreateSut() => new(
+    private WiredProcessService CreateSut() => WiredProcessService.Create(
         _windows.Object, _validation.Object, TestDataFactory.CreateMockBrowserDetectionService().Object,
         _resolver.Object, Permissive.TargetPolicy, Permissive.HostGuard, new ChromiumPrograms(),
         new InterpreterGuard(), new DebugBrowserLocator(), Permissive.SecurityProbe, new ChromiumSwitchGuard(),

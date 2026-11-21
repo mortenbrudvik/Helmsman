@@ -505,7 +505,7 @@ public class TargetPolicyEnforcementTests
 
     private readonly Mock<INativeProcessWrapper> _processWrapper = new();
 
-    private (ProcessService Service, Mock<IProcessHandle> Process) CreateProcessService(string processName, ITargetPolicy policy)
+    private (WiredProcessService Service, Mock<IProcessHandle> Process) CreateProcessService(string processName, ITargetPolicy policy)
     {
         var wrapper = _processWrapper;
         var process = new Mock<IProcessHandle>();
@@ -514,7 +514,7 @@ public class TargetPolicyEnforcementTests
         wrapper.Setup(w => w.OpenProcess(KeePassPid)).Returns(process.Object);
         // Not an ancestor of the server; an unread answer (null) is refused before the tree is checked (review F3)
         wrapper.Setup(w => w.IsAncestorOfCurrentProcess(It.IsAny<int>())).Returns(false);
-        var service = new ProcessService(
+        var service = WiredProcessService.Create(
             TestDataFactory.CreateMockWindowService().Object,
             new Mock<IInputValidationService>().Object,
             TestDataFactory.CreateMockBrowserDetectionService().Object,

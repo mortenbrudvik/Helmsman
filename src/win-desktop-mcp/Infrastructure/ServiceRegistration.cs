@@ -97,6 +97,8 @@ public static class ServiceRegistration
         services.AddSingleton(_ => new InterpreterGuard());
         services.AddSingleton(_ => new ChromiumSwitchGuard());
         services.AddSingleton(_ => new DebugBrowserLocator());
+        // list_processes and the reads of a process's name and path (roadmap M6.6), under the target policy
+        services.AddSingleton<IProcessListing, ProcessListingService>();
         services.AddSingleton<IProcessService, ProcessService>();
         // Packaged app activation and the installed apps (roadmap M6.5): launch_application's AppUserModelIDs and friendly
         // names, and list_installed_apps. The E2E harness refuses the activation (WrapperCatalog: ProcessStart)
