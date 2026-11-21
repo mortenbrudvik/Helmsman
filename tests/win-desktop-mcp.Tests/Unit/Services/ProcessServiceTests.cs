@@ -485,6 +485,59 @@ public class ProcessServiceTests
         _startedWith!.FileName.Should().Be("notepad.exe");
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task LaunchApplication_ASystemToolWithArguments_StartsNothing_WithOrWithoutReuseExisting(bool reuseExisting)
+    {
+        // Arrange
+        _mockResolver.Setup(r => r.Resolve("shutdown", It.IsAny<string?>()))
+            .Returns(new ResolvedLaunchTarget(@"C:\Windows\System32\shutdown.exe", LaunchTargetKind.NativeExecutable));
+
+        // Act
+        var result = await CreateSut().LaunchApplicationAsync(
+            new LaunchRequest("shutdown", ["/s", "/t", "0"], ReuseExisting: reuseExisting), waitForWindow: false, waitTimeoutMs: 0);
+
+        // Assert
+        result.ErrorCode.Should().Be(nameof(LaunchErrorCode.InterpreterWithArguments));
+        result.ErrorMessage.Should().Contain("shutdown").And.Contain("Nothing was started");
+        VerifyNothingStarted();
+    }
+
+    [Fact]
+    public async Task LaunchApplicationsBatch_ASystemToolOrAShortcut_FailsAlone()
+    {
+        // Act
+        var results = await CreateSut().LaunchApplicationsBatchAsync(
+        [
+            new LaunchRequest("notepad.exe"),
+            new LaunchRequest("taskkill.exe", ["/F", "/IM", "explorer.exe"]),
+            new LaunchRequest(@"C:\Users\me\Desktop\Tool.lnk"),
+            new LaunchRequest("explorer.exe", [@"C:\Users\me\Downloads\fix.reg"])
+        ]);
+
+        // Assert - notepad starts; the others do not
+        results.Select(r => r.Success).Should().Equal(true, false, false, false);
+        results[1].ErrorCode.Should().Be(nameof(LaunchErrorCode.InterpreterWithArguments));
+        results[2].ErrorCode.Should().Be(nameof(LaunchErrorCode.ScriptFile));
+        results[3].ErrorCode.Should().Be(nameof(LaunchErrorCode.ScriptFile));
+        _mockProcessWrapper.Verify(w => w.StartProcess(It.IsAny<ProcessStartInfo>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData("reg.exe", new[] { "delete", @"HKCU\Software\X", "/f" }, nameof(LaunchErrorCode.InterpreterWithArguments))]
+    [InlineData("curl.exe", new[] { "-T", @"C:\Users\me\secrets.txt", "https://example.com" }, nameof(LaunchErrorCode.InterpreterWithArguments))]
+    [InlineData(@"C:\Users\me\Downloads\update.msix", new string[0], nameof(LaunchErrorCode.ScriptFile))]
+    public void CheckLaunch_TheCheckLayoutsAndWorkspacesUse_RefusesTheNewEntriesToo(string executable, string[] arguments, string errorCode)
+    {
+        // Act - apply_layout checks a launch with CheckLaunch before it launches it
+        var refusal = CreateSut().CheckLaunch(new LaunchRequest(executable, arguments));
+
+        // Assert
+        refusal!.ErrorCode.Should().Be(errorCode);
+        VerifyNothingStarted();
+    }
+
     [Fact]
     public async Task LaunchApplicationsBatch_ReportsProgressAfterEachApplication()
     {

@@ -246,15 +246,17 @@ public enum LaunchErrorCode
     ExecutableNotFound = 15,
 
     /// <summary>
-    /// The target is a command interpreter, script host or other program that runs what its command line names (cmd,
-    /// PowerShell, Windows Script Host, Python, ...), and it was given arguments: the server does not run commands or
-    /// scripts for the agent (roadmap M3.F8). Nothing was started; without arguments it starts as usual.
+    /// The target is a command interpreter, script host, system tool or other program whose arguments run code, change the
+    /// system or send data (cmd, PowerShell, Windows Script Host, Python, shutdown, taskkill, reg, curl, ...), and it was
+    /// given arguments: the server does not run commands or scripts for the agent (roadmap M3.F8). Nothing was started;
+    /// without arguments it starts as usual.
     /// </summary>
     InterpreterWithArguments = 16,
 
     /// <summary>
-    /// The launch would run a script file (.bat, .cmd, .ps1, .vbs, .py, ...), as the target or through explorer.exe, which
-    /// opens its argument with the program registered for it (roadmap M3.F8). Nothing was started.
+    /// The launch would run, install or open a script, installer, shortcut or other such file (.bat, .ps1, .vbs, .py, .msi,
+    /// .msix, .lnk, .url, .reg, .msc, ...), as the target or through explorer.exe, which opens its argument with the program
+    /// registered for it (roadmap M3.F8). Nothing was started.
     /// </summary>
     ScriptFile = 17,
 

@@ -241,7 +241,296 @@ public class InterpreterGuardTests
     {
         // Assert
         InterpreterGuard.ScriptExtensions.Should().Contain([".bat", ".cmd", ".ps1", ".vbs", ".vbe", ".js", ".jse", ".wsf", ".wsh", ".hta", ".py", ".pyw"]);
-        InterpreterGuard.ScriptExtensions.Should().NotContain([".exe", ".com", ".txt", ".pdf", ".lnk"]);
+        // .com is a program type the resolver starts as a native program (tree.com, more.com), as .exe is
+        InterpreterGuard.ScriptExtensions.Should().NotContain([".exe", ".com", ".txt", ".pdf", ".docx", ".png"]);
+    }
+
+    #endregion
+
+    #region System tools, transfer tools and openers refused with arguments (launch guard blocklist)
+
+    /// <summary>
+    /// The programs added to <see cref="InterpreterGuard.Interpreters"/> by the launch guard blocklist review: native tools
+    /// whose arguments destroy data, change the system, kill or control processes and services, run another command, or move
+    /// data off the machine. Kept here by hand, so that dropping one from the guard fails a test.
+    /// </summary>
+    public static readonly TheoryData<string> SystemTools = new()
+    {
+        // Shells, terminals and WSL
+        "zsh", "fish", "nu", "ksh", "dash", "tcsh", "csh", "busybox", "mintty", "git-bash", "git-cmd", "wslconfig",
+
+        // Language runtimes
+        "bun", "go", "cargo", "julia", "lua", "rscript", "jshell", "csi", "fsi",
+
+        // Power and sessions
+        "shutdown", "logoff", "tsdiscon", "rwinsta", "psshutdown",
+
+        // Processes
+        "taskkill", "tskill", "pskill", "pssuspend",
+
+        // Registry
+        "reg", "regedit", "regedt32", "regini",
+
+        // Services, drivers, network, accounts, policy and settings
+        "sc", "net", "net1", "netsh", "route", "ipconfig", "pnputil", "bcdedit", "bcdboot", "reagentc", "dism", "wusa", "setx",
+        "auditpol", "secedit", "powercfg", "cmdkey", "mpcmdrun",
+
+        // Disks, files and permissions
+        "cipher", "format", "diskpart", "mountvol", "fsutil", "vssadmin", "wbadmin", "wevtutil", "manage-bde", "takeown",
+        "icacls", "cacls", "robocopy", "xcopy", "sdelete", "tar",
+
+        // Programs that run, load or open what their arguments name
+        "runas", "psexec", "psexec64", "paexec", "at", "winrs", "msdt", "infdefaultinstall", "odbcconf", "mavinject",
+        "presentationhost", "syncappvpublishingserver", "appvlp", "atbroker", "pcwrun", "tttracer", "register-cimprovider",
+        "wuauclt", "mmc", "control", "hh",
+
+        // Download, upload and remote access
+        "curl", "wget", "certutil", "certreq", "bitsadmin", "ftp", "tftp", "finger", "esentutl", "expand", "extrac32",
+        "replace", "cmdl32", "desktopimgdownldr", "ssh", "scp", "sftp", "sshd", "rsync", "plink", "pscp", "psftp", "nc", "ncat",
+        "netcat", "rclone", "azcopy", "aws", "gh", "git",
+
+        // Package managers and containers
+        "winget", "choco", "pip", "pipx", "uv", "uvx", "conda", "pnpm", "docker", "podman", "kubectl"
+    };
+
+    [Theory]
+    [MemberData(nameof(SystemTools))]
+    public void Check_ASystemToolWithArguments_IsRefused_AndWithoutArguments_IsAllowed(string tool)
+    {
+        // Arrange - as the resolver hands back a System32 program (the folder does not matter, only the name)
+        var path = $@"C:\Windows\System32\{tool}.exe";
+
+        // Act
+        var withArguments = CreateSut().Check(tool, path, ["/x"]);
+        var bare = CreateSut().Check(tool, path, null);
+        var empty = CreateSut().Check(tool, path, []);
+
+        // Assert
+        withArguments.Should().NotBeNull($"{tool} with arguments must be refused");
+        withArguments!.ErrorCode.Should().Be(nameof(LaunchErrorCode.InterpreterWithArguments));
+        withArguments.Message.Should().Contain(path).And.Contain("does not run commands or scripts").And.Contain("Nothing was started");
+        bare.Should().BeNull($"{tool} without arguments starts as usual");
+        empty.Should().BeNull();
+        InterpreterGuard.Interpreters.Should().Contain(tool);
+    }
+
+    [Theory]
+    [InlineData("shutdown", "/s")]
+    [InlineData("taskkill", "/F")]
+    [InlineData("net1", "user")]
+    [InlineData("psexec64", "-s")]
+    [InlineData("regedt32", "/s")]
+    [InlineData("manage-bde", "-off")]
+    [InlineData("ssh", "host")]
+    [InlineData("curl", "-T")]
+    public void Check_ASystemToolsName_IsReadRobustly(string tool, string argument)
+    {
+        string[] forms =
+        [
+            tool,
+            tool.ToUpperInvariant(),
+            $"{tool}.exe",
+            $"{tool.ToUpperInvariant()}.EXE",
+            $@"C:\Windows\System32\{tool}.exe",
+            $@"C:\WINDOWS\SYSTEM32\{tool.ToUpperInvariant()}.EXE",
+            $@"C:\Windows\System32\{tool}",
+            $"\"C:\\Windows\\System32\\{tool}.exe\"",
+            $"C:/Windows/System32/{tool}.exe",
+            $"file:///C:/Windows/System32/{tool}.exe",
+            $@"C:\Windows\System32\{tool}.exe.",
+            $@"C:\Windows\System32\{tool}.exe ",
+            $@"C:\Windows\System32\{tool}.exe::$DATA"
+        ];
+
+        foreach (var form in forms)
+        {
+            // Act - the requested name alone, as when the resolver handed it back unchanged
+            var refusal = CreateSut().Check(form, form, [argument]);
+
+            // Assert
+            refusal.Should().NotBeNull($"'{form}' with arguments must be refused");
+            refusal!.ErrorCode.Should().Be(nameof(LaunchErrorCode.InterpreterWithArguments));
+        }
+    }
+
+    [Theory]
+    [InlineData("shutdown")]
+    [InlineData("taskkill")]
+    [InlineData("reg")]
+    public void Check_ASystemToolBehindAnotherName_IsRefused_ByTheResolvedFile(string tool)
+    {
+        // Act - an App Paths entry may map any name to the tool
+        var refusal = CreateSut().Check("helper", $@"C:\Windows\System32\{tool}.exe", ["/x"]);
+
+        // Assert
+        refusal!.ErrorCode.Should().Be(nameof(LaunchErrorCode.InterpreterWithArguments));
+    }
+
+    [Fact]
+    public void Check_AnEightDotThreeShortNameOfASystemTool_IsExpandedFirst()
+    {
+        // Arrange
+        const string shortPath = @"C:\Windows\System32\MANAGE~1.EXE";
+        _longPaths[shortPath] = @"C:\Windows\System32\manage-bde.exe";
+
+        // Act
+        var refusal = CreateSut().Check(shortPath, shortPath, ["-off", "C:"]);
+
+        // Assert
+        refusal!.ErrorCode.Should().Be(nameof(LaunchErrorCode.InterpreterWithArguments));
+    }
+
+    [Theory]
+    [InlineData("pip3.12", "pip")]
+    [InlineData("lua54", "lua")]
+    [InlineData("go1.22", "go")]
+    [InlineData("psexec64", "psexec64")]
+    [InlineData("net1", "net1")]
+    [InlineData("regedt32", "regedt32")]
+    public void Check_ADigitInAToolsName_IsMatchedAsTheToolOrItsVersion(string program, string shown)
+    {
+        // Act
+        var refusal = CreateSut().Check(program, $@"C:\Tools\{program}.exe", ["x"]);
+
+        // Assert - the entry that matched is the one the message names
+        refusal!.Message.Should().Contain($"({shown})");
+    }
+
+    [Theory]
+    [InlineData(@"C:\Program Files\NetBeans\bin\netbeans64.exe")]
+    [InlineData(@"C:\Program Files\Notepad++\notepad++.exe")]
+    [InlineData(@"C:\Users\me\AppData\Local\GitHubDesktop\GitHubDesktop.exe")]
+    [InlineData(@"C:\Users\me\AppData\Local\gitkraken\gitkraken.exe")]
+    [InlineData(@"C:\Tools\network-monitor.exe")]
+    [InlineData(@"C:\Tools\scanner.exe")]
+    [InlineData(@"C:\Tools\regex-tester.exe")]
+    [InlineData(@"C:\Tools\controller.exe")]
+    public void Check_ProgramsWhoseNamesOnlyStartLikeATool_AreAllowed(string program)
+    {
+        // Act
+        var refusal = CreateSut().Check(program, program, ["x"]);
+
+        // Assert
+        refusal.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("control", @"C:\Windows\System32\ncpa.cpl")]
+    [InlineData("control", "printers")]
+    [InlineData("mmc", @"C:\Users\me\Downloads\console.msc")]
+    [InlineData("hh", @"C:\Users\me\Downloads\help.chm")]
+    [InlineData("regedit", @"C:\Users\me\Downloads\settings.reg")]
+    [InlineData("rundll32", "url.dll,FileProtocolHandler")]
+    public void Check_AnOpenerThatIsAlsoAToolWithArguments_IsRefused(string opener, string argument)
+    {
+        // Act - refused for any arguments, so it never gets to the opener check (ScriptOpeners holds explorer alone)
+        var refusal = CreateSut().Check(opener, $@"C:\Windows\System32\{opener}.exe", [argument]);
+
+        // Assert
+        refusal!.ErrorCode.Should().Be(nameof(LaunchErrorCode.InterpreterWithArguments));
+    }
+
+    #endregion
+
+    #region File types that run, install or open what they name (launch guard blocklist)
+
+    /// <summary>The file types added to <see cref="InterpreterGuard.ScriptExtensions"/> by the launch guard blocklist review.</summary>
+    public static readonly TheoryData<string> RefusedFileTypes = new()
+    {
+        ".lnk", ".url", ".website", ".pif", ".appref-ms", ".settingcontent-ms",
+        ".msix", ".msixbundle", ".appx", ".appxbundle", ".appinstaller", ".application", ".vsto", ".msu", ".ppkg", ".gadget", ".jnlp",
+        ".reg", ".msc", ".chm", ".scr", ".wsc", ".sct", ".psc1", ".ahk", ".au3", ".diagcab", ".xll", ".rdp"
+    };
+
+    [Theory]
+    [MemberData(nameof(RefusedFileTypes))]
+    public void Check_AFileThatRunsOrInstallsWhatItNames_IsRefused_AsTheTarget(string extension)
+    {
+        // Arrange
+        var file = $@"C:\Users\me\Downloads\thing{extension}";
+        var upper = $@"C:\Users\me\Downloads\THING{extension.ToUpperInvariant()}";
+
+        // Act
+        var bare = CreateSut().Check(file, file, null);
+        var withArguments = CreateSut().Check(file, file, ["x"]);
+        var inUpperCase = CreateSut().Check(upper, upper, null);
+        var asFileUri = CreateSut().Check($"file:///C:/Users/me/Downloads/thing{extension}", $"file:///C:/Users/me/Downloads/thing{extension}", null);
+
+        // Assert
+        bare.Should().NotBeNull($"a {extension} target must be refused");
+        bare!.ErrorCode.Should().Be(nameof(LaunchErrorCode.ScriptFile));
+        bare.Message.Should().Contain(extension).And.Contain("Nothing was started");
+        withArguments!.ErrorCode.Should().Be(nameof(LaunchErrorCode.ScriptFile));
+        inUpperCase!.ErrorCode.Should().Be(nameof(LaunchErrorCode.ScriptFile));
+        asFileUri!.ErrorCode.Should().Be(nameof(LaunchErrorCode.ScriptFile));
+        InterpreterGuard.ScriptExtensions.Should().Contain(extension);
+    }
+
+    [Theory]
+    [MemberData(nameof(RefusedFileTypes))]
+    public void Check_AFileThatRunsOrInstallsWhatItNames_IsRefused_AsWhatAnOpenerOpens(string extension)
+    {
+        var file = $@"C:\Users\me\Downloads\thing{extension}";
+
+        // explorer opens its argument with the program registered for it
+        var byExplorer = CreateSut().Check("explorer", @"C:\Windows\explorer.exe", [file]);
+        byExplorer.Should().NotBeNull($"explorer given a {extension} must be refused");
+        byExplorer!.ErrorCode.Should().Be(nameof(LaunchErrorCode.ScriptFile));
+        byExplorer.Message.Should().Contain(file);
+
+        // The other openers are refused for any arguments
+        foreach (var opener in new[] { "control", "mmc", "hh", "regedit", "rundll32" })
+        {
+            var refusal = CreateSut().Check(opener, $@"C:\Windows\System32\{opener}.exe", [file]);
+            refusal.Should().NotBeNull($"{opener} given a {extension} must be refused");
+        }
+    }
+
+    [Theory]
+    [InlineData(@"C:\Windows\System32\services.msc")]
+    [InlineData(@"C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\Paint.lnk")]
+    [InlineData(@"C:\Users\me\Desktop\Shared Folder.lnk")]
+    public void Check_AShortcutOrConsoleTheAgentNames_IsRefused_WhereverItIs(string file)
+    {
+        // Act - the guard cannot see what a shortcut or a console runs, so the file is refused, not followed
+        var refusal = CreateSut().Check(file, file, null);
+
+        // Assert
+        refusal!.ErrorCode.Should().Be(nameof(LaunchErrorCode.ScriptFile));
+    }
+
+    [Fact]
+    public void Check_ANameThatAppPathsMapsToAShortcut_IsRefused()
+    {
+        // Act - App Paths may point a bare name at any file; a shortcut's target is not read, so the shortcut is refused
+        var refusal = CreateSut().Check("mytool", @"C:\Tools\mytool.lnk", null);
+
+        // Assert
+        refusal!.ErrorCode.Should().Be(nameof(LaunchErrorCode.ScriptFile));
+        refusal.Message.Should().Contain("mytool").And.Contain(".lnk");
+    }
+
+    [Theory]
+    [InlineData("notepad", @"C:\Windows\System32\notepad.exe", @"C:\Users\me\Documents\file.txt")]
+    [InlineData("notepad", @"C:\Windows\System32\notepad.exe", @"C:\Users\me\Downloads\settings.reg")]
+    [InlineData("mspaint", @"C:\Windows\System32\mspaint.exe", @"C:\Users\me\Pictures\x.png")]
+    [InlineData("explorer", @"C:\Windows\explorer.exe", @"C:\some\folder")]
+    [InlineData("explorer", @"C:\Windows\explorer.exe", @"/select,C:\Users\me\Documents\report.pdf")]
+    [InlineData("msedge", @"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe", "https://example.com")]
+    [InlineData("chrome", @"C:\Program Files\Google\Chrome\Application\chrome.exe", "https://example.com/setup.msix")]
+    [InlineData("firefox", @"C:\Program Files\Mozilla Firefox\firefox.exe", "https://example.com")]
+    [InlineData("winword", @"C:\Program Files\Microsoft Office\root\Office16\WINWORD.EXE", @"C:\Users\me\Documents\x.docx")]
+    [InlineData("excel", @"C:\Program Files\Microsoft Office\root\Office16\EXCEL.EXE", @"C:\Users\me\Documents\x.xlsx")]
+    [InlineData("wordpad", @"C:\Program Files\Windows NT\Accessories\wordpad.exe", @"C:\Users\me\Documents\x.rtf")]
+    [InlineData("code.exe", @"C:\Users\me\AppData\Local\Programs\Microsoft VS Code\Code.exe", @"C:\Projects\MyApp")]
+    [InlineData("calc", @"C:\Windows\System32\calc.exe", "")]
+    public void Check_AnOrdinaryApplicationWithAFileArgument_IsAllowed(string executable, string resolved, string argument)
+    {
+        // Act - the blocklist must not creep into the programs a user asks an agent to open a file with
+        var refusal = CreateSut().Check(executable, resolved, [argument]);
+
+        // Assert
+        refusal.Should().BeNull();
     }
 
     #endregion

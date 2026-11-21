@@ -6,56 +6,122 @@ namespace WinDesktopMcp.Services;
 
 /// <summary>
 /// Refuses the launches that would run a command or a script (roadmap M3.F8, the repo owner's choice for D-PAL-07): a
-/// command interpreter, script host or other program that runs what its command line names (<see cref="Interpreters"/>)
-/// started with arguments, and a script file (<see cref="ScriptExtensions"/>), which Windows would hand to such a program,
-/// as the target or as what explorer.exe is asked to open. The server does not run commands or scripts for the agent; the
-/// user runs them. An interpreter started without arguments (an empty console or terminal) is allowed.
+/// command interpreter, script host or other program that runs what its command line names, or a native tool whose
+/// arguments destroy data, change the system, kill or control processes and services, or move data off the machine
+/// (<see cref="Interpreters"/>), started with arguments; and a script, installer, shortcut or other file that Windows
+/// hands to a program that runs, installs or opens what it names (<see cref="ScriptExtensions"/>), as the target or as
+/// what explorer.exe is asked to open. The server does not run commands or scripts for the agent; the user runs them. A
+/// program of the list started without arguments (an empty console, Registry Editor, Control Panel) is allowed.
 /// </summary>
 /// <remarks>
 /// Both the name the agent asked for and the file the resolver found are checked, so an App Paths entry that maps
 /// another name to an interpreter counts. A name is read the way Windows reads it: quotes, a file: URI, forward slashes,
 /// letter case, a missing .exe, trailing dots and spaces, an alternate data stream (cmd.exe::$DATA) and an 8.3 short name
 /// (POWERS~1.EXE, expanded from the file system) all lead to the same program. A version after the name counts as the
-/// name (python3.12, ubuntu2204). This is a list of names, not a sandbox: a renamed copy of an interpreter, a shortcut
-/// (.lnk) or Internet shortcut (.url) whose target is one, a document type associated with an interpreter by the user, a
-/// program missing from the list that runs code from its arguments, and a command typed into a console started without
-/// arguments are not caught.
+/// name (python3.12, ubuntu2204, pip3.12); a name that ends in digits itself (net1, psexec64, regedt32) is listed as it is.
+/// <para>
+/// A shortcut (.lnk, .url, .pif) the agent names, or an App Paths entry points to, is refused as a file, since its target
+/// is not read here. An installed app launched by its name or its shell:AppsFolder entry is not affected: the server
+/// starts or checks the program its Start menu shortcut points to (PKEY_Link_TargetParsingPath), never the .lnk, so that
+/// program gets these checks. One whose shortcut opens a refused file type (Windows Tools' consoles open .msc files) is
+/// refused like the file. A bare name never resolves to a shortcut (ExecutableResolver tries .com, .exe, .bat and .cmd).
+/// </para>
+/// <para>
+/// This is a list of names, not a sandbox. It does not catch: a renamed copy of a listed program; a program missing from the
+/// list that runs code, deletes data or sends it from its arguments (there are many, and a third-party tool on PATH can be
+/// one); a document type associated with an interpreter by the user; a document whose program runs its macros or
+/// add-ins (an Office file); a URI (the protocol allowlist decides those); a disk image (.iso, .vhdx), which mounts but
+/// runs nothing by itself; and what the agent types into a console, or changes through a program's window, after starting
+/// it without arguments. Programs a user opens a file with (Notepad, Paint, a browser, Office, explorer with a folder) are
+/// not on the list and get their arguments.
+/// </para>
 /// </remarks>
 public sealed partial class InterpreterGuard
 {
     /// <summary>
     /// The programs refused with arguments, by file name without .exe, in lower case: command shells and terminals, script
-    /// hosts, language runtimes, and system programs that load or run code named on their command line.
+    /// hosts, language runtimes and package managers, programs that load, run or open the code or file their command line
+    /// names, and native tools whose arguments destroy data, change the system, kill or control processes and services, or
+    /// move data off the machine (shutdown, taskkill, reg, sc, net, cipher, curl, robocopy, ssh, git, ...). The name
+    /// predates the tools: the rule is "its arguments can run code or do damage", whatever the program is called.
     /// </summary>
     public static readonly IReadOnlySet<string> Interpreters = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
-        // Command shells, consoles and terminals (WSL distributions start a shell too)
+        // Command shells, consoles and terminals (WSL distributions start a shell too; wslconfig /unregister deletes one)
         "cmd", "powershell", "powershell_ise", "pwsh", "bash", "sh", "wsl", "wslg", "conhost", "wt", "windowsterminal",
-        "ubuntu", "debian", "kali",
+        "ubuntu", "debian", "kali", "zsh", "fish", "nu", "ksh", "dash", "tcsh", "csh", "busybox", "mintty", "git-bash",
+        "git-cmd", "wslconfig",
 
         // Script hosts
         "wscript", "cscript", "mshta", "scriptrunner",
 
-        // Language runtimes
-        "python", "pythonw", "py", "pyw", "node", "deno", "java", "javaw", "ruby", "rubyw", "perl", "php", "dotnet",
+        // Language runtimes and interactive compilers
+        "python", "pythonw", "py", "pyw", "node", "deno", "java", "javaw", "ruby", "rubyw", "perl", "php", "dotnet", "bun",
+        "go", "cargo", "julia", "lua", "rscript", "jshell", "csi", "fsi",
+
+        // Package managers and containers, which install and run what their arguments name
+        "winget", "choco", "pip", "pipx", "uv", "uvx", "conda", "pnpm", "docker", "podman", "kubectl",
 
         // System programs that load or run the code their arguments name
         "rundll32", "regsvr32", "msiexec", "cmstp", "msbuild", "installutil", "regasm", "regsvcs", "forfiles", "wmic",
-        "schtasks", "pcalua"
+        "schtasks", "pcalua", "runas", "psexec", "psexec64", "paexec", "at", "winrs", "msdt", "infdefaultinstall", "odbcconf",
+        "mavinject", "presentationhost", "syncappvpublishingserver", "appvlp", "atbroker", "pcwrun", "tttracer",
+        "register-cimprovider", "wuauclt",
+
+        // Programs that open the file their arguments name (a .cpl, .msc, .chm or .reg) with the code inside it
+        "mmc", "control", "hh",
+
+        // Power and sessions
+        "shutdown", "logoff", "tsdiscon", "rwinsta", "psshutdown",
+
+        // Processes (kill_process has the protected-process list, the host guard, the target policy and confirmation)
+        "taskkill", "tskill", "pskill", "pssuspend",
+
+        // The registry
+        "reg", "regedit", "regedt32", "regini",
+
+        // Services, drivers, boot, network, accounts, policy and settings
+        "sc", "net", "net1", "netsh", "route", "ipconfig", "pnputil", "bcdedit", "bcdboot", "reagentc", "dism", "wusa", "setx",
+        "auditpol", "secedit", "powercfg", "cmdkey", "mpcmdrun",
+
+        // Disks, files and permissions: wipe, format, encrypt, delete, overwrite or take over
+        "cipher", "format", "diskpart", "mountvol", "fsutil", "vssadmin", "wbadmin", "wevtutil", "manage-bde", "takeown",
+        "icacls", "cacls", "robocopy", "xcopy", "sdelete", "tar",
+
+        // Download, upload and remote access (git runs commands from its arguments too: git -c alias.x=!cmd x)
+        "curl", "wget", "certutil", "certreq", "bitsadmin", "ftp", "tftp", "finger", "esentutl", "expand", "extrac32", "replace",
+        "cmdl32", "desktopimgdownldr", "ssh", "scp", "sftp", "sshd", "rsync", "plink", "pscp", "psftp", "nc", "ncat", "netcat",
+        "rclone", "azcopy", "aws", "gh", "git"
     };
 
     /// <summary>
-    /// The file types refused as a launch target, because Windows runs them with an interpreter or installer: batch files,
-    /// PowerShell, Windows Script Host and HTML applications, Python, Java archives, Windows Installer packages, Control
-    /// Panel items and the scripts of other runtimes.
+    /// The file types refused as a launch target, because Windows hands them to a program that runs, installs or opens what
+    /// they name: batch files, PowerShell, Windows Script Host and HTML applications, Python, Java archives, the scripts of
+    /// other runtimes; installers and packages (Windows Installer, MSIX and AppX, App Installer, ClickOnce, Office add-ins,
+    /// updates, provisioning packages); shortcuts whose target the guard cannot see (.lnk, .url, .pif, settings shortcuts);
+    /// registry files; Control Panel items, management consoles, compiled help, screen savers, troubleshooters and Remote
+    /// Desktop connections.
     /// </summary>
     public static readonly IReadOnlySet<string> ScriptExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
-        ".bat", ".cmd", ".ps1", ".psm1", ".vbs", ".vbe", ".js", ".jse", ".wsf", ".wsh", ".hta", ".py", ".pyw", ".pyz",
-        ".pyzw", ".jar", ".msi", ".msp", ".cpl", ".sh", ".rb", ".pl", ".php"
+        // Scripts
+        ".bat", ".cmd", ".ps1", ".psm1", ".psc1", ".vbs", ".vbe", ".js", ".jse", ".wsf", ".wsh", ".wsc", ".sct", ".hta", ".py",
+        ".pyw", ".pyz", ".pyzw", ".jar", ".jnlp", ".sh", ".rb", ".pl", ".php", ".ahk", ".au3",
+
+        // Installers and packages
+        ".msi", ".msp", ".msu", ".msix", ".msixbundle", ".appx", ".appxbundle", ".appinstaller", ".application", ".appref-ms",
+        ".vsto", ".ppkg", ".gadget", ".xll",
+
+        // Shortcuts, whose target is not checked
+        ".lnk", ".url", ".website", ".pif", ".settingcontent-ms",
+
+        // Files a system program runs or applies: registry files, Control Panel items, consoles, help, screen savers,
+        // troubleshooters, Remote Desktop connections (which can hand the drives to the remote computer)
+        ".reg", ".cpl", ".msc", ".chm", ".scr", ".diagcab", ".rdp"
     };
 
-    // Programs that open what their arguments name with the program registered for it, which runs a script
+    // Programs that open what their arguments name with the program registered for it, which runs a script. The other
+    // openers (control, mmc, hh, regedit, rundll32) are in Interpreters, refused with any arguments
     private static readonly string[] ScriptOpeners = ["explorer"];
 
     private readonly Func<string, string?> _longPath;
@@ -93,8 +159,9 @@ public sealed partial class InterpreterGuard
                   "(for VS Code code.exe, which App Paths resolves, or its full path)."
                 : string.Empty;
             return new InterpreterRefusal(nameof(LaunchErrorCode.ScriptFile),
-                $"{shown} is a script ({extension.ToLowerInvariant()}) that Windows would run with its interpreter, and " +
-                $"launch_application does not run scripts: {NoCommands} Ask the user to run it.{batchHint} Nothing was started.");
+                $"{shown} is a script, installer, shortcut or other file ({extension.ToLowerInvariant()}) that Windows would " +
+                $"hand to a program that runs, installs or opens what it names, and launch_application does not run scripts: " +
+                $"{NoCommands} Ask the user to run it.{batchHint} Nothing was started.");
         }
 
         if (arguments is not { Count: > 0 })
@@ -106,8 +173,9 @@ public sealed partial class InterpreterGuard
         if (programs.Select(InterpreterOf).OfType<string>().FirstOrDefault() is { } interpreter)
         {
             return new InterpreterRefusal(nameof(LaunchErrorCode.InterpreterWithArguments),
-                $"{shown} is a command interpreter or script host ({interpreter}), and launch_application does not start one " +
-                $"with arguments: {NoCommands} Ask the user to run the command; do not type it into a console or terminal " +
+                $"{shown} is a command interpreter, script host or system tool whose arguments run code, change the system or " +
+                $"send data ({interpreter}), and launch_application does not start one with arguments: {NoCommands} Ask the " +
+                "user to run the command; do not type it into a console or terminal " +
                 "either. Started without arguments it opens as usual. Nothing was started.");
         }
 
@@ -118,8 +186,9 @@ public sealed partial class InterpreterGuard
                 if (FileNameOf(argument) is { } name && ScriptExtensions.Contains(Path.GetExtension(name)))
                 {
                     return new InterpreterRefusal(nameof(LaunchErrorCode.ScriptFile),
-                        $"{shown} would open '{argument}', a script ({Path.GetExtension(name).ToLowerInvariant()}), with the " +
-                        $"program registered for it, which runs it, and launch_application does not run scripts: {NoCommands} " +
+                        $"{shown} would open '{argument}', a script, installer, shortcut or other file " +
+                        $"({Path.GetExtension(name).ToLowerInvariant()}), with the program registered for it, which runs, " +
+                        $"installs or opens what it names, and launch_application does not run scripts: {NoCommands} " +
                         "Ask the user to run it. Nothing was started.");
                 }
             }
@@ -162,7 +231,8 @@ public sealed partial class InterpreterGuard
         {
             var extension = Path.GetExtension(program.Trim().TrimEnd('.', ' ')).ToLowerInvariant();
             return new InterpreterRefusal(nameof(LaunchErrorCode.ScriptFile),
-                $"The app '{appId}' starts a script ({extension}) that Windows would run with its interpreter, and " +
+                $"The app '{appId}' starts a script, installer, shortcut or other file ({extension}) that Windows would hand " +
+                "to a program that runs, installs or opens what it names, and " +
                 $"launch_application does not run scripts: {NoCommands} Ask the user to run it. Nothing was started.");
         }
 
@@ -187,8 +257,8 @@ public sealed partial class InterpreterGuard
         return interpreter == null
             ? null
             : new InterpreterRefusal(nameof(LaunchErrorCode.InterpreterWithArguments),
-                $"The app '{appId}' is a command interpreter, terminal or language runtime ({interpreter}), and launch_application " +
-                $"does not start one with arguments: {NoCommands} Ask the user to run the command; do not type it into a console " +
+                $"The app '{appId}' is a command interpreter, terminal, language runtime or system tool whose arguments run " +
+                $"code, change the system or send data ({interpreter}), and launch_application does not start one with arguments: {NoCommands} Ask the user to run the command; do not type it into a console " +
                 "or terminal either. Started without arguments it opens as usual. Nothing was started.");
     }
 
