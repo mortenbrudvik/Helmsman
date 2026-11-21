@@ -50,11 +50,13 @@ public partial class ElementActionTools
     /// <param name="realizeRequest">The realize request for the item's ref, once it is found.</param>
     /// <param name="timeout">The whole search's time (timeoutMs).</param>
     /// <param name="allowHostTarget">allowHostTarget, for each page's scroll.</param>
+    /// <param name="confirmedHost">The user's yes to acting on the agent's host window, for each page's scroll.</param>
     /// <param name="namedList">listRef: the list the agent named, used without looking for lists (roadmap M3.F18).</param>
     /// <param name="notFound">The first search's ElementNotFound, returned when there is no list to scroll.</param>
     private async Task<ElementActionResult> RealizeByScrollingAsync(
-        ElementQuery query, Func<string, ElementActionRequest> realizeRequest, TimeSpan timeout, bool allowHostTarget, int maxScrolls,
-        string? namedList, Stopwatch stopwatch, ElementActionResult notFound, CancellationToken cancellationToken)
+        ElementQuery query, Func<string, ElementActionRequest> realizeRequest, TimeSpan timeout, bool allowHostTarget,
+        HostTargetApproval? confirmedHost, int maxScrolls, string? namedList, Stopwatch stopwatch, ElementActionResult notFound,
+        CancellationToken cancellationToken)
     {
         var actionName = ToolEnum<ElementActionKind>.Name(ElementActionKind.Realize);
         ElementActionResult Fail(string code, string error) =>
@@ -117,7 +119,7 @@ public partial class ElementActionTools
         {
             if (stopwatch.Elapsed >= timeout)
             {
-                var putBack = await PutBackAsync(listRef, start, pages, allowHostTarget, timeout, stopwatch, cancellationToken)
+                var putBack = await PutBackAsync(listRef, start, pages, allowHostTarget, confirmedHost, timeout, stopwatch, cancellationToken)
                     .ConfigureAwait(false);
                 return Fail(nameof(UIElementErrorCode.OperationTimedOut),
                     $"The timeout passed after {pages} pages of {listName} were searched; the item was not found. {putBack} Raise " +
@@ -126,7 +128,8 @@ public partial class ElementActionTools
 
             var scrolled = await _actions.ActAsync(new ElementActionRequest(
                 listRef, ElementActionKind.Scroll, Direction: direction, Amount: ElementScrollAmount.Page,
-                AllowHostTarget: allowHostTarget, Timeout: Remaining(timeout, stopwatch)), cancellationToken).ConfigureAwait(false);
+                AllowHostTarget: allowHostTarget, Timeout: Remaining(timeout, stopwatch)) { ConfirmedHost = confirmedHost }, cancellationToken)
+                .ConfigureAwait(false);
             if (!scrolled.Success)
             {
                 return scrolled with
@@ -176,7 +179,7 @@ public partial class ElementActionTools
 
                     // The page's search ended the search without the item (it did not finish, or the policy refuses its only
                     // matches): the list goes back where it was, as at the end of the search
-                    var putBack = await PutBackAsync(listRef, start, pages, allowHostTarget, timeout, stopwatch, cancellationToken)
+                    var putBack = await PutBackAsync(listRef, start, pages, allowHostTarget, confirmedHost, timeout, stopwatch, cancellationToken)
                         .ConfigureAwait(false);
                     return failure with { Error = $"{after}. {putBack}" };
                 }
@@ -194,7 +197,8 @@ public partial class ElementActionTools
             }
         }
 
-        var restored = await PutBackAsync(listRef, start, pages, allowHostTarget, timeout, stopwatch, cancellationToken).ConfigureAwait(false);
+        var restored = await PutBackAsync(listRef, start, pages, allowHostTarget, confirmedHost, timeout, stopwatch, cancellationToken)
+            .ConfigureAwait(false);
         return Fail(nameof(UIElementErrorCode.ElementNotFound),
             $"No element matches the criteria after {pages} pages of {listName} were searched" +
             (pages >= maxScrolls ? $" (maxScrolls {maxScrolls} reached)" : " (down to its end and back up to its start)") +
@@ -208,8 +212,8 @@ public partial class ElementActionTools
     /// </summary>
     /// <param name="start">The list's vertical position before the first page, or null when it was not read.</param>
     private async Task<string> PutBackAsync(
-        string listRef, double? start, int pages, bool allowHostTarget, TimeSpan timeout, Stopwatch stopwatch,
-        CancellationToken cancellationToken)
+        string listRef, double? start, int pages, bool allowHostTarget, HostTargetApproval? confirmedHost, TimeSpan timeout,
+        Stopwatch stopwatch, CancellationToken cancellationToken)
     {
         if (pages == 0)
         {
@@ -224,7 +228,7 @@ public partial class ElementActionTools
         var at = $"{Percent(percent)} down";
         var restored = await _actions.ActAsync(new ElementActionRequest(
             listRef, ElementActionKind.Scroll, Direction: ElementScrollDirection.Up, AllowHostTarget: allowHostTarget,
-            Timeout: Remaining(timeout, stopwatch), ScrollPercent: percent), cancellationToken).ConfigureAwait(false);
+            Timeout: Remaining(timeout, stopwatch), ScrollPercent: percent) { ConfirmedHost = confirmedHost }, cancellationToken).ConfigureAwait(false);
         if (!restored.Success)
         {
             return $"The list could not be put back where it was ({at}), so it was left where the search ended: {restored.Error}";

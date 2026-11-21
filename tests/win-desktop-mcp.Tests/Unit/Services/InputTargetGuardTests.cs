@@ -180,6 +180,13 @@ public class InputTargetGuardTests
 
     private static InputTarget To(nint handle, bool allowHostTarget = false) => InputTarget.Window(handle, allowHostTarget);
 
+    /// <summary>The terminal named with allowHostTarget, after the user confirmed input to it (HostTargetConfirmation).</summary>
+    private static InputTarget ConfirmedTerminal => Confirmed(Terminal, Terminal, TerminalPid);
+
+    /// <summary><paramref name="handle"/> named with allowHostTarget, after the user confirmed input to <paramref name="approved"/>.</summary>
+    private static InputTarget Confirmed(nint handle, nint approved, int processId) =>
+        InputTarget.Window(handle, allowHostTarget: true) with { ConfirmedHost = new HostTargetApproval(approved, processId) };
+
     private void VerifyNoActivation() =>
         _foreground.Verify(f => f.EnsureForeground(It.IsAny<nint>(), It.IsAny<int>()), Times.Never);
 
@@ -1018,9 +1025,9 @@ public class InputTargetGuardTests
     }
 
     [Fact]
-    public void Keyboard_TargetIsTheHost_WithAllowHostTarget_IsAllowed()
+    public void Keyboard_TargetIsTheHost_WithAllowHostTarget_TheUserConfirmed_IsAllowed()
     {
-        var result = CreateSut().CheckKeyboard(To(Terminal, allowHostTarget: true), KeyboardInputKind.Text, null);
+        var result = CreateSut().CheckKeyboard(ConfirmedTerminal, KeyboardInputKind.Text, null);
 
         result.Allowed.Should().BeTrue(result.Error);
         result.Receiving.Should().Be(Terminal);
@@ -1446,7 +1453,7 @@ public class InputTargetGuardTests
         _hostGuard.Setup(g => g.IsHostWindow(hostDialog)).Returns(true);
         At(hostDialog);
 
-        CreateSut().CheckMouse(500, 300, To(Terminal, allowHostTarget: true)).Allowed.Should().BeTrue();
+        CreateSut().CheckMouse(500, 300, ConfirmedTerminal).Allowed.Should().BeTrue();
     }
 
     [Fact]
@@ -1459,7 +1466,7 @@ public class InputTargetGuardTests
     }
 
     [Fact]
-    public void Mouse_TargetIsTheHost_OnlyWithAllowHostTarget()
+    public void Mouse_TargetIsTheHost_OnlyWithAllowHostTarget_TheUserConfirmed()
     {
         // Arrange
         At(Terminal);
@@ -1467,7 +1474,7 @@ public class InputTargetGuardTests
 
         // Act & Assert
         sut.CheckMouse(500, 300, To(Terminal)).ErrorCode.Should().Be(InputErrorCode.TargetIsAgentHost);
-        sut.CheckMouse(500, 300, To(Terminal, allowHostTarget: true)).Allowed.Should().BeTrue();
+        sut.CheckMouse(500, 300, ConfirmedTerminal).Allowed.Should().BeTrue();
     }
 
     [Fact]
@@ -1947,9 +1954,9 @@ public class InputTargetGuardTests
     }
 
     [Fact]
-    public void CheckTarget_OfTheHostWindow_NamedWithAllowHostTarget_IsAllowed()
+    public void CheckTarget_OfTheHostWindow_NamedWithAllowHostTarget_TheUserConfirmed_IsAllowed()
     {
-        CreateSut().CheckTarget(To(Terminal, allowHostTarget: true)).Allowed.Should().BeTrue();
+        CreateSut().CheckTarget(ConfirmedTerminal).Allowed.Should().BeTrue();
     }
 
     [Fact]
@@ -2000,7 +2007,7 @@ public class InputTargetGuardTests
     {
         // The target is Notepad, so allowHostTarget does not reach the host's terminal
         CreateSut().CheckElementWindow(To(Notepad, allowHostTarget: true), Terminal).ErrorCode.Should().Be(InputErrorCode.TargetIsAgentHost);
-        CreateSut().CheckElementWindow(To(Terminal, allowHostTarget: true), Terminal).Allowed.Should().BeTrue();
+        CreateSut().CheckElementWindow(ConfirmedTerminal, Terminal).Allowed.Should().BeTrue();
     }
 
     #endregion
@@ -2083,8 +2090,174 @@ public class InputTargetGuardTests
         SecurityWarningOfTheServer();
         At(Terminal);
 
-        CreateSut().CheckTarget(To(Terminal, allowHostTarget: true)).Allowed.Should().BeTrue();
-        CreateSut().CheckMouse(500, 300, To(Terminal, allowHostTarget: true)).Allowed.Should().BeTrue();
+        CreateSut().CheckTarget(ConfirmedTerminal).Allowed.Should().BeTrue();
+        CreateSut().CheckMouse(500, 300, ConfirmedTerminal).Allowed.Should().BeTrue();
+    }
+
+    #endregion
+
+    #region allowHostTarget lifts the host rule only with the user's confirmation
+
+    private static readonly nint SecondTerminal = 0x120; // another window of the agent's host, not owned by Terminal
+
+    [Fact]
+    public void Keyboard_TargetIsTheHost_WithAllowHostTargetAlone_IsRefused_AndNotActivated()
+    {
+        // The agent sets allowHostTarget itself: without the user's yes it lifts nothing
+        var result = CreateSut().CheckKeyboard(To(Terminal, allowHostTarget: true), KeyboardInputKind.Keys, SendKeysParser.Parse("y{ENTER}"));
+
+        result.ErrorCode.Should().Be(InputErrorCode.TargetIsAgentHost);
+        result.Error.Should().Contain("the user").And.Contain("confirm");
+        VerifyNoActivation();
+    }
+
+    [Fact]
+    public void Mouse_TargetIsTheHost_WithAllowHostTargetAlone_IsRefused()
+    {
+        At(Terminal);
+
+        var result = CreateSut().CheckMouse(500, 300, To(Terminal, allowHostTarget: true));
+
+        result.ErrorCode.Should().Be(InputErrorCode.TargetIsAgentHost);
+        result.Error.Should().Contain("confirm");
+    }
+
+    [Fact]
+    public void CheckTargetAndElementWindow_OfTheHost_WithAllowHostTargetAlone_AreRefused()
+    {
+        // element_action, respond_to_dialog and file_dialog go through these
+        CreateSut().CheckTarget(To(Terminal, allowHostTarget: true)).ErrorCode.Should().Be(InputErrorCode.TargetIsAgentHost);
+        CreateSut().CheckElementWindow(To(Terminal, allowHostTarget: true), Terminal).ErrorCode.Should().Be(InputErrorCode.TargetIsAgentHost);
+    }
+
+    [Fact]
+    public void Keyboard_TheConfirmationIsForAnotherHostWindow_IsRefused()
+    {
+        // Arrange - the user confirmed the second terminal window, the call names the first
+        Window(SecondTerminal, TerminalPid, "WindowsTerminal", "ssh prod");
+        _hostGuard.Setup(g => g.IsHostWindow(SecondTerminal)).Returns(true);
+
+        // Act
+        var result = CreateSut().CheckKeyboard(Confirmed(Terminal, SecondTerminal, TerminalPid), KeyboardInputKind.Text, null);
+
+        // Assert
+        result.ErrorCode.Should().Be(InputErrorCode.TargetIsAgentHost);
+        result.Error.Should().Contain("ssh prod").And.Contain("pwsh");
+        VerifyNoActivation();
+    }
+
+    [Fact]
+    public void Mouse_TheConfirmedWindowsHandleNowBelongsToAnotherProcess_IsRefused()
+    {
+        // Arrange - the window the user confirmed closed while they answered, and another process's window got its handle
+        At(Terminal);
+
+        // Act
+        var result = CreateSut().CheckMouse(500, 300, Confirmed(Terminal, Terminal, processId: 4242));
+
+        // Assert
+        result.ErrorCode.Should().Be(InputErrorCode.TargetIsAgentHost);
+        result.Error.Should().Contain("confirm");
+    }
+
+    [Fact]
+    public void Mouse_Recheck_ADifferentHostWindowAtThePointAtSendTime_IsRefused()
+    {
+        // Arrange - the click was approved on the confirmed terminal; before the press another host window is at the point
+        Window(SecondTerminal, TerminalPid, "WindowsTerminal", "ssh prod");
+        _hostGuard.Setup(g => g.IsHostWindow(SecondTerminal)).Returns(true);
+        At(Terminal);
+        var sut = CreateSut();
+        var approved = sut.CheckMouse(500, 300, ConfirmedTerminal);
+        approved.Allowed.Should().BeTrue(approved.Error);
+        At(SecondTerminal);
+
+        // Act
+        var recheck = sut.RecheckMouse(500, 300, approved);
+
+        // Assert
+        recheck.Allowed.Should().BeFalse();
+        recheck.ReceivingWindow!.Handle.Should().Be(SecondTerminal);
+    }
+
+    [Fact]
+    public void Keyboard_Recheck_ADifferentHostWindowInFrontAtSendTime_IsRefused()
+    {
+        // Arrange
+        Window(SecondTerminal, TerminalPid, "WindowsTerminal", "ssh prod");
+        _hostGuard.Setup(g => g.IsHostWindow(SecondTerminal)).Returns(true);
+        var sut = CreateSut();
+        var approved = sut.CheckKeyboard(ConfirmedTerminal, KeyboardInputKind.Text, null);
+        approved.Allowed.Should().BeTrue(approved.Error);
+        _inFront = SecondTerminal;
+
+        // Act
+        var recheck = sut.RecheckKeyboard(approved);
+
+        // Assert
+        recheck.Allowed.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Keyboard_AConfirmationOfTheHost_DoesNotLiftTheRuleForAnotherTarget()
+    {
+        // Arrange - Notepad is the target; the approval names the terminal, which owns nothing of Notepad's
+        var sut = CreateSut();
+        var approved = sut.CheckKeyboard(Confirmed(Notepad, Terminal, TerminalPid), KeyboardInputKind.Text, null);
+        approved.Receiving.Should().Be(Notepad);
+
+        // Act - the terminal comes to the front before the next batch
+        _inFront = Terminal;
+        var recheck = sut.RecheckKeyboard(approved);
+
+        // Assert - the approval of the terminal does not let a call aimed at Notepad type into it
+        recheck.Allowed.Should().BeFalse();
+    }
+
+    [Fact]
+    public void HostWindowToConfirm_TheHostNamedWithAllowHostTarget_IsItsTopLevelWindow()
+    {
+        // Arrange - a child window of the terminal stands for the terminal
+        var child = new nint(0x101);
+        _windows.Setup(w => w.IsWindow(child)).Returns(true);
+        _windows.Setup(w => w.GetAncestor(child, WindowAncestor.Root)).Returns(Terminal);
+
+        // Act
+        var sut = CreateSut();
+        var direct = sut.HostWindowToConfirm(To(Terminal, allowHostTarget: true));
+        var viaChild = sut.HostWindowToConfirm(To(child, allowHostTarget: true));
+
+        // Assert
+        direct.Should().Be(new HostWindowToConfirm(new WindowSummary(Terminal, "pwsh", "WindowsTerminal", TerminalPid), false));
+        viaChild.Should().Be(direct);
+        direct!.Approval.Should().Be(new HostTargetApproval(Terminal, TerminalPid));
+    }
+
+    [Fact]
+    public void HostWindowToConfirm_AWindowCountedAsTheHostOnlyWhileTheAncestorsAreUnknown_SaysSo()
+    {
+        _hostGuard.Setup(g => g.IsHostWindowOnlyWhileAncestorsUnknown(Terminal)).Returns(true);
+
+        CreateSut().HostWindowToConfirm(To(Terminal, allowHostTarget: true))!.OnlyWhileAncestorsUnknown.Should().BeTrue();
+    }
+
+    [Fact]
+    public void HostWindowToConfirm_NothingToAsk_IsNull()
+    {
+        var sut = CreateSut();
+
+        sut.HostWindowToConfirm(To(Terminal)).Should().BeNull("no allowHostTarget: refused as today, no question");
+        sut.HostWindowToConfirm(To(Notepad, allowHostTarget: true)).Should().BeNull("an ordinary window needs no question");
+        sut.HostWindowToConfirm(new InputTarget(null, AllowHostTarget: true)).Should().BeNull("no window named");
+        sut.HostWindowToConfirm(To(0x999, allowHostTarget: true)).Should().BeNull("no window");
+    }
+
+    [Fact]
+    public void HostWindowToConfirm_AWindowOfTheServersOwnProcess_IsNull_ItIsRefusedWhateverTheUserSays()
+    {
+        SecurityWarningOfTheServer();
+
+        CreateSut().HostWindowToConfirm(To(SecurityWarning, allowHostTarget: true)).Should().BeNull();
     }
 
     #endregion

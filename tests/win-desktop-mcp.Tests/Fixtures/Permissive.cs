@@ -1,3 +1,6 @@
+using ModelContextProtocol.Server;
+using WinDesktopMcp.Infrastructure;
+
 namespace WinDesktopMcp.Tests.Fixtures;
 
 /// <summary>
@@ -55,6 +58,18 @@ public static class Permissive
 
     /// <summary>A paste guard that lets every batch paste.</summary>
     public static IClipboardPasteGuard PasteGuard { get; } = new AnyPaste();
+
+    /// <summary>
+    /// A host confirmation that never asks and approves nothing: allowHostTarget passes through to the service as the call
+    /// gave it, and the input guard (or its mock) decides alone.
+    /// </summary>
+    public static IHostTargetConfirmation HostConfirmation { get; } = new NeverAsks();
+
+    private sealed class NeverAsks : IHostTargetConfirmation
+    {
+        public Task<HostConfirmation> ConfirmAsync(McpServer? server, IReadOnlyList<InputTarget> targets, string input,
+            CancellationToken cancellationToken) => Task.FromResult(WinDesktopMcp.Infrastructure.HostConfirmation.None);
+    }
 
     private sealed class NoHost : IHostGuard
     {

@@ -298,4 +298,8 @@ public sealed record ElementActionRequest(
     ElementActionFallback Fallback = ElementActionFallback.None,
     bool AllowHostTarget = false,
     TimeSpan? Timeout = null,
-    double? ScrollPercent = null);
+    double? ScrollPercent = null)
+{
+    /// <summary>The user's yes to acting on the agent's host window for this call (<see cref="InputTarget.ConfirmedHost"/>); only the tool sets it.</summary>
+    public HostTargetApproval? ConfirmedHost { get; init; }
+}

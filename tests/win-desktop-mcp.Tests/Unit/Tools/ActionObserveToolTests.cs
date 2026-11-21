@@ -55,9 +55,9 @@ public class ActionObserveToolTests
                 request.Include.Contains(DesktopStateSection.Screenshot) ? new EncodedImage([1, 2, 3], "image/png") : null));
     }
 
-    private InputSimulationTools CreateInputSut() => new(_input.Object, Mock.Of<ICoordinateSpaceResolver>(), _windows.Object, _desktopState.Object);
+    private InputSimulationTools CreateInputSut() => new(_input.Object, Mock.Of<ICoordinateSpaceResolver>(), Permissive.HostConfirmation, _windows.Object, _desktopState.Object);
 
-    private DialogTools CreateDialogSut() => new(_dialogs.Object, Mock.Of<IFileDialogService>(), _windows.Object, _desktopState.Object);
+    private DialogTools CreateDialogSut() => new(_dialogs.Object, Mock.Of<IFileDialogService>(), Permissive.HostConfirmation, _windows.Object, _desktopState.Object);
 
     private static async Task<ToolErrorException> RefusedAsync(Func<Task> call) =>
         (await FluentActions.Awaiting(call).Should().ThrowAsync<ToolErrorException>()).Which;

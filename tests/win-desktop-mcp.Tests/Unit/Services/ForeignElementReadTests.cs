@@ -730,7 +730,7 @@ public class ForeignElementReadTests
     }
 
     private ElementActionTools ActionTools(Mock<IElementActionService> actions) =>
-        new(actions.Object, Search(_policy), _registry, new Mock<IWindowService>().Object);
+        new(actions.Object, Search(_policy), _registry, Permissive.HostConfirmation, new Mock<IWindowService>().Object);
 
     [Fact]
     public async Task ElementAction_ByCriteria_MatchingOnlyAnElementOfADeniedProcess_IsTargetDeniedByPolicy_AndNothingIsDone()
@@ -940,7 +940,7 @@ public class ForeignElementReadTests
         var actions = new Mock<IElementActionService>();
         actions.Setup(a => a.ActAsync(It.IsAny<ElementActionRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ElementActionResult(true, "invoke"));
-        var tools = new ElementActionTools(actions.Object, SearchAsTheServerWires(DeniesWebView2), _registry, new Mock<IWindowService>().Object);
+        var tools = new ElementActionTools(actions.Object, SearchAsTheServerWires(DeniesWebView2), _registry, Permissive.HostConfirmation, new Mock<IWindowService>().Object);
 
         // Act
         var result = await tools.ElementAction(ElementActionKind.Invoke, handle: (long)Handle, name: "Send").Payload<ElementActionResult>();

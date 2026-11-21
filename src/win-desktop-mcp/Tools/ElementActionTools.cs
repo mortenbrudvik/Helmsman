@@ -20,6 +20,7 @@ public partial class ElementActionTools
     private readonly IElementActionService _actions;
     private readonly IElementSearchService _search;
     private readonly IElementRegistry _registry;
+    private readonly IHostTargetConfirmation _hostConfirmation;
     private readonly IWindowService? _windowService;
     private readonly IDesktopStateService? _desktopState;
     private readonly IMenuPathService? _menuPaths;
@@ -27,16 +28,18 @@ public partial class ElementActionTools
     /// <param name="actions">Acts on the element.</param>
     /// <param name="search">Resolves window and element criteria to one element, as find_ui_elements searches.</param>
     /// <param name="registry">Tells which window a ref belongs to.</param>
+    /// <param name="hostConfirmation">Asks the user before allowHostTarget acts on the agent's own host window.</param>
     /// <param name="windowService">Resolves the window selector; the server always passes it.</param>
     /// <param name="desktopState">get_desktop_state's observation, for observe (roadmap M3.12); the server always passes it.</param>
     /// <param name="menuPaths">Carries out menu_path (roadmap M3.5); the server always passes it.</param>
     public ElementActionTools(
-        IElementActionService actions, IElementSearchService search, IElementRegistry registry, IWindowService? windowService = null,
-        IDesktopStateService? desktopState = null, IMenuPathService? menuPaths = null)
+        IElementActionService actions, IElementSearchService search, IElementRegistry registry, IHostTargetConfirmation hostConfirmation,
+        IWindowService? windowService = null, IDesktopStateService? desktopState = null, IMenuPathService? menuPaths = null)
     {
         _actions = actions;
         _search = search;
         _registry = registry;
+        _hostConfirmation = hostConfirmation ?? throw new ArgumentNullException(nameof(hostConfirmation));
         _windowService = windowService;
         _desktopState = desktopState;
         _menuPaths = menuPaths;
@@ -110,7 +113,8 @@ public partial class ElementActionTools
                      "the pointer and takes the foreground).")]
         ElementActionFallback fallback = ElementActionFallback.None,
         [Description("Allow acting on the agent's own host window (its terminal, editor or chat app). Works only with ref or " +
-                     "handle (or window.handle); set it only when the user explicitly asked for it. Default: false")]
+                     "handle (or window.handle); the server asks the user first (ConfirmationDeclined, ConfirmationRequired). Use " +
+                     "only when the user asked for it. Default: false")]
         bool allowHostTarget = false,
         [Description(MaxScrollsDescription)]
         int maxScrolls = 0,
@@ -124,13 +128,19 @@ public partial class ElementActionTools
                      "get_desktop_state to be served) or 'screenshot' (as state, plus a capture of that window as image content with " +
                      "a captureId; needs capture_window to be served too).")]
         ObserveMode observe = ObserveMode.None,
+        McpServer? server = null,
         CancellationToken cancellationToken = default)
     {
         var timeout = TimeSpan.FromMilliseconds(Math.Clamp(timeoutMs, MinTimeoutMs, MaxTimeoutMs));
 
+        // The user's yes to acting on the agent's own host window, asked once the window is known (allowHostTarget)
+        HostTargetApproval? confirmedHost = null;
+        Task<HostTargetApproval?> ConfirmAsync(nint window, string? element) =>
+            ConfirmHostAsync(server, window, allowHostTarget, action, element, value, cancellationToken);
+
         // The request once its element is named by a ref: the one passed, or the one the criteria found
         ElementActionRequest RequestFor(string elementRef) =>
-            new(elementRef, action, value, mode, direction, amount, fallback, allowHostTarget, timeout);
+            new(elementRef, action, value, mode, direction, amount, fallback, allowHostTarget, timeout) { ConfirmedHost = confirmedHost };
 
         if (ElementActionService.ArgumentError(action, value, mode, direction, fallback) is { } argumentError)
         {
@@ -182,11 +192,16 @@ public partial class ElementActionTools
             var normalized = ElementRefs.Require(@ref, "ref", "Nothing was done.");
             var lookup = _registry.Lookup(normalized);
             NoteWindow(lookup.WindowHandle);
+            if (lookup.Success)
+            {
+                confirmedHost = await ConfirmAsync(lookup.WindowHandle, Element(lookup)).ConfigureAwait(false);
+            }
+
             if (action == ElementActionKind.MenuPath)
             {
                 // The ref's own window holds the path's first item; a ref the registry no longer knows names no window
                 return await ObserveAsync(lookup.Success
-                    ? await MenuPathAsync(lookup.WindowHandle, normalized, value, allowHostTarget, timeout, scope: null, cancellationToken)
+                    ? await MenuPathAsync(lookup.WindowHandle, normalized, value, allowHostTarget, confirmedHost, timeout, scope: null, cancellationToken)
                         .ConfigureAwait(false)
                     : new ElementActionResult(false, "menu_path", normalized, Error: lookup.Error, ErrorCode: lookup.ErrorCode.ToString()),
                     observe, cancellationToken).ConfigureAwait(false);
@@ -216,8 +231,10 @@ public partial class ElementActionTools
         {
             var menuWindow = WindowTargeting.Require(_windowService, handle, window);
             NoteWindow(menuWindow);
+            confirmedHost = await ConfirmAsync(menuWindow, element: null).ConfigureAwait(false);
             return await ObserveAsync(
-                await MenuPathAsync(menuWindow, startRef: null, value, allowHostTarget, timeout, scope, cancellationToken).ConfigureAwait(false),
+                await MenuPathAsync(menuWindow, startRef: null, value, allowHostTarget, confirmedHost, timeout, scope, cancellationToken)
+                    .ConfigureAwait(false),
                 observe, cancellationToken).ConfigureAwait(false);
         }
 
@@ -260,8 +277,9 @@ public partial class ElementActionTools
         if (found.Failure is { ErrorCode: nameof(UIElementErrorCode.ElementNotFound) } && action == ElementActionKind.Realize && maxScrolls > 0)
         {
             NoteWindow(windowHandle);
+            confirmedHost = await ConfirmAsync(windowHandle, element: null).ConfigureAwait(false);
             return await ObserveAsync(
-                await RealizeByScrollingAsync(query, RequestFor, timeout, allowHostTarget, Math.Min(maxScrolls, MaxScrollsLimit), scrollListRef,
+                await RealizeByScrollingAsync(query, RequestFor, timeout, allowHostTarget, confirmedHost, Math.Min(maxScrolls, MaxScrollsLimit), scrollListRef,
                         stopwatch, found.Failure, cancellationToken)
                     .ConfigureAwait(false),
                 observe, cancellationToken).ConfigureAwait(false);
@@ -273,12 +291,16 @@ public partial class ElementActionTools
         }
 
         NoteWindow(windowHandle);
+
+        // The element the criteria found is in its own window (the one searched, or a popup of it)
+        var foundLookup = _registry.Lookup(found.Ref!);
+        var foundWindow = foundLookup.WindowHandle != nint.Zero ? foundLookup.WindowHandle : windowHandle;
+        confirmedHost = await ConfirmAsync(foundWindow, Element(foundLookup)).ConfigureAwait(false);
         if (action == ElementActionKind.MenuPath)
         {
             // The element the criteria found holds the path's first item (a menu bar, an open menu), in its own window
-            var registered = _registry.Lookup(found.Ref!).WindowHandle;
             return await ObserveAsync(
-                await MenuPathAsync(registered != nint.Zero ? registered : windowHandle, found.Ref, value, allowHostTarget, timeout,
+                await MenuPathAsync(foundWindow, found.Ref, value, allowHostTarget, confirmedHost, timeout,
                         scope: null, cancellationToken)
                     .ConfigureAwait(false),
                 observe, cancellationToken).ConfigureAwait(false);
@@ -304,8 +326,8 @@ public partial class ElementActionTools
     /// element_action by the menu path service.
     /// </summary>
     private async Task<ElementActionResult> MenuPathAsync(
-        nint window, string? startRef, string? path, bool allowHostTarget, TimeSpan timeout, ElementSearchScope? scope,
-        CancellationToken cancellationToken)
+        nint window, string? startRef, string? path, bool allowHostTarget, HostTargetApproval? confirmedHost, TimeSpan timeout,
+        ElementSearchScope? scope, CancellationToken cancellationToken)
     {
         if (_menuPaths == null)
         {
@@ -314,9 +336,35 @@ public partial class ElementActionTools
 
         var items = MenuPaths.Parse(path, out var error) ??
                     throw new ToolErrorException(ToolErrorReporting.InvalidArgumentsErrorCode, error + " Nothing was done.");
-        return await _menuPaths.RunAsync(new MenuPathRequest(window, startRef, items, scope, allowHostTarget, timeout),
+        return await _menuPaths.RunAsync(new MenuPathRequest(window, startRef, items, scope, allowHostTarget, timeout) { ConfirmedHost = confirmedHost },
             cancellationToken).ConfigureAwait(false);
     }
+
+    /// <summary>
+    /// Asks the user before allowHostTarget acts on the agent's own host window <paramref name="window"/> (nothing is asked for
+    /// another window, or without allowHostTarget), before any action takes the input gate; the approval for the request.
+    /// </summary>
+    /// <exception cref="ToolErrorException">ConfirmationRequired or ConfirmationDeclined: nothing is done.</exception>
+    private async Task<HostTargetApproval?> ConfirmHostAsync(McpServer? server, nint window, bool allowHostTarget, ElementActionKind action,
+        string? element, string? value, CancellationToken cancellationToken)
+    {
+        if (!allowHostTarget || window == nint.Zero)
+        {
+            return null;
+        }
+
+        var input = $"element_action: {ToolEnum<ElementActionKind>.Name(action)}{(element == null ? string.Empty : $" on {element}")}" +
+                    (value == null ? string.Empty : $", the value {HostTargetConfirmation.TextPreview(value)}");
+        var confirmed = await _hostConfirmation.ConfirmAsync(server, [InputTarget.Window(window, allowHostTarget: true)], input, cancellationToken)
+            .ConfigureAwait(false);
+        return confirmed.For(window);
+    }
+
+    /// <summary>The element as the user's question names it: "the Button 'Allow'"; null when the registry has no record of it.</summary>
+    private static string? Element(ElementLookup lookup) =>
+        lookup.Fingerprint is { } element
+            ? $"the {element.ControlType}{(string.IsNullOrEmpty(element.Name) ? string.Empty : " " + UserConfirmation.Quote(element.Name))}"
+            : null;
 
     /// <summary>
     /// The ref of the one element the query matches, or the failure: none, several, matches of an app the target policy

@@ -16,7 +16,7 @@ public class InputSimulationToolsTests
     }
 
     private InputSimulationTools CreateSut() =>
-        new InputSimulationTools(_mockInputService.Object, Mock.Of<ICoordinateSpaceResolver>());
+        new InputSimulationTools(_mockInputService.Object, Mock.Of<ICoordinateSpaceResolver>(), Permissive.HostConfirmation);
 
     private static Mock<IInputSimulationService> CreateMockInputSimulationService(
         bool success = true,
@@ -65,20 +65,20 @@ public class InputSimulationToolsTests
     #region MouseMove Tests
 
     [Fact]
-    public void MouseMove_CallsServiceWithCorrectCoordinates()
+    public async Task MouseMove_CallsServiceWithCorrectCoordinates()
     {
         // Arrange
         var sut = CreateSut();
 
         // Act
-        sut.MouseMove(700, 800);
+        await sut.MouseMove(700, 800);
 
         // Assert
         _mockInputService.Verify(s => s.MoveMouse(700, 800, InputTarget.None, false, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public void MouseMove_ReturnsServiceResult()
+    public async Task MouseMove_ReturnsServiceResult()
     {
         // Arrange
         var expectedResult = new MouseMoveResult(true, 700, 800);
@@ -86,14 +86,14 @@ public class InputSimulationToolsTests
         var sut = CreateSut();
 
         // Act
-        var result = sut.MouseMove(700, 800);
+        var result = await sut.MouseMove(700, 800);
 
         // Assert
         result.Should().Be(expectedResult);
     }
 
     [Fact]
-    public void MouseMove_WhenServiceReturnsError_ReturnsError()
+    public async Task MouseMove_WhenServiceReturnsError_ReturnsError()
     {
         // Arrange
         var errorResult = new MouseMoveResult(
@@ -106,7 +106,7 @@ public class InputSimulationToolsTests
         var sut = CreateSut();
 
         // Act
-        var result = sut.MouseMove(10000, 10000);
+        var result = await sut.MouseMove(10000, 10000);
 
         // Assert
         result.Success.Should().BeFalse();
@@ -114,13 +114,13 @@ public class InputSimulationToolsTests
     }
 
     [Fact]
-    public void MouseMove_WithZeroCoordinates_PassesToService()
+    public async Task MouseMove_WithZeroCoordinates_PassesToService()
     {
         // Arrange
         var sut = CreateSut();
 
         // Act
-        sut.MouseMove(0, 0);
+        await sut.MouseMove(0, 0);
 
         // Assert
         _mockInputService.Verify(s => s.MoveMouse(0, 0, InputTarget.None, false, It.IsAny<CancellationToken>()), Times.Once);
@@ -134,13 +134,13 @@ public class InputSimulationToolsTests
     [InlineData(0, 0)]
     [InlineData(100, 200)]
     [InlineData(1920, 1080)]
-    public void MouseMove_ResultContainsCorrectCoordinates(int x, int y)
+    public async Task MouseMove_ResultContainsCorrectCoordinates(int x, int y)
     {
         // Arrange
         var sut = CreateSut();
 
         // Act
-        var result = sut.MouseMove(x, y);
+        var result = await sut.MouseMove(x, y);
 
         // Assert
         result.X.Should().Be(x);
@@ -401,7 +401,7 @@ public class InputSimulationToolsTests
 
         // Act
         await sut.MouseClick(1, 2, releaseHeldModifiers: true, cancellationToken: request.Token);
-        sut.MouseMove(1, 2, releaseHeldModifiers: true, cancellationToken: request.Token);
+        await sut.MouseMove(1, 2, releaseHeldModifiers: true, cancellationToken: request.Token);
 
         // Assert
         _mockInputService.Verify(s => s.MouseClick(1, 2, MouseButton.Primary, 1, It.IsAny<IReadOnlyList<MouseModifier>>(), InputTarget.None, true,

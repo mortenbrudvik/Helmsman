@@ -27,7 +27,7 @@ public class DialogToolsTests
             .Returns(WindowResolution.Found(TestDataFactory.CreateWindowInfo(handleValue: 0x4400)));
     }
 
-    private DialogTools CreateSut() => new(_dialogs.Object, _fileDialogs.Object, _windows.Object);
+    private DialogTools CreateSut() => new(_dialogs.Object, _fileDialogs.Object, Permissive.HostConfirmation, _windows.Object);
 
     private static async Task<ToolErrorException> RefusedAsync(Func<Task> call) =>
         (await FluentActions.Awaiting(call).Should().ThrowAsync<ToolErrorException>()).Which;
@@ -57,7 +57,7 @@ public class DialogToolsTests
     {
         // {"foreground": true} is whatever window is in front, not the dialog the agent read: a prompt that came up meanwhile
         // would be answered blind. The real service, with nothing behind it that may be touched
-        var sut = new DialogTools(Untouched.Dialogs(), _fileDialogs.Object, _windows.Object);
+        var sut = new DialogTools(Untouched.Dialogs(), _fileDialogs.Object, Permissive.HostConfirmation, _windows.Object);
 
         var result = await sut.RespondToDialog(button, window: new WindowSelector { Foreground = true }).Payload<DialogResponseResult>();
 
@@ -133,7 +133,7 @@ public class DialogToolsTests
         var path = action == FileDialogAction.Open
             ? typeof(DialogToolsTests).Assembly.Location
             : Path.Combine(Path.GetTempPath(), $"wam-{Guid.NewGuid():N}.txt");
-        var sut = new DialogTools(_dialogs.Object, Untouched.FileDialogs(), _windows.Object);
+        var sut = new DialogTools(_dialogs.Object, Untouched.FileDialogs(), Permissive.HostConfirmation, _windows.Object);
 
         var result = await sut.FileDialog(path, action, window: new WindowSelector { Foreground = true });
 

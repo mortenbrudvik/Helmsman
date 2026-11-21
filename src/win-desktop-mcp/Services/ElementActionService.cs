@@ -125,6 +125,13 @@ public sealed partial class ElementActionService : IElementActionService
     public Action<TimeSpan> Sleep { get; init; } = Thread.Sleep;
 
     /// <summary>
+    /// The guard's target for an action on <paramref name="window"/>: with the request's allowHostTarget and the user's yes to
+    /// it (<see cref="ElementActionRequest.ConfirmedHost"/>), which together lift the host rule for the window the user confirmed.
+    /// </summary>
+    private static InputTarget HostTarget(nint window, ElementActionRequest request) =>
+        InputTarget.Window(window, request.AllowHostTarget) with { ConfirmedHost = request.ConfirmedHost };
+
+    /// <summary>
     /// Why the request's arguments do not fit its action (a missing or invalid value, a direction for another action), or
     /// null. The tool checks this before it searches for the element, so a wrong call costs no search.
     /// </summary>
@@ -268,7 +275,7 @@ public sealed partial class ElementActionService : IElementActionService
 
         var handle = (nint)popup.Handle;
         if (UiaTargets.NotRespondingReason(_windows, handle) != null ||
-            !_guard.CheckElementWindow(InputTarget.Window(call.Window, call.Request.AllowHostTarget), handle).Allowed)
+            !_guard.CheckElementWindow(HostTarget(call.Window, call.Request), handle).Allowed)
         {
             return result;
         }
@@ -316,7 +323,7 @@ public sealed partial class ElementActionService : IElementActionService
     private async Task<ElementActionResult> ActInsideGateAsync(ActionCall call, IDisposable gate, CancellationToken cancellationToken)
     {
         var request = call.Request;
-        var target = InputTarget.Window(call.Window, request.AllowHostTarget);
+        var target = HostTarget(call.Window, request);
         var checkedTarget = _guard.CheckTarget(target);
         if (!checkedTarget.Allowed)
         {
@@ -574,7 +581,7 @@ public sealed partial class ElementActionService : IElementActionService
         }
 
         gate.Dispose();
-        var target = InputTarget.Window(call.Window, call.Request.AllowHostTarget);
+        var target = HostTarget(call.Window, call.Request);
         var clicked = plan.Mouse switch
         {
             MouseKind.Right => _input.RightClick(at.X, at.Y, target, releaseHeldModifiers: false, cancellationToken),
@@ -645,7 +652,7 @@ public sealed partial class ElementActionService : IElementActionService
         // Each call below takes the input gate again, so focus could move between them: the guard runs this recheck inside
         // the gate before every batch, and keys never reach another control the focus moved to (roadmap M3.F17)
         var focus = new FocusWatch();
-        var target = InputTarget.Window(call.Window, request.AllowHostTarget) with
+        var target = HostTarget(call.Window, request) with
         {
             FocusRecheck = () => RecheckFocus(element, targetProcess, focus, cancellationToken)
         };

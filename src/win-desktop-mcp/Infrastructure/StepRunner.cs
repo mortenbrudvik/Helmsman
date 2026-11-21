@@ -454,9 +454,14 @@ public sealed partial class StepRunner
     /// <summary>Why a step may not use one of its arguments in a run, or null. Values are read as the tool binds them.</summary>
     private static string? Forbidden(string tool, JsonObject arguments)
     {
+        // A run never reaches the agent's host: allowHostTarget needs the user's yes, which a step cannot ask for while the run
+        // holds the input gate (every other call would wait for the user). A reference cannot set it either: a reference ends in
+        // an identifier (ReferenceEnds), never a boolean. A step whose window turns out to be a host window (a reference resolved
+        // during the run) is refused by the input guard as the host (TargetIsAgentHost), and the run stops there
         if (IsTrue(arguments, "allowHostTarget"))
         {
-            return "allowHostTarget is not allowed in a run: act on your own terminal or chat window with a direct call, after asking the user.";
+            return "allowHostTarget is not allowed in a run: input to your own terminal or chat window needs the user's yes, which " +
+                   "a direct call asks for.";
         }
 
         if (ValueOf<ElementSearchScope>(arguments, "scope") is ElementSearchScope.Desktop)

@@ -44,7 +44,11 @@ public sealed record DialogContent(
 /// visible text; null to only read the dialog (nothing is pressed).</param>
 /// <param name="AllowHostTarget">Lifts the host guard for the dialog (the tool allows it only for a window named by handle).</param>
 /// <param name="Timeout">The bound of each read, and how long the button press may block.</param>
-public sealed record DialogResponseRequest(nint Window, string? Button, bool AllowHostTarget = false, TimeSpan? Timeout = null);
+public sealed record DialogResponseRequest(nint Window, string? Button, bool AllowHostTarget = false, TimeSpan? Timeout = null)
+{
+    /// <summary>The user's yes to acting on the agent's host window for this call (<see cref="InputTarget.ConfirmedHost"/>); only the tool sets it.</summary>
+    public HostTargetApproval? ConfirmedHost { get; init; }
+}
 
 /// <summary>Result of respond_to_dialog (roadmap M3.5).</summary>
 /// <param name="DialogHandle">The dialog answered (or that was read before a refusal).</param>
@@ -103,7 +107,11 @@ public sealed record FileDialogRequest(
     FileDialogAction Action,
     bool Overwrite = false,
     bool AllowHostTarget = false,
-    TimeSpan? Timeout = null);
+    TimeSpan? Timeout = null)
+{
+    /// <summary>The user's yes to acting on the agent's host window for this call (<see cref="InputTarget.ConfirmedHost"/>); only the tool sets it.</summary>
+    public HostTargetApproval? ConfirmedHost { get; init; }
+}
 
 /// <summary>Result of file_dialog (roadmap M3.14).</summary>
 /// <param name="DialogHandle">The file dialog.</param>
@@ -148,4 +156,8 @@ public sealed record MenuPathRequest(
     IReadOnlyList<string> Items,
     ElementSearchScope? Scope = null,
     bool AllowHostTarget = false,
-    TimeSpan? Timeout = null);
+    TimeSpan? Timeout = null)
+{
+    /// <summary>The user's yes to acting on the agent's host window for this call (<see cref="InputTarget.ConfirmedHost"/>); only the tool sets it.</summary>
+    public HostTargetApproval? ConfirmedHost { get; init; }
+}

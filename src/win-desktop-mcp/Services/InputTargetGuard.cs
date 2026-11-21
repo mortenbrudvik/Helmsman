@@ -421,6 +421,21 @@ public sealed class InputTargetGuard : IInputTargetGuard
                ?? InputGuardResult.Allow(target, elementWindow, window.Summary, anchor: targetRoot);
     }
 
+    public HostWindowToConfirm? HostWindowToConfirm(InputTarget target)
+    {
+        if (!target.AllowHostTarget || target.WindowHandle is not { } handle || handle == nint.Zero || !_windows.IsWindow(handle))
+        {
+            return null;
+        }
+
+        // The top-level window, as the guard checks it; a window of the server's own process is refused whatever the user says
+        var root = RootOf(handle);
+        var window = Read(root);
+        return IsServerWindow(root, window) || !_hostGuard.IsHostWindow(root)
+            ? null
+            : new HostWindowToConfirm(window.Summary, _hostGuard.IsHostWindowOnlyWhileAncestorsUnknown(root));
+    }
+
     public WindowSummary? DescribeForeground()
     {
         var foreground = _windows.GetForegroundWindow();
@@ -594,7 +609,8 @@ public sealed class InputTargetGuard : IInputTargetGuard
 
     /// <summary>
     /// The probes, policy and host checks of a window the input would reach. The host check is skipped only
-    /// for an explicit target with allowHostTarget, and only when the window is the target's top-level
+    /// for an explicit target with allowHostTarget that the user confirmed for this call (InputTarget.ConfirmedHost: the
+    /// agent sets the flag, only the server the approval), and only when the window is the target's top-level
     /// window <paramref name="targetRoot"/> or a window it owns: a popup that is accepted only because it
     /// belongs to the target's process or a child process is still checked. A window of the server's own process
     /// (or one it owns) is refused whatever allowHostTarget says.
@@ -642,18 +658,24 @@ public sealed class InputTargetGuard : IInputTargetGuard
                 target, window.Summary);
         }
 
-        // Host: the agent's own terminal, editor or chat app
-        var explicitHost = target.HasWindow && target.AllowHostTarget && targetRoot != nint.Zero &&
-                           (hWnd == targetRoot || WindowOwnerChain.IsOwnedBy(_windows, hWnd, targetRoot));
-        if (!explicitHost && _hostGuard.IsHostWindow(hWnd))
+        // Host: the agent's own terminal, editor or chat app. allowHostTarget is set by the agent, so it lifts the rule only
+        // together with the user's yes for this call (ConfirmedHost, which only the server sets), for the window the user was
+        // shown and the windows it owns
+        var named = target.HasWindow && target.AllowHostTarget && targetRoot != nint.Zero &&
+                    (hWnd == targetRoot || WindowOwnerChain.IsOwnedBy(_windows, hWnd, targetRoot));
+        if (_hostGuard.IsHostWindow(hWnd) && !(named && IsConfirmed(target, targetRoot)))
         {
-            var hint = target.HasWindow && target.AllowHostTarget
-                ? "allowHostTarget lifts this only for the window named in windowHandle and the windows it owns, and this window " +
-                  "is neither. Pass the host window's own handle as windowHandle, and only if the user explicitly asked for input to it."
+            var hint = named
+                ? ConfirmationHint(target, targetRoot)
+                : target.HasWindow && target.AllowHostTarget
+                ? "allowHostTarget lifts this only for the window named in windowHandle and the windows it owns, after the user " +
+                  "confirms it, and this window is neither. Pass the host window's own handle as windowHandle, and only if the user asked for input to it."
                 : target.HasWindow
-                ? "It belongs to the agent's host, and allowHostTarget was not set. Pass allowHostTarget=true only if the user explicitly asked for input to that window."
+                ? "It belongs to the agent's host, and allowHostTarget was not set. Pass allowHostTarget=true only if the user asked for input " +
+                  "to that window: the server then asks the user to confirm it."
                 :"Pass windowHandle with the window you mean; the server brings it to the front for keys and checks that the point is on it for clicks. " +
-                  "To act on the host window itself, pass its handle as windowHandle with allowHostTarget=true, and only if the user explicitly asked for it." +
+                  "To act on the host window itself, pass its handle as windowHandle with allowHostTarget=true, only if the user asked for it: " +
+                  "the server then asks the user to confirm it." +
                   (target.AllowHostTarget ? " allowHostTarget has no effect without windowHandle." : string.Empty);
             // A window that counts as the host's only because the ancestors are unknown (HostGuard): the error says so
             var unknown = HostGuard.AncestorsUnknownNoteFor(_hostGuard, hWnd);
@@ -664,6 +686,31 @@ public sealed class InputTargetGuard : IInputTargetGuard
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// True when the user confirmed input to <paramref name="targetRoot"/> for this call: the approval names that window, or a
+    /// window that owns it (a menu or dialog the confirmed window opened, which element_action's menu_path and the dialog tools
+    /// name as their target), and the confirmed window still belongs to the process the user was shown (a handle reused by
+    /// another window is not covered).
+    /// </summary>
+    private bool IsConfirmed(InputTarget target, nint targetRoot) =>
+        target.ConfirmedHost is { } approved &&
+        (approved.Window == targetRoot || WindowOwnerChain.IsOwnedBy(_windows, targetRoot, approved.Window)) &&
+        _windows.IsWindow(approved.Window) && Read(approved.Window).Summary.ProcessId == approved.ProcessId;
+
+    /// <summary>Why allowHostTarget did not lift the host rule for the window the call names, and what to do.</summary>
+    private string ConfirmationHint(InputTarget target, nint targetRoot)
+    {
+        if (target.ConfirmedHost is not { } approved)
+        {
+            return "allowHostTarget lifts this only after the user confirms input to that window for this call, and the user did not " +
+                   "confirm it. Call again only if the user asked for input there: the server asks the user first.";
+        }
+
+        var shown = approved.Window == targetRoot ? $"window {approved.Window} of process {approved.ProcessId}" : Name(Describe(approved.Window));
+        return $"The user confirmed input to {shown}, and the window the call names is no longer that one (it closed and its handle " +
+               "was reused, or it is another window). Call again only if the user asked for input there: the server asks the user again.";
     }
 
     /// <summary>Whether the window, or a window that owns it, belongs to this server's own process.</summary>

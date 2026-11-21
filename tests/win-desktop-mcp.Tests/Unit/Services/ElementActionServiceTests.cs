@@ -1322,7 +1322,7 @@ public sealed class ElementActionServiceTests : IDisposable
         // Arrange - the call measured on Explorer: handle, name, maxScrolls 20, and the natural controlType
         var list = new FakeVirtualList(300, realized: 42, i => $"item-{i:D3}.txt", Pid).WithExplorerPlaceholders();
         _window.With(list.List);
-        var tool = new ElementActionTools(CreateSut(), new ElementSearchService(_tree, _worker, _registry, _windows.Object, Permissive.TargetPolicy), _registry);
+        var tool = new ElementActionTools(CreateSut(), new ElementSearchService(_tree, _worker, _registry, _windows.Object, Permissive.TargetPolicy), _registry, Permissive.HostConfirmation);
 
         // Act
         var result = await tool.ElementAction(ElementActionKind.Realize, handle: Handle, name: "item-250.txt", controlType: "ListItem",

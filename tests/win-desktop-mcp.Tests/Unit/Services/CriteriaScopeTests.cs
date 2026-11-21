@@ -180,7 +180,7 @@ public class CriteriaScopeTests
             .Callback((ElementActionRequest request, CancellationToken _) => acted = request)
             .ReturnsAsync((ElementActionRequest request, CancellationToken _) =>
                 new ElementActionResult(true, "invoke", request.Ref, Menu, ElementActionStatus.Done, ElementActionMethod.Invoke));
-        var sut = new ElementActionTools(actions.Object, _search, _registry);
+        var sut = new ElementActionTools(actions.Object, _search, _registry, Permissive.HostConfirmation);
 
         // Act
         var result = await sut.ElementAction(ElementActionKind.Invoke, handle: Main, name: "Rename", controlType: "MenuItem", scope: scope).Payload<ElementActionResult>();

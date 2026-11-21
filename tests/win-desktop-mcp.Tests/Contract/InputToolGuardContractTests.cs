@@ -97,11 +97,13 @@ public class InputToolGuardContractTests
             _windows.Object, _hitTest.Object, _threads.Object, new Mock<INativeProcessWrapper>().Object,
             _windowService.Object, _foreground.Object, _security.Object, _hostGuard.Object,
             new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows), InputGuardOptions.Default);
-        var service = new InputSimulationService(monitors.Object, _input.Object, guard, new InputSession(_input.Object), Permissive.PasteGuard,
+        var session = new InputSession(_input.Object);
+        var service = new InputSimulationService(monitors.Object, _input.Object, guard, session, Permissive.PasteGuard,
             Permissive.Takeover, hitTest: _hitTest.Object, systemInfo: _systemInfo.Object);
         return InProcessMcpServer.StartAsync(
             [],
-            builder => builder.AddToolErrorReporting().WithServerTools(new InputSimulationTools(service, Mock.Of<ICoordinateSpaceResolver>())));
+            builder => builder.AddToolErrorReporting().WithServerTools(new InputSimulationTools(service, Mock.Of<ICoordinateSpaceResolver>(),
+                new HostTargetConfirmation(guard, session))));
     }
 
     private static JsonElement ParsePayload(CallToolResult result)
@@ -320,25 +322,26 @@ public class InputToolGuardContractTests
     }
 
     [Fact]
-    public async Task Click_WithTheHostAsWindowHandleAndAllowHostTarget_IsSent()
+    public async Task Click_WithTheHostAsWindowHandleAndAllowHostTarget_OnAClientThatCannotAsk_IsConfirmationRequired()
     {
-        // Arrange
+        // Arrange - this client has no elicitation: the user cannot be asked, and allowHostTarget alone lifts nothing
+        // (HostTargetConfirmationContractTests has the client that asks)
         At(Terminal);
         await using var server = await StartServerAsync();
 
         // Act
-        var payload = ParsePayload(await server.CallToolAsync("mouse_click", new Dictionary<string, object?>
+        var result = await server.CallToolAsync("mouse_click", new Dictionary<string, object?>
         {
             ["x"] = 400,
             ["y"] = 300,
             ["windowHandle"] = (long)Terminal,
             ["allowHostTarget"] = true
-        }));
+        });
 
         // Assert
-        payload.GetProperty("success").GetBoolean().Should().BeTrue();
-        payload.GetProperty("receivingWindow").GetProperty("handle").GetInt64().Should().Be(Terminal);
-        _input.Verify(i => i.SetCursorPos(400, 300), Times.Once);
+        result.IsError.Should().BeTrue();
+        ParsePayload(result).GetProperty("errorCode").GetString().Should().Be(nameof(WindowErrorCode.ConfirmationRequired));
+        VerifyNothingSent();
     }
 
     [Fact]

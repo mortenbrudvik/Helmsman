@@ -147,6 +147,9 @@ public sealed class ContractServices : IDisposable
 
     public IScreenshotService Screenshots { get; private set; } = null!;
 
+    /// <summary>The input guard behind allowHostTarget's question (<see cref="HostTargetConfirmation"/>): a loose mock, so no window is the host's.</summary>
+    public Mock<IInputTargetGuard> InputGuard { get; } = new();
+
     /// <summary>The capture registry the typical captures register in and the mouse tools' image points resolve through (roadmap M3.11).</summary>
     public CaptureRegistry Captures { get; } = new();
 
@@ -231,6 +234,8 @@ public sealed class ContractServices : IDisposable
         // get_window_info's detail 'full' reads the window's integrity (roadmap M6.6)
         services.AddSingleton(SecurityProbe.Object);
         services.AddSingleton<IInputSession>(Session);
+        // allowHostTarget's question, as the server registers it, over a guard that names no window the host's unless a test says so
+        services.AddSingleton<IHostTargetConfirmation>(new HostTargetConfirmation(InputGuard.Object, Session));
         // run_steps' destructive chords and takeover detection, as the server registers them with the variables unset
         services.AddSingleton(InputGuardOptions.Default);
         services.AddSingleton(Permissive.Takeover);

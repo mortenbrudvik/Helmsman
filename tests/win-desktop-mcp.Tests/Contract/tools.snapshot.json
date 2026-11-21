@@ -2340,7 +2340,7 @@
             "default": null
           },
           "allowHostTarget": {
-            "description": "Allow input to the agent's own host window: the terminal, editor or chat app this server was started from. Works only together with windowHandle (or window.handle) naming that window; set it only when the user explicitly asked for input there. Default: false",
+            "description": "Allow input to the agent's own host window (its terminal, editor or chat app), named by windowHandle or window.handle. The server asks the user first; nothing is sent without their yes (ConfirmationDeclined) or when the client cannot ask (ConfirmationRequired). Use only when the user asked for it. Default: false",
             "type": "boolean",
             "default": false
           },
@@ -2627,7 +2627,7 @@
             ]
           },
           "allowHostTarget": {
-            "description": "Allow acting on the agent's own host window (its terminal, editor or chat app). Works only with ref or handle (or window.handle); set it only when the user explicitly asked for it. Default: false",
+            "description": "Allow acting on the agent's own host window (its terminal, editor or chat app). Works only with ref or handle (or window.handle); the server asks the user first (ConfirmationDeclined, ConfirmationRequired). Use only when the user asked for it. Default: false",
             "type": "boolean",
             "default": false
           },
@@ -2776,7 +2776,7 @@
             "default": null
           },
           "allowHostTarget": {
-            "description": "Allow completing a file dialog of the agent's own host window (its terminal, editor or chat app). Works only with handle (or window.handle); set it only when the user explicitly asked for it. Default: false",
+            "description": "Allow completing a file dialog of the agent's own host window (its terminal, editor or chat app). Works only with handle (or window.handle); the server asks the user first (ConfirmationDeclined, ConfirmationRequired). Use only when the user asked for it. Default: false",
             "type": "boolean",
             "default": false
           },
@@ -5489,7 +5489,7 @@
             "default": null
           },
           "allowHostTarget": {
-            "description": "Allow input to the agent's own host window: the terminal, editor or chat app this server was started from. Works only together with windowHandle (or window.handle) naming that window; set it only when the user explicitly asked for input there. Default: false",
+            "description": "Allow input to the agent's own host window (its terminal, editor or chat app), named by windowHandle or window.handle. The server asks the user first; nothing is sent without their yes (ConfirmationDeclined) or when the client cannot ask (ConfirmationRequired). Use only when the user asked for it. Default: false",
             "type": "boolean",
             "default": false
           },
@@ -5640,7 +5640,7 @@
             "default": null
           },
           "allowHostTarget": {
-            "description": "Allow input to the agent's own host window: the terminal, editor or chat app this server was started from. Works only together with windowHandle (or window.handle) naming that window; set it only when the user explicitly asked for input there. Default: false",
+            "description": "Allow input to the agent's own host window (its terminal, editor or chat app), named by windowHandle or window.handle. The server asks the user first; nothing is sent without their yes (ConfirmationDeclined) or when the client cannot ask (ConfirmationRequired). Use only when the user asked for it. Default: false",
             "type": "boolean",
             "default": false
           },
@@ -5928,7 +5928,7 @@
             "default": null
           },
           "allowHostTarget": {
-            "description": "Allow input to the agent's own host window: the terminal, editor or chat app this server was started from. Works only together with windowHandle (or window.handle) naming that window; set it only when the user explicitly asked for input there. Default: false",
+            "description": "Allow input to the agent's own host window (its terminal, editor or chat app), named by windowHandle or window.handle. The server asks the user first; nothing is sent without their yes (ConfirmationDeclined) or when the client cannot ask (ConfirmationRequired). Use only when the user asked for it. Default: false",
             "type": "boolean",
             "default": false
           },
@@ -6452,7 +6452,7 @@
             "default": null
           },
           "allowHostTarget": {
-            "description": "Allow answering a dialog of the agent's own host window (its terminal, editor or chat app). Works only with handle (or window.handle); set it only when the user explicitly asked for it. Default: false",
+            "description": "Allow answering a dialog of the agent's own host window (its terminal, editor or chat app). Works only with handle (or window.handle); the server asks the user first (ConfirmationDeclined, ConfirmationRequired). Use only when the user asked for it. Default: false",
             "type": "boolean",
             "default": false
           },
@@ -7124,7 +7124,7 @@
             "default": null
           },
           "allowHostTarget": {
-            "description": "Allow input to the agent's own host window: the terminal, editor or chat app this server was started from. Works only together with windowHandle (or window.handle) naming that window; set it only when the user explicitly asked for input there. Default: false",
+            "description": "Allow input to the agent's own host window (its terminal, editor or chat app), named by windowHandle or window.handle. The server asks the user first; nothing is sent without their yes (ConfirmationDeclined) or when the client cannot ask (ConfirmationRequired). Use only when the user asked for it. Default: false",
             "type": "boolean",
             "default": false
           },
@@ -7257,7 +7257,7 @@
             "default": null
           },
           "allowHostTarget": {
-            "description": "Allow input to the agent's own host window: the terminal, editor or chat app this server was started from. Works only together with windowHandle (or window.handle) naming that window; set it only when the user explicitly asked for input there. Default: false",
+            "description": "Allow input to the agent's own host window (its terminal, editor or chat app), named by windowHandle or window.handle. The server asks the user first; nothing is sent without their yes (ConfirmationDeclined) or when the client cannot ask (ConfirmationRequired). Use only when the user asked for it. Default: false",
             "type": "boolean",
             "default": false
           },
@@ -8493,7 +8493,7 @@
             "default": null
           },
           "allowHostTarget": {
-            "description": "Allow input to the agent's own host window: the terminal, editor or chat app this server was started from. Works only together with windowHandle (or window.handle) naming that window; set it only when the user explicitly asked for input there. Default: false",
+            "description": "Allow input to the agent's own host window (its terminal, editor or chat app), named by windowHandle or window.handle. The server asks the user first; nothing is sent without their yes (ConfirmationDeclined) or when the client cannot ask (ConfirmationRequired). Use only when the user asked for it. Default: false",
             "type": "boolean",
             "default": false
           },

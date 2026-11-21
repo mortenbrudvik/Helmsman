@@ -48,7 +48,7 @@ public class InputSimulationToolsSpaceTests
         return result;
     }
 
-    private InputSimulationTools CreateSut() => new(_input.Object, _resolver.Object, _windows.Object);
+    private InputSimulationTools CreateSut() => new(_input.Object, _resolver.Object, Permissive.HostConfirmation, _windows.Object);
 
     [Fact]
     public async Task MouseClick_WithoutSpace_SendsTheScreenPointAsBefore()
@@ -204,26 +204,26 @@ public class InputSimulationToolsSpaceTests
         _sentPoint.Should().Be((208, 281));
         (await sut.MouseClick(10, 5, clickCount: 2, windowHandle: Captured, space: CoordinateSpace.Window).Payload<ClickResult>()).X.Should().Be(110);
         _sentPoint.Should().Be((110, 205));
-        sut.MouseMove(10, 5, windowHandle: Captured, space: CoordinateSpace.Client).Requested.Should().Be(new RequestedPoint(10, 5, "client"));
+        (await sut.MouseMove(10, 5, windowHandle: Captured, space: CoordinateSpace.Client)).Requested.Should().Be(new RequestedPoint(10, 5, "client"));
         _sentPoint.Should().Be((118, 236));
     }
 
     [Fact]
-    public void MouseMove_ACaptureThatCannotBeConverted_FailsWithItsCode()
+    public async Task MouseMove_ACaptureThatCannotBeConverted_FailsWithItsCode()
     {
         _resolver.Setup(r => r.FromImage(CaptureId, 1, 1)).Returns(PointResolution.Fail(InputErrorCode.StaleCapture, "moved"));
 
-        var result = CreateSut().MouseMove(1, 1, captureId: CaptureId);
+        var result = await CreateSut().MouseMove(1, 1, captureId: CaptureId);
 
         result.ErrorCode.Should().Be(InputErrorCode.StaleCapture);
         _sentPoint.Should().BeNull();
     }
 
     [Fact]
-    public void Scroll_AtAnImagePoint_ScrollsTheCapturedWindowThere()
+    public async Task Scroll_AtAnImagePoint_ScrollsTheCapturedWindowThere()
     {
         // Act
-        var result = CreateSut().Scroll(x: 50, y: 25, deltaY: 3, captureId: CaptureId);
+        var result = await CreateSut().Scroll(x: 50, y: 25, deltaY: 3, captureId: CaptureId);
 
         // Assert
         _sentPoint.Should().Be((208, 281));
@@ -232,14 +232,14 @@ public class InputSimulationToolsSpaceTests
     }
 
     [Fact]
-    public void Scroll_PassesItsModifiers_ToTheGuardedInput()
+    public async Task Scroll_PassesItsModifiers_ToTheGuardedInput()
     {
         // Issue #8: Ctrl+wheel and Shift+wheel, at a point and at a window's client centre
         var tools = CreateSut();
 
-        tools.Scroll(x: 300, y: 400, deltaY: -2, modifiers: [MouseModifier.Ctrl]);
-        tools.Scroll(windowHandle: Captured, deltaY: 1, modifiers: [MouseModifier.Shift]);
-        tools.Scroll(windowHandle: Captured, deltaY: 1);
+        await tools.Scroll(x: 300, y: 400, deltaY: -2, modifiers: [MouseModifier.Ctrl]);
+        await tools.Scroll(windowHandle: Captured, deltaY: 1, modifiers: [MouseModifier.Shift]);
+        await tools.Scroll(windowHandle: Captured, deltaY: 1);
 
         _input.Verify(s => s.Scroll(300, 400, -2, 0, It.Is<IReadOnlyList<MouseModifier>>(m => m.SequenceEqual(new[] { MouseModifier.Ctrl })),
             It.IsAny<InputTarget>(), false, It.IsAny<CancellationToken>()), Times.Once);
@@ -250,19 +250,19 @@ public class InputSimulationToolsSpaceTests
     }
 
     [Fact]
-    public void Scroll_AConvertedSpaceWithoutAPoint_IsInvalidArguments()
+    public async Task Scroll_AConvertedSpaceWithoutAPoint_IsInvalidArguments()
     {
         var act = () => CreateSut().Scroll(windowHandle: Captured, deltaY: 3, space: CoordinateSpace.Client);
 
-        act.Should().Throw<ToolErrorException>().Which.Message.Should().Contain("x and y");
+        (await act.Should().ThrowAsync<ToolErrorException>()).Which.Message.Should().Contain("x and y");
     }
 
     [Fact]
-    public void Scroll_ACaptureThatCannotBeConverted_FailsWithItsCode()
+    public async Task Scroll_ACaptureThatCannotBeConverted_FailsWithItsCode()
     {
         _resolver.Setup(r => r.FromImage(CaptureId, 1, 1)).Returns(PointResolution.Fail(InputErrorCode.CaptureNotFound, "gone"));
 
-        var result = CreateSut().Scroll(x: 1, y: 1, deltaY: 1, captureId: CaptureId);
+        var result = await CreateSut().Scroll(x: 1, y: 1, deltaY: 1, captureId: CaptureId);
 
         result.ErrorCode.Should().Be(InputErrorCode.CaptureNotFound);
         result.DeltaY.Should().Be(1);

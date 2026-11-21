@@ -95,7 +95,8 @@ public class ToolDescriptionTests
         description.Should().Contain("Pass windowHandle", "the target window is how input is kept off the wrong window (roadmap M1.5)");
         description.Should().Contain("TargetIsAgentHost").And.Contain("receivingWindow");
         ParameterDescription(toolName, "windowHandle").Should().Contain("Strongly recommended");
-        ParameterDescription(toolName, "allowHostTarget").Should().Contain("explicitly asked").And.Contain("windowHandle");
+        ParameterDescription(toolName, "allowHostTarget").Should().Contain("user asked").And.Contain("windowHandle")
+            .And.Contain("asks the user first").And.Contain("ConfirmationDeclined").And.Contain("ConfirmationRequired");
     }
 
     [Fact]

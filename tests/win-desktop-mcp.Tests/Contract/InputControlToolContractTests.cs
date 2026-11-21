@@ -99,7 +99,7 @@ public sealed class InputControlToolContractTests : IDisposable
                     }))
                     .AddToolErrorReporting()
                     .AddInputGateSerialization()
-                    .WithServerTools(new InputSimulationTools(service, Mock.Of<ICoordinateSpaceResolver>()));
+                    .WithServerTools(new InputSimulationTools(service, Mock.Of<ICoordinateSpaceResolver>(), Permissive.HostConfirmation));
 
                 // The input control tools are registered as the server registers them: the SDK builds a new
                 // instance from the services for every call, so no state of theirs outlives a call. Only a test

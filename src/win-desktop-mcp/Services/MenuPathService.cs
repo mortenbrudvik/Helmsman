@@ -361,7 +361,7 @@ public sealed class MenuPathService : IMenuPathService
 
         /// <summary>element_action's request for an item, within the path's time.</summary>
         public ElementActionRequest Action(string itemRef, ElementActionKind action) =>
-            new(itemRef, action, AllowHostTarget: Request.AllowHostTarget, Timeout: StepTimeout);
+            new(itemRef, action, AllowHostTarget: Request.AllowHostTarget, Timeout: StepTimeout) { ConfirmedHost = Request.ConfirmedHost };
 
         /// <summary>The path ran out of its time before the item at <paramref name="index"/>.</summary>
         public ElementActionResult TimedOut(int index) => Fail(nameof(UIElementErrorCode.OperationTimedOut),

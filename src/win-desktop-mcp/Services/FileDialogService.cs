@@ -140,7 +140,7 @@ public sealed class FileDialogService : IFileDialogService
         var dialog = location.Dialog;
         call.Dialog = dialog;
         NoteWindow(dialog);
-        var allowed = _guard.CheckTarget(InputTarget.Window(dialog, request.AllowHostTarget));
+        var allowed = _guard.CheckTarget(InputTarget.Window(dialog, request.AllowHostTarget) with { ConfirmedHost = request.ConfirmedHost });
         if (!allowed.Allowed)
         {
             return call.Fail(allowed.ErrorCode.ToString(), $"{allowed.Error} Nothing was read or typed.");
@@ -155,7 +155,7 @@ public sealed class FileDialogService : IFileDialogService
 
         // 2. The full path, through the Value pattern
         var set = await _actions.ActAsync(new ElementActionRequest(
-            box.Ref!, ElementActionKind.SetValue, fullPath, AllowHostTarget: request.AllowHostTarget, Timeout: call.StepTimeout),
+            box.Ref!, ElementActionKind.SetValue, fullPath, AllowHostTarget: request.AllowHostTarget, Timeout: call.StepTimeout) { ConfirmedHost = request.ConfirmedHost },
             cancellationToken).ConfigureAwait(false);
         if (!set.Success)
         {
@@ -183,7 +183,7 @@ public sealed class FileDialogService : IFileDialogService
         call.FileBefore = FileStamp.Of(fullPath);
         var pressTimeout = call.StepTimeout < PressTimeout ? call.StepTimeout : PressTimeout;
         var pressed = await _actions.ActAsync(new ElementActionRequest(
-            button.Ref!, ElementActionKind.Invoke, AllowHostTarget: request.AllowHostTarget, Timeout: pressTimeout),
+            button.Ref!, ElementActionKind.Invoke, AllowHostTarget: request.AllowHostTarget, Timeout: pressTimeout) { ConfirmedHost = request.ConfirmedHost },
             cancellationToken).ConfigureAwait(false);
         nint pending = nint.Zero;
         if (!pressed.Success)
@@ -229,7 +229,7 @@ public sealed class FileDialogService : IFileDialogService
 
                 // The prompt is checked as a target before it is read, as the dialog was: a prompt of another process (a
                 // credential prompt of a network drive) that the user's policy denies is neither read nor answered
-                var promptAllowed = _guard.CheckTarget(InputTarget.Window(prompt, request.AllowHostTarget));
+                var promptAllowed = _guard.CheckTarget(InputTarget.Window(prompt, request.AllowHostTarget) with { ConfirmedHost = request.ConfirmedHost });
                 if (!promptAllowed.Allowed)
                 {
                     return call.Fail(promptAllowed.ErrorCode.ToString(),
@@ -262,7 +262,7 @@ public sealed class FileDialogService : IFileDialogService
 
                 var answer = request.Overwrite ? "yes" : "no";
                 var answered = await _dialogs.RespondAsync(
-                    new DialogResponseRequest(prompt, answer, request.AllowHostTarget, call.StepTimeout), cancellationToken).ConfigureAwait(false);
+                    new DialogResponseRequest(prompt, answer, request.AllowHostTarget, call.StepTimeout) { ConfirmedHost = request.ConfirmedHost }, cancellationToken).ConfigureAwait(false);
                 if (!answered.Success)
                 {
                     return call.Fail(answered.ErrorCode ?? nameof(UIElementErrorCode.ActionFailed),

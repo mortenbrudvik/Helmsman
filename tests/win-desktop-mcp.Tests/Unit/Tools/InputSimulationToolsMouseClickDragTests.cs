@@ -47,7 +47,7 @@ public class InputSimulationToolsMouseClickDragTests
             .Returns((CoordinateSpace _, nint _, int x, int y) => PointResolution.At(1000 + x, 200 + y, () => null));
     }
 
-    private InputSimulationTools CreateSut() => new(_input.Object, _resolver.Object, _windows.Object);
+    private InputSimulationTools CreateSut() => new(_input.Object, _resolver.Object, Permissive.HostConfirmation, _windows.Object);
 
     #region mouse_click
 

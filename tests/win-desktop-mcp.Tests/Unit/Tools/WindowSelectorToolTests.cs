@@ -420,7 +420,7 @@ public class WindowSelectorToolTests
         input.Setup(i => i.MouseClick(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<MouseButton>(), It.IsAny<int>(), It.IsAny<IReadOnlyList<MouseModifier>>(), It.IsAny<InputTarget>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .Callback((int _, int _, MouseButton _, int _, IReadOnlyList<MouseModifier> _, InputTarget target, bool _, CancellationToken _) => passed = target)
             .Returns(new ClickResult(true, 5, 6, "left"));
-        var tools = new InputSimulationTools(input.Object, Mock.Of<ICoordinateSpaceResolver>(), _windows.Object);
+        var tools = new InputSimulationTools(input.Object, Mock.Of<ICoordinateSpaceResolver>(), Permissive.HostConfirmation, _windows.Object);
         var selector = new WindowSelector { ProcessName = "notepad", TitleContains = "notes.txt" };
         _windows.Setup(w => w.ResolveWindow(selector)).Returns(WindowResolution.Found(NotepadWindow));
 
@@ -445,7 +445,7 @@ public class WindowSelectorToolTests
         input.Setup(i => i.MouseClick(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<MouseButton>(), It.IsAny<int>(), It.IsAny<IReadOnlyList<MouseModifier>>(), It.IsAny<InputTarget>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .Callback((int _, int _, MouseButton _, int _, IReadOnlyList<MouseModifier> _, InputTarget target, bool _, CancellationToken _) => passed = target)
             .Returns(new ClickResult(true, 5, 6, "left"));
-        var tools = new InputSimulationTools(input.Object, Mock.Of<ICoordinateSpaceResolver>(), _windows.Object);
+        var tools = new InputSimulationTools(input.Object, Mock.Of<ICoordinateSpaceResolver>(), Permissive.HostConfirmation, _windows.Object);
         var selector = new WindowSelector { ProcessName = "notepad", TitleRegex = "^(a+)+$" };
         _windows.Setup(w => w.ResolveWindow(selector)).Returns(WindowResolution.Found(NotepadWindow with { Title = "aaa" }));
         await tools.MouseClick(5, 6, window: selector);
@@ -468,7 +468,7 @@ public class WindowSelectorToolTests
             .Callback((int _, int _, MouseButton _, int _, IReadOnlyList<MouseModifier> _, InputTarget target, bool _, CancellationToken _) => passed = target)
             .Returns(new ClickResult(true, 5, 6, "left"));
 
-        await new InputSimulationTools(input.Object, Mock.Of<ICoordinateSpaceResolver>(), _windows.Object).MouseClick(5, 6, windowHandle: Notepad);
+        await new InputSimulationTools(input.Object, Mock.Of<ICoordinateSpaceResolver>(), Permissive.HostConfirmation, _windows.Object).MouseClick(5, 6, windowHandle: Notepad);
 
         passed!.Value.SelectorRecheck.Should().BeNull();
     }
@@ -480,7 +480,7 @@ public class WindowSelectorToolTests
         var input = new Mock<IInputSimulationService>();
         input.Setup(i => i.MouseClick(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<MouseButton>(), It.IsAny<int>(), It.IsAny<IReadOnlyList<MouseModifier>>(), It.IsAny<InputTarget>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .Returns(new ClickResult(true, 5, 6, "left"));
-        var tools = new InputSimulationTools(input.Object, Mock.Of<ICoordinateSpaceResolver>(), _windows.Object);
+        var tools = new InputSimulationTools(input.Object, Mock.Of<ICoordinateSpaceResolver>(), Permissive.HostConfirmation, _windows.Object);
 
         // Act
         await tools.MouseClick(5, 6, window: NotepadSelector);
@@ -497,7 +497,7 @@ public class WindowSelectorToolTests
         var input = new Mock<IInputSimulationService>();
         input.Setup(i => i.SendKeysAsync(It.IsAny<string>(), It.IsAny<InputTarget>(), It.IsAny<bool>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SendKeysResult(false, "%{F4}", Error: "refused", ErrorCode: InputErrorCode.DestructiveChordNeedsTarget));
-        var tools = new InputSimulationTools(input.Object, Mock.Of<ICoordinateSpaceResolver>(), _windows.Object);
+        var tools = new InputSimulationTools(input.Object, Mock.Of<ICoordinateSpaceResolver>(), Permissive.HostConfirmation, _windows.Object);
 
         // Act
         await tools.SendKeys("%{F4}", window: new WindowSelector { Foreground = true });
@@ -513,7 +513,7 @@ public class WindowSelectorToolTests
         var input = new Mock<IInputSimulationService>();
         input.Setup(i => i.TypeTextAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<InputTarget>(), It.IsAny<bool>(), It.IsAny<TextControlChars?>(), It.IsAny<TextInputMethod>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new TypeTextResult(true, 5, 5));
-        var tools = new InputSimulationTools(input.Object, Mock.Of<ICoordinateSpaceResolver>(), _windows.Object);
+        var tools = new InputSimulationTools(input.Object, Mock.Of<ICoordinateSpaceResolver>(), Permissive.HostConfirmation, _windows.Object);
 
         await tools.TypeText("hello", window: new WindowSelector { Foreground = true }, allowHostTarget: true);
 
@@ -528,7 +528,7 @@ public class WindowSelectorToolTests
     {
         // Arrange - a selector by name could resolve to the agent's own terminal without the agent ever seeing it
         var input = new Mock<IInputSimulationService>(MockBehavior.Strict);
-        var tools = new InputSimulationTools(input.Object, Mock.Of<ICoordinateSpaceResolver>(), _windows.Object);
+        var tools = new InputSimulationTools(input.Object, Mock.Of<ICoordinateSpaceResolver>(), Permissive.HostConfirmation, _windows.Object);
         var selector = foregroundWithFilter ? new WindowSelector { Foreground = true, ProcessName = "WindowsTerminal" } : NotepadSelector;
 
         // Act
@@ -550,7 +550,7 @@ public class WindowSelectorToolTests
         var input = new Mock<IInputSimulationService>();
         input.Setup(i => i.MouseClick(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<MouseButton>(), It.IsAny<int>(), It.IsAny<IReadOnlyList<MouseModifier>>(), It.IsAny<InputTarget>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .Returns(new ClickResult(true, 5, 6, "left"));
-        var tools = new InputSimulationTools(input.Object, Mock.Of<ICoordinateSpaceResolver>(), _windows.Object);
+        var tools = new InputSimulationTools(input.Object, Mock.Of<ICoordinateSpaceResolver>(), Permissive.HostConfirmation, _windows.Object);
 
         // Act
         await tools.MouseClick(5, 6, window: named, allowHostTarget: true);
@@ -563,7 +563,7 @@ public class WindowSelectorToolTests
     public async Task TypeText_WithAnAmbiguousSelector_SendsNothing()
     {
         var input = new Mock<IInputSimulationService>(MockBehavior.Strict);
-        var tools = new InputSimulationTools(input.Object, Mock.Of<ICoordinateSpaceResolver>(), _windows.Object);
+        var tools = new InputSimulationTools(input.Object, Mock.Of<ICoordinateSpaceResolver>(), Permissive.HostConfirmation, _windows.Object);
 
         var act = () => tools.TypeText("hello", window: ChromeSelector);
 
@@ -574,7 +574,7 @@ public class WindowSelectorToolTests
     public async Task SendKeys_WithWindowHandleAndWindow_IsInvalidArguments()
     {
         var input = new Mock<IInputSimulationService>(MockBehavior.Strict);
-        var tools = new InputSimulationTools(input.Object, Mock.Of<ICoordinateSpaceResolver>(), _windows.Object);
+        var tools = new InputSimulationTools(input.Object, Mock.Of<ICoordinateSpaceResolver>(), Permissive.HostConfirmation, _windows.Object);
 
         var act = () => tools.SendKeys("^s", windowHandle: Notepad, window: NotepadSelector);
 
@@ -582,12 +582,12 @@ public class WindowSelectorToolTests
     }
 
     [Fact]
-    public void Scroll_WithASelectorAndNoPoint_ScrollsTheResolvedWindow()
+    public async Task Scroll_WithASelectorAndNoPoint_ScrollsTheResolvedWindow()
     {
         var input = new Mock<IInputSimulationService>();
-        var tools = new InputSimulationTools(input.Object, Mock.Of<ICoordinateSpaceResolver>(), _windows.Object);
+        var tools = new InputSimulationTools(input.Object, Mock.Of<ICoordinateSpaceResolver>(), Permissive.HostConfirmation, _windows.Object);
 
-        tools.Scroll(window: NotepadSelector, deltaY: 3);
+        await tools.Scroll(window: NotepadSelector, deltaY: 3);
 
         input.Verify(i => i.Scroll(null, null, 3, 0, It.Is<IReadOnlyList<MouseModifier>>(m => m.Count == 0), new InputTarget((nint)Notepad, false), false,
             It.IsAny<CancellationToken>()), Times.Once);

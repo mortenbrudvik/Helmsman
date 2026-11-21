@@ -297,6 +297,8 @@ public static class ServiceRegistration
             new TargetPolicy(TargetPolicySettings.FromEnvironment(), sp.GetRequiredService<INativeWindowWrapper>()));
         services.AddSingleton(_ => InputGuardOptions.FromEnvironment());
         services.AddSingleton<IInputTargetGuard, InputTargetGuard>();
+        // allowHostTarget's question to the user (elicitation) before input reaches the agent's own host window
+        services.AddSingleton<IHostTargetConfirmation, HostTargetConfirmation>();
         services.AddSingleton<IInputSafetyInfo, InputSafetyInfo>();
         services.AddHostedService<InputSafetyStartup>(); // logs the settings in force at start
 

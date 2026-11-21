@@ -67,7 +67,7 @@ public class ElementActionRealizeToolTests
         _registry.Setup(r => r.Lookup(It.IsAny<string>())).Returns((string r) => new ElementLookup(r, Handle, null, 1));
     }
 
-    private ElementActionTools CreateSut() => new(_actions.Object, _search.Object, _registry.Object);
+    private ElementActionTools CreateSut() => new(_actions.Object, _search.Object, _registry.Object, Permissive.HostConfirmation);
 
     private static FindElementsResult Found(int matchCount, params FoundElement[] elements) =>
         new(true, Handle, "Chat", matchCount, matchCount > elements.Length, elements, 1);
@@ -581,7 +581,7 @@ public class ElementActionRealizeToolTests
             .Callback((DesktopStateRequest request, CancellationToken _) => order.Add($"observe {request.Window} after {_requests.Count} actions"))
             .ReturnsAsync(new DesktopStateSnapshot(new DesktopState(true, Handle, "Chat", null, SessionLockState.Unlocked, null, null, new DesktopInputState(false),
                 null, null, null, null, null, null, 9), null));
-        var sut = new ElementActionTools(_actions.Object, _search.Object, _registry.Object, windows.Object, desktopState.Object);
+        var sut = new ElementActionTools(_actions.Object, _search.Object, _registry.Object, Permissive.HostConfirmation, windows.Object, desktopState.Object);
 
         // Act
         var result = await sut.ElementAction(ElementActionKind.Realize, handle: Handle, name: "Old message", maxScrolls: 10,

@@ -99,7 +99,7 @@ public class CaptureCoordinateContractTests
         return InProcessMcpServer.StartAsync(
             [],
             builder => builder.AddToolErrorReporting()
-                .WithServerTools(new InputSimulationTools(input, resolver, _windowService.Object))
+                .WithServerTools(new InputSimulationTools(input, resolver, Permissive.HostConfirmation, _windowService.Object))
                 .WithServerTools(screenshotTools));
     }
 

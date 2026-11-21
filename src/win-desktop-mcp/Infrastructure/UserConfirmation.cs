@@ -16,7 +16,8 @@ public sealed record ConfirmationAnswer(bool Confirmed, string? Reason);
 /// <summary>
 /// Asks the user, not the model, to confirm an irreversible action (roadmap M2.10): the MCP client shows the question
 /// (elicitation) and only a ticked "confirm" from the user lets the action go ahead. kill_process and
-/// close_windows_batch use it when the client can ask; otherwise they fall back to their confirm argument.
+/// close_windows_batch use it when the client can ask; otherwise they fall back to their confirm argument. allowHostTarget's
+/// question (HostTargetConfirmation) has no such fallback: a client that cannot ask gets no input to the agent's host.
 /// </summary>
 /// <remarks>
 /// Never ask while holding the input gate: the user may take minutes to answer, and every input and window call would

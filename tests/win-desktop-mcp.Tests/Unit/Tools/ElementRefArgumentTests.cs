@@ -58,7 +58,7 @@ public class ElementRefArgumentTests
     public async Task ElementAction_Ref()
     {
         var sut = new ElementActionTools(new Mock<IElementActionService>().Object, new Mock<IElementSearchService>().Object,
-            new Mock<IElementRegistry>().Object);
+            new Mock<IElementRegistry>().Object, Permissive.HostConfirmation);
 
         var error = await RefusedAsync(() => sut.ElementAction(ElementActionKind.Invoke, @ref: "Save"));
 
@@ -69,7 +69,7 @@ public class ElementRefArgumentTests
     public async Task ElementAction_ListRef()
     {
         var sut = new ElementActionTools(new Mock<IElementActionService>().Object, new Mock<IElementSearchService>().Object,
-            new Mock<IElementRegistry>().Object);
+            new Mock<IElementRegistry>().Object, Permissive.HostConfirmation);
 
         var error = await RefusedAsync(() => sut.ElementAction(ElementActionKind.Realize, name: "Item 7", maxScrolls: 3, listRef: "Files"));
 

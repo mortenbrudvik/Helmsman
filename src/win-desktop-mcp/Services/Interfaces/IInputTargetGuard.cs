@@ -20,13 +20,14 @@ public enum KeyboardInputKind
 /// <item>The request: send_keys with a destructive chord and no target (DestructiveChordNeedsTarget).</item>
 /// <item>Desktop probes: SessionLocked, DesktopUnavailable.</item>
 /// <item>An explicit target: InvalidHandle; then its probes, policy and host checks (TargetElevated,
-/// TargetDeniedByPolicy, TargetIsAgentHost unless allowHostTarget, and always for a window of the server's own
+/// TargetDeniedByPolicy, TargetIsAgentHost unless allowHostTarget with the user's yes for the call (InputTarget.ConfirmedHost),
+/// and always for a window of the server's own
 /// process or one such a window owns: a prompt Windows showed for the server, which only the user answers); then
 /// BlockedByModal when a modal dialog disables it.</item>
 /// <item>The receiving window (keys: the foreground window, after EnsureForeground brought the target to
 /// the front; mouse: the top-level window at the point; no window there is TargetOccluded). With a target it
 /// must belong to the target first (TargetNotForeground, TargetOccluded). Then the same probes, policy and
-/// host checks as for a target; allowHostTarget lifts the host check only for the target's top-level window
+/// host checks as for a target; allowHostTarget, with the user's yes, lifts the host check only for the target's top-level window
 /// and the windows it owns. Keys never go to a modal dialog of the target (BlockedByModal).</item>
 /// <item>type_text only: TargetInMenuMode when a menu is active in the receiving window.</item>
 /// <item>Mouse only: MouseInUse when another window has captured the mouse (on the foreground thread, or on the
@@ -108,6 +109,26 @@ public interface IInputTargetGuard
     /// <param name="target">The call's target, as passed to <see cref="CheckTarget"/>.</param>
     /// <param name="elementWindow">The nearest window handle at or above the element; zero or not a window is InvalidHandle.</param>
     InputGuardResult CheckElementWindow(InputTarget target, nint elementWindow);
+
+    /// <summary>
+    /// The agent's host window the user must confirm before <paramref name="target"/> may get input, or null when there is
+    /// nothing to ask: no allowHostTarget, no window, a handle that is no window, a top-level window that is not the host's
+    /// (<see cref="IHostGuard.IsHostWindow"/>), or a window of the server's own process (refused whatever the user says).
+    /// Reads only; called before the input gate, so the guard checks the window again, with the approval, inside it.
+    /// </summary>
+    HostWindowToConfirm? HostWindowToConfirm(InputTarget target);
+}
+
+/// <summary>An agent's host window a call asks to send input to (<see cref="IInputTargetGuard.HostWindowToConfirm"/>).</summary>
+/// <param name="Window">The target's top-level window, as the input results describe it.</param>
+/// <param name="OnlyWhileAncestorsUnknown">
+/// True when it counts as the host's only because the server's ancestor processes cannot be read
+/// (<see cref="IHostGuard.IsHostWindowOnlyWhileAncestorsUnknown"/>): the question calls it possibly the agent's own.
+/// </param>
+public sealed record HostWindowToConfirm(WindowSummary Window, bool OnlyWhileAncestorsUnknown)
+{
+    /// <summary>The approval of this window, once the user confirmed it.</summary>
+    public HostTargetApproval Approval => new((nint)Window.Handle, Window.ProcessId);
 }
 
 /// <summary>

@@ -20,19 +20,22 @@ public class DialogTools
 
     private readonly IDialogService _dialogs;
     private readonly IFileDialogService _fileDialogs;
+    private readonly IHostTargetConfirmation _hostConfirmation;
     private readonly IWindowService? _windowService;
     private readonly IDesktopStateService? _desktopState;
 
     /// <param name="dialogs">Reads and answers dialogs.</param>
     /// <param name="fileDialogs">Completes file dialogs.</param>
+    /// <param name="hostConfirmation">Asks the user before allowHostTarget acts on a dialog of the agent's own host window.</param>
     /// <param name="windowService">Resolves the window selector (roadmap M2.4); the server always passes it.</param>
     /// <param name="desktopState">get_desktop_state's observation, for respond_to_dialog's observe (roadmap M3.F32); the server
     /// always passes it.</param>
-    public DialogTools(IDialogService dialogs, IFileDialogService fileDialogs, IWindowService? windowService = null,
-        IDesktopStateService? desktopState = null)
+    public DialogTools(IDialogService dialogs, IFileDialogService fileDialogs, IHostTargetConfirmation hostConfirmation,
+        IWindowService? windowService = null, IDesktopStateService? desktopState = null)
     {
         _dialogs = dialogs;
         _fileDialogs = fileDialogs;
+        _hostConfirmation = hostConfirmation ?? throw new ArgumentNullException(nameof(hostConfirmation));
         _windowService = windowService;
         _desktopState = desktopState;
     }
@@ -66,13 +69,15 @@ public class DialogTools
         [Description(WindowTargeting.WindowDescription)]
         WindowSelector? window = null,
         [Description("Allow answering a dialog of the agent's own host window (its terminal, editor or chat app). Works only " +
-                     "with handle (or window.handle); set it only when the user explicitly asked for it. Default: false")]
+                     "with handle (or window.handle); the server asks the user first (ConfirmationDeclined, ConfirmationRequired). " +
+                     "Use only when the user asked for it. Default: false")]
         bool allowHostTarget = false,
         [Description("The bound of each read and how long the press may block, in milliseconds (default: 5000, clamped " +
                      "to 1000-30000).")]
         int timeoutMs = DefaultRespondTimeoutMs,
         [Description(ActionObservation.ObserveDescription)]
         ObserveMode observe = ObserveMode.None,
+        McpServer? server = null,
         CancellationToken cancellationToken = default)
     {
         ActionObservation.Check(_desktopState, observe, "Nothing was done.");
@@ -85,7 +90,11 @@ public class DialogTools
                 "an AutomationId, or its visible text; leave it out to only read the dialog. Nothing was done.");
         }
 
-        var result = await _dialogs.RespondAsync(new DialogResponseRequest(target, button, allowHostTarget, timeout), cancellationToken)
+        var confirmed = await ConfirmHostAsync(server, target, allowHostTarget,
+            $"respond_to_dialog: {(button == null ? "read the dialog, pressing nothing" : $"press the button {UserConfirmation.Quote(button)}")}",
+            cancellationToken).ConfigureAwait(false);
+        var result = await _dialogs.RespondAsync(new DialogResponseRequest(target, button, allowHostTarget, timeout) { ConfirmedHost = confirmed },
+                cancellationToken)
             .ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -124,11 +133,13 @@ public class DialogTools
         [Description(WindowTargeting.WindowDescription)]
         WindowSelector? window = null,
         [Description("Allow completing a file dialog of the agent's own host window (its terminal, editor or chat app). Works " +
-                     "only with handle (or window.handle); set it only when the user explicitly asked for it. Default: false")]
+                     "only with handle (or window.handle); the server asks the user first (ConfirmationDeclined, " +
+                     "ConfirmationRequired). Use only when the user asked for it. Default: false")]
         bool allowHostTarget = false,
         [Description("How long the whole call may take, the wait for the dialog to close included, in milliseconds (default: " +
                      "10000, clamped to 1000-60000).")]
         int timeoutMs = DefaultFileDialogTimeoutMs,
+        McpServer? server = null,
         CancellationToken cancellationToken = default)
     {
         var checkedPath = FileDialogPaths.Check(path, action, overwrite);
@@ -139,10 +150,32 @@ public class DialogTools
 
         var target = Target(handle, window, allowHostTarget);
         var timeout = TimeSpan.FromMilliseconds(Math.Clamp(timeoutMs, MinTimeoutMs, MaxFileDialogTimeoutMs));
-        var result = await _fileDialogs.CompleteAsync(new FileDialogRequest(target, path, action, overwrite, allowHostTarget, timeout),
+        var confirmed = await ConfirmHostAsync(server, target, allowHostTarget,
+            $"file_dialog: {ToolEnum<FileDialogAction>.Name(action)} {UserConfirmation.QuotePath(path)}{(overwrite ? ", replacing the file" : string.Empty)}",
             cancellationToken).ConfigureAwait(false);
+        var result = await _fileDialogs.CompleteAsync(
+            new FileDialogRequest(target, path, action, overwrite, allowHostTarget, timeout) { ConfirmedHost = confirmed }, cancellationToken)
+            .ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
         return result;
+    }
+
+    /// <summary>
+    /// Asks the user before allowHostTarget acts on a dialog of the agent's own host window <paramref name="window"/> (nothing is
+    /// asked for another window, or without allowHostTarget), before the action takes the input gate; the approval.
+    /// </summary>
+    /// <exception cref="ToolErrorException">ConfirmationRequired or ConfirmationDeclined: nothing is done.</exception>
+    private async Task<HostTargetApproval?> ConfirmHostAsync(McpServer? server, nint window, bool allowHostTarget, string input,
+        CancellationToken cancellationToken)
+    {
+        if (!allowHostTarget || window == nint.Zero)
+        {
+            return null;
+        }
+
+        var confirmed = await _hostConfirmation.ConfirmAsync(server, [InputTarget.Window(window, allowHostTarget: true)], input, cancellationToken)
+            .ConfigureAwait(false);
+        return confirmed.For(window);
     }
 
     /// <summary>

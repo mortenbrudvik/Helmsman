@@ -36,7 +36,7 @@ public class ElementActionToolTests
     private MenuPathRequest? _menuRequest;
 
     private ElementActionTools CreateSut() =>
-        new(_actions.Object, _search.Object, _registry.Object, _windowService.Object, menuPaths: _menuPaths.Object);
+        new(_actions.Object, _search.Object, _registry.Object, Permissive.HostConfirmation, _windowService.Object, menuPaths: _menuPaths.Object);
 
     private void SetUpMenuPaths() =>
         _menuPaths.Setup(m => m.RunAsync(It.IsAny<MenuPathRequest>(), It.IsAny<CancellationToken>()))
@@ -295,7 +295,7 @@ public class ElementActionToolTests
                 new DesktopState(true, request.Window ?? 0x77, "after", null, SessionLockState.Unlocked, null, null, new DesktopInputState(false),
                     null, null, null, null, null, null, 9),
                 request.Include.Contains(DesktopStateSection.Screenshot) ? new EncodedImage([1, 2, 3], "image/png") : null));
-        return new ElementActionTools(_actions.Object, _search.Object, _registry.Object, _windows.Object, _desktopState.Object,
+        return new ElementActionTools(_actions.Object, _search.Object, _registry.Object, Permissive.HostConfirmation, _windows.Object, _desktopState.Object,
             _menuPaths.Object);
     }
 

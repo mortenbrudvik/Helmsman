@@ -18,6 +18,15 @@ public sealed record WindowSummary(long Handle, string Title, string ProcessName
 public sealed record SelectorRefusal(string ErrorCode, string Error);
 
 /// <summary>
+/// The agent's host window the user confirmed input to, for one call (<see cref="InputTarget.ConfirmedHost"/>): the
+/// top-level window as the user was shown it, with its process, so a handle reused by another process's window is not
+/// covered.
+/// </summary>
+/// <param name="Window">The top-level window the user confirmed.</param>
+/// <param name="ProcessId">Its process when the user was asked (for a UWP frame, the app's own, as the window tools report it).</param>
+public sealed record HostTargetApproval(nint Window, int ProcessId);
+
+/// <summary>
 /// The window an input call is meant for (roadmap M1.5), or none. With a window the input guard brings it
 /// to the front (keys) or checks that the point is on it (mouse), and refuses to send input that would
 /// land elsewhere.
@@ -25,7 +34,8 @@ public sealed record SelectorRefusal(string ErrorCode, string Error);
 /// <param name="WindowHandle">The target window, or null for no target.</param>
 /// <param name="AllowHostTarget">
 /// Lets input reach the agent's own host window (its terminal, editor or chat app), but only when that
-/// window is the explicit target. It has no effect without <paramref name="WindowHandle"/>.
+/// window is the explicit target and the user confirmed it for this call (<see cref="ConfirmedHost"/>). It has no effect
+/// without <paramref name="WindowHandle"/>.
 /// </param>
 public readonly record struct InputTarget(nint? WindowHandle, bool AllowHostTarget = false)
 {
@@ -65,6 +75,14 @@ public readonly record struct InputTarget(nint? WindowHandle, bool AllowHostTarg
     /// focused. It reads the application's focus, so it must bound its own wait: the gate is held while it runs.
     /// </summary>
     public Func<SelectorRefusal?>? FocusRecheck { get; init; }
+
+    /// <summary>
+    /// The agent's host window the user confirmed this call's input to (allowHostTarget), or null. Only the server sets it,
+    /// after the user's yes through the client (Infrastructure.HostTargetConfirmation); no tool argument does. The input
+    /// guard lifts the host rule only for a target that is that window (the same handle, of the same process) or a window it
+    /// owns, so allowHostTarget alone never reaches the host.
+    /// </summary>
+    public HostTargetApproval? ConfirmedHost { get; init; }
 
     /// <summary>Two targets are equal when they name the same window with the same host rule; the rechecks are not compared.</summary>
     public bool Equals(InputTarget other) => WindowHandle == other.WindowHandle && AllowHostTarget == other.AllowHostTarget;
@@ -390,7 +408,8 @@ public enum InputErrorCode
 
     /// <summary>
     /// The input would reach the agent's own host (its terminal, editor or chat app, or a window it owns),
-    /// and the call did not target that window explicitly with allowHostTarget=true.
+    /// and the call did not target that window explicitly with allowHostTarget=true, or the user's yes to it (asked by the
+    /// server for that call) does not cover the window the input would reach now.
     /// </summary>
     TargetIsAgentHost = 20,
 

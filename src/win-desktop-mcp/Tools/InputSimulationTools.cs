@@ -32,8 +32,9 @@ public class InputSimulationTools
         "top-level window; click the field first to put the caret in it. Default: none";
 
     internal const string AllowHostTargetDescription =
-        "Allow input to the agent's own host window: the terminal, editor or chat app this server was started from. Works only " +
-        "together with windowHandle (or window.handle) naming that window; set it only when the user explicitly asked for input there. Default: false";
+        "Allow input to the agent's own host window (its terminal, editor or chat app), named by windowHandle or window.handle. The " +
+        "server asks the user first; nothing is sent without their yes (ConfirmationDeclined) or when the client cannot ask " +
+        "(ConfirmationRequired). Use only when the user asked for it. Default: false";
 
     internal const string ReleaseHeldModifiersDescription =
         "Release modifier keys (Shift, Ctrl, Alt, Windows) that are down before the input is sent, instead of refusing with " +
@@ -91,18 +92,21 @@ public class InputSimulationTools
     private readonly IInputSimulationService _inputService;
     private readonly IWindowService? _windowService;
     private readonly ICoordinateSpaceResolver _coordinates;
+    private readonly IHostTargetConfirmation _hostConfirmation;
     private readonly IDesktopStateService? _desktopState;
 
     /// <param name="inputService">The guarded input.</param>
     /// <param name="coordinates">Converts window, client and image points to screen points (roadmap M3.11).</param>
+    /// <param name="hostConfirmation">Asks the user before allowHostTarget sends input to the agent's own host window.</param>
     /// <param name="windowService">Resolves the window selector (roadmap M2.4); the server always passes it.</param>
     /// <param name="desktopState">get_desktop_state's observation, for observe (roadmap M3.F32); the server always passes it.</param>
     public InputSimulationTools(IInputSimulationService inputService, ICoordinateSpaceResolver coordinates,
-        IWindowService? windowService = null, IDesktopStateService? desktopState = null)
+        IHostTargetConfirmation hostConfirmation, IWindowService? windowService = null, IDesktopStateService? desktopState = null)
     {
         _inputService = inputService;
         _windowService = windowService;
         _coordinates = coordinates ?? throw new ArgumentNullException(nameof(coordinates));
+        _hostConfirmation = hostConfirmation ?? throw new ArgumentNullException(nameof(hostConfirmation));
         _desktopState = desktopState;
     }
 
@@ -139,6 +143,7 @@ public class InputSimulationTools
         string? captureId = null,
         [Description(ActionObservation.ObserveDescription)]
         ObserveMode observe = ObserveMode.None,
+        McpServer? server = null,
         CancellationToken cancellationToken = default)
     {
         if (clickCount is < 1 or > InputBatchBuilder.MaxClicks)
@@ -157,8 +162,11 @@ public class InputSimulationTools
             }, point.Target, observe, cancellationToken).ConfigureAwait(false);
         }
 
-        return await ObserveAsync(Echo(_inputService.MouseClick(point.X, point.Y, button, clickCount, modifiers ?? [], point.Target,
-            releaseHeldModifiers, cancellationToken), point.Requested), point.Target, observe, cancellationToken).ConfigureAwait(false);
+        var confirmed = await ConfirmAsync(server, [point.Target],
+            $"mouse_click: {ClickName(button, clickCount)} at ({point.X}, {point.Y}){With(modifiers)}", cancellationToken).ConfigureAwait(false);
+        var target = confirmed.Apply(point.Target);
+        return await ObserveAsync(Echo(_inputService.MouseClick(point.X, point.Y, button, clickCount, modifiers ?? [], target,
+            releaseHeldModifiers, cancellationToken), point.Requested), target, observe, cancellationToken).ConfigureAwait(false);
     }
 
     [McpServerTool(Name = "drag", Title = "Drag", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false)]
@@ -208,6 +216,7 @@ public class InputSimulationTools
         string? captureId = null,
         [Description(ActionObservation.ObserveDescription)]
         ObserveMode observe = ObserveMode.None,
+        McpServer? server = null,
         CancellationToken cancellationToken = default)
     {
         var request = new DragRequest(fromX, fromY, toX, toY, button, modifiers ?? [], steps, stepDelayMs, holdBeforeMoveMs);
@@ -236,6 +245,11 @@ public class InputSimulationTools
         }
         else
         {
+            // One question for both points' windows
+            var confirmed = await ConfirmAsync(server, [from.Target, to.Target],
+                $"drag: press the {ToolEnum<MouseButton>.Name(button)} button at ({from.X}, {from.Y}) and release it at ({to.X}, {to.Y}){With(modifiers)}",
+                cancellationToken).ConfigureAwait(false);
+            (@from, to) = (@from with { Target = confirmed.Apply(@from.Target) }, to with { Target = confirmed.Apply(to.Target) });
             result = await _inputService.DragAsync(request with { FromX = from.X, FromY = from.Y, ToX = to.X, ToY = to.Y }, from.Target,
                 to.Target, releaseHeldModifiers, cancellationToken).ConfigureAwait(false);
         }
@@ -249,7 +263,7 @@ public class InputSimulationTools
     [McpServerTool(Name = "mouse_move", Title = "Move Mouse Pointer", ReadOnly = false, Destructive = false, Idempotent = true, OpenWorld = false)]
     [Description("Move the mouse cursor to the specified screen coordinates, or to a point of a capture's image with its captureId, without clicking. Useful for hovering over elements to trigger tooltips or hover states." +
                  " Pass windowHandle with the window you mean; the same checks as for mouse_click apply (TargetOccluded, BlockedByModal, TargetIsAgentHost, MouseInUse); a pointer that does not get to the point is CursorClamped." + GuardNote)]
-    public MouseMoveResult MouseMove(
+    public async Task<MouseMoveResult> MouseMove(
         [Description(XDescription)]
         int x,
         [Description(YDescription)]
@@ -266,6 +280,7 @@ public class InputSimulationTools
         CoordinateSpace? space = null,
         [Description(CaptureIdDescription)]
         string? captureId = null,
+        McpServer? server = null,
         CancellationToken cancellationToken = default)
     {
         var point = Point(x, y, space, captureId, windowHandle, window, allowHostTarget);
@@ -274,7 +289,10 @@ public class InputSimulationTools
             return new MouseMoveResult(false, x, y, failure.Error, failure.ErrorCode) { Requested = point.Requested };
         }
 
-        return Echo(_inputService.MoveMouse(point.X, point.Y, point.Target, releaseHeldModifiers, cancellationToken), point.Requested);
+        var confirmed = await ConfirmAsync(server, [point.Target], $"mouse_move: move the pointer to ({point.X}, {point.Y})", cancellationToken)
+            .ConfigureAwait(false);
+        return Echo(_inputService.MoveMouse(point.X, point.Y, confirmed.Apply(point.Target), releaseHeldModifiers, cancellationToken),
+            point.Requested);
     }
 
     [McpServerTool(Name = "scroll", Title = "Scroll", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false)]
@@ -289,7 +307,7 @@ public class InputSimulationTools
                  "content, not at such a control. To see whether the content moved, read it again (get_ui_elements, a capture)." +
                  " The same checks as for mouse_click apply (TargetOccluded, BlockedByModal, TargetIsAgentHost, CursorNotAtPoint, MouseInUse, CursorClamped)." +
                  GuardNote)]
-    public ScrollResult Scroll(
+    public async Task<ScrollResult> Scroll(
         [Description(MouseWindowHandleDescription)]
         long? windowHandle = null,
         [Description(WindowTargeting.InputWindowDescription)]
@@ -312,6 +330,7 @@ public class InputSimulationTools
         CoordinateSpace? space = null,
         [Description(CaptureIdDescription)]
         string? captureId = null,
+        McpServer? server = null,
         CancellationToken cancellationToken = default)
     {
         if (x.HasValue != y.HasValue)
@@ -336,8 +355,10 @@ public class InputSimulationTools
                 return new ScrollResult(false, pointX, pointY, deltaY, deltaX, failure.Error, failure.ErrorCode) { Requested = point.Requested };
             }
 
-            return Echo(_inputService.Scroll(point.X, point.Y, deltaY, deltaX, modifiers ?? [], point.Target, releaseHeldModifiers,
-                cancellationToken), point.Requested);
+            var confirmedAtPoint = await ConfirmAsync(server, [point.Target],
+                $"scroll: {Notches(deltaY, deltaX)} at ({point.X}, {point.Y}){With(modifiers)}", cancellationToken).ConfigureAwait(false);
+            return Echo(_inputService.Scroll(point.X, point.Y, deltaY, deltaX, modifiers ?? [], confirmedAtPoint.Apply(point.Target),
+                releaseHeldModifiers, cancellationToken), point.Requested);
         }
 
         if ((space != null && space != CoordinateSpace.Screen) || captureId != null)
@@ -356,7 +377,9 @@ public class InputSimulationTools
                 "x and y. {\"foreground\": true} alone names no window here. Nothing was scrolled.");
         }
 
-        return _inputService.Scroll(null, null, deltaY, deltaX, modifiers ?? [], target, releaseHeldModifiers, cancellationToken);
+        var confirmed = await ConfirmAsync(server, [target], $"scroll: {Notches(deltaY, deltaX)} at the centre of the window{With(modifiers)}",
+            cancellationToken).ConfigureAwait(false);
+        return _inputService.Scroll(null, null, deltaY, deltaX, modifiers ?? [], confirmed.Apply(target), releaseHeldModifiers, cancellationToken);
     }
 
     [McpServerTool(Name = "type_text", Title = "Type Text", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false)]
@@ -392,11 +415,14 @@ public class InputSimulationTools
         bool releaseHeldModifiers = false,
         [Description(ActionObservation.ObserveDescription)]
         ObserveMode observe = ObserveMode.None,
+        McpServer? server = null,
         CancellationToken cancellationToken = default)
     {
         ActionObservation.Check(_desktopState, observe, NothingSent);
         delayMs = Math.Clamp(delayMs, 0, 100);
         var target = Target(windowHandle, window, allowHostTarget);
+        target = (await ConfirmAsync(server, [target], $"type_text: {HostTargetConfirmation.TextPreview(text)}", cancellationToken)
+            .ConfigureAwait(false)).Apply(target);
         var result = await _inputService.TypeTextAsync(text, delayMs, target, releaseHeldModifiers, controlChars, method, cancellationToken)
             .ConfigureAwait(false);
         return await ActionObservation.ResultAsync(result, result.Success, Acted(target, result.ReceivingWindow),
@@ -434,11 +460,14 @@ public class InputSimulationTools
         [Description("Milliseconds between keys, each press of {NAME n} counting (clamped to 0-500, default 0; more than 10000 ms in all is InvalidArguments). " +
                      "For apps that drop fast keys.")]
         int delayMs = 0,
+        McpServer? server = null,
         CancellationToken cancellationToken = default)
     {
         ActionObservation.Check(_desktopState, observe, NothingSent);
         delayMs = Math.Clamp(delayMs, 0, InputSimulationService.MaxSendKeysDelayMs);
         var target = Target(windowHandle, window, allowHostTarget);
+        target = (await ConfirmAsync(server, [target], $"send_keys: the keys {HostTargetConfirmation.KeysPreview(keys)}", cancellationToken)
+            .ConfigureAwait(false)).Apply(target);
         var result = await _inputService.SendKeysAsync(keys, target, releaseHeldModifiers, delayMs, cancellationToken).ConfigureAwait(false);
         return await ActionObservation.ResultAsync(result, result.Success, Acted(target, result.ReceivingWindow),
             ActionObservation.RefusesWindow(result.ErrorCode.ToString()), observe, (sent, observed) => sent with { Observed = observed },
@@ -479,6 +508,7 @@ public class InputSimulationTools
         bool releaseHeldModifiers = false,
         [Description(ActionObservation.ObserveDescription)]
         ObserveMode observe = ObserveMode.None,
+        McpServer? server = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(keys);
@@ -492,6 +522,9 @@ public class InputSimulationTools
 
         ActionObservation.Check(_desktopState, observe, NothingSent);
         var target = Target(windowHandle, window, allowHostTarget);
+        target = (await ConfirmAsync(server, [target],
+            $"press_keys: the keys {HostTargetConfirmation.KeysPreview(keys.Text)}{(repeat > 1 ? $", {repeat} times" : string.Empty)}",
+            cancellationToken).ConfigureAwait(false)).Apply(target);
         SendKeysResult result;
         try
         {
@@ -507,6 +540,41 @@ public class InputSimulationTools
         return await ActionObservation.ResultAsync(result, result.Success, Acted(target, result.ReceivingWindow),
             ActionObservation.RefusesWindow(result.ErrorCode.ToString()), observe, (pressed, observed) => pressed with { Observed = observed },
             _desktopState, _windowService, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Asks the user before allowHostTarget sends <paramref name="input"/> to the agent's own host window among
+    /// <paramref name="targets"/> (nothing is asked otherwise), before the input service takes the input gate.
+    /// </summary>
+    /// <exception cref="ToolErrorException">ConfirmationRequired or ConfirmationDeclined: nothing is sent.</exception>
+    private Task<HostConfirmation> ConfirmAsync(McpServer? server, IReadOnlyList<InputTarget> targets, string input,
+        CancellationToken cancellationToken) =>
+        _hostConfirmation.ConfirmAsync(server, targets, input, cancellationToken);
+
+    /// <summary>A click as the user's question names it: "a double primary click".</summary>
+    private static string ClickName(MouseButton button, int clickCount) =>
+        $"{clickCount switch { 2 => "a double", 3 => "a triple", _ => "a" }} {ToolEnum<MouseButton>.Name(button)} click";
+
+    /// <summary>The modifier keys held, for the question: " with ctrl+shift", or nothing.</summary>
+    private static string With(MouseModifier[]? modifiers) =>
+        modifiers is { Length: > 0 } ? $" with {string.Join("+", modifiers.Distinct().Select(ToolEnum<MouseModifier>.Name))}" : string.Empty;
+
+    /// <summary>The wheel's turn, for the question: "3 notches down", "2 notches down and 1 notch left".</summary>
+    private static string Notches(int deltaY, int deltaX)
+    {
+        static string Of(int count, string way) => $"{Math.Abs(count)} notch{(Math.Abs(count) == 1 ? string.Empty : "es")} {way}";
+        var parts = new List<string>();
+        if (deltaY != 0)
+        {
+            parts.Add(Of(deltaY, deltaY > 0 ? "down" : "up"));
+        }
+
+        if (deltaX != 0)
+        {
+            parts.Add(Of(deltaX, deltaX > 0 ? "right" : "left"));
+        }
+
+        return string.Join(" and ", parts);
     }
 
     /// <summary>
