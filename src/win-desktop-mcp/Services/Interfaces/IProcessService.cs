@@ -3,6 +3,12 @@ using WinDesktopMcp.Models.Results;
 
 namespace WinDesktopMcp.Services.Interfaces;
 
+/// <summary>
+/// The process services in one interface, for the tools and services that use several of them: each member is the one of
+/// <see cref="ILaunchPlanner"/>, <see cref="IApplicationLauncher"/>, <see cref="IProcessListing"/>,
+/// <see cref="IProcessTermination"/> or <see cref="IDebugBrowserLauncher"/> it names (<see cref="ProcessService"/> hands
+/// each call on).
+/// </summary>
 public interface IProcessService
 {
     /// <inheritdoc cref="IApplicationLauncher.LaunchApplicationAsync(string, string[], string, bool, int, CancellationToken)"/>
@@ -51,14 +57,7 @@ public interface IProcessService
         IProgress<OperationProgress>? progress = null,
         CancellationToken cancellationToken = default);
 
-    /// <summary>
-    /// Launches a browser with CDP (Chrome DevTools Protocol) debug port enabled, with a profile of its own and without
-    /// first-run screens (roadmap M5.1). Success means the started browser is running and its port is known; a launch
-    /// that handed off to a browser already running with the same profile fails with DebugLaunchFailed.
-    /// </summary>
-    /// <param name="request">The browser, url, port (0: the browser picks one), profile and .exe.</param>
-    /// <param name="cancellationToken">Cancels the call, as for <see cref="LaunchApplicationAsync(LaunchRequest, bool, int, CancellationToken)"/>.</param>
-    /// <returns>Result containing process ID, window handle, CDP port, user data directory and the launch status.</returns>
+    /// <inheritdoc cref="IDebugBrowserLauncher.LaunchBrowserWithDebugAsync"/>
     Task<DebugBrowserLaunchResult> LaunchBrowserWithDebugAsync(
         DebugBrowserLaunchRequest request,
         CancellationToken cancellationToken = default);

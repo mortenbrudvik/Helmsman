@@ -11,7 +11,7 @@ public interface INativeAppsWrapper
     /// <summary>
     /// Activates a packaged app through IApplicationActivationManager.ActivateApplication (AO_NOERRORUI), on a
     /// single-threaded apartment thread of its own, and blocks until Windows answers: a cold start with a splash screen
-    /// can take seconds, so call it from a thread that may wait (ProcessService abandons it after its activation timeout).
+    /// can take seconds, so call it from a thread that may wait (ApplicationLauncher abandons it after its activation timeout).
     /// Never throws.
     /// </summary>
     /// <param name="appUserModelId">The packaged app's AppUserModelID (PackageFamilyName!AppId).</param>

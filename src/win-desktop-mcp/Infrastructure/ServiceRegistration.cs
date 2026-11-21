@@ -106,6 +106,9 @@ public static class ServiceRegistration
         services.AddSingleton<IProcessListing, ProcessListingService>();
         // kill_process: the protected processes, the target policy and the agent's host, for its process tree too
         services.AddSingleton<IProcessTermination, ProcessTerminationService>();
+        // launch_browser_with_debug's launch (roadmap M5.1), through the launcher above
+        services.AddSingleton<IDebugBrowserLauncher, DebugBrowserLauncher>();
+        // The tools' one entry to the services above; it only hands each call on
         services.AddSingleton<IProcessService, ProcessService>();
         // Packaged app activation and the installed apps (roadmap M6.5): launch_application's AppUserModelIDs and friendly
         // names, and list_installed_apps. The E2E harness refuses the activation (WrapperCatalog: ProcessStart)

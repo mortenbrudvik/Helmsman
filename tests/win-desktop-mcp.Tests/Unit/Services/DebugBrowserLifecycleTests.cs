@@ -20,7 +20,7 @@ public sealed class DebugBrowserLifecycleTests : IDisposable
 
     private readonly string _root = Path.Combine(Path.GetTempPath(), $"wam-m54-lifecycle-{Guid.NewGuid():N}");
     private readonly DebugBrowserProfiles _profiles;
-    private readonly Mock<IProcessService> _processes = new();
+    private readonly Mock<IDebugBrowserLauncher> _processes = new();
     private readonly Mock<INativeProcessWrapper> _native = new();
     private readonly Mock<IDebugPortLocator> _ports = new();
     private readonly Mock<ICdpService> _cdp = new();

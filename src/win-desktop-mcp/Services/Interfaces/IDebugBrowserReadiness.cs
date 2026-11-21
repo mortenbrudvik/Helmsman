@@ -4,7 +4,7 @@ namespace WinDesktopMcp.Services.Interfaces;
 
 /// <summary>
 /// Checks that a debug browser's DevTools endpoint answers before launch_browser_with_debug reports success (roadmap
-/// M5.1). <see cref="ProcessService"/> calls it once the browser has started, kept its window and reported its port; it
+/// M5.1). <see cref="DebugBrowserLauncher"/> calls it once the browser has started, kept its window and reported its port; it
 /// has no CDP dependency itself, so the check over /json/version is <see cref="DebugBrowserReadinessProbe"/>, over
 /// <see cref="ICdpService"/>. Without one, the launch is reported once the port is known (cdpReady null).
 /// </summary>

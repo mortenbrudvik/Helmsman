@@ -171,6 +171,7 @@ src/win-desktop-mcp/Services/BrowserCdpTargets.cs -> Infrastructure.ToolErrorRep
 src/win-desktop-mcp/Services/BrowserDialogService.cs -> Infrastructure.ToolErrorReporting
 src/win-desktop-mcp/Services/BrowserPageService.cs -> Infrastructure.ToolErrorReporting
 src/win-desktop-mcp/Services/BrowserTabService.cs -> Infrastructure.ToolErrorReporting
+src/win-desktop-mcp/Services/DebugBrowserLauncher.cs -> Infrastructure.ToolErrorReporting  # moved out of ProcessService when it was split; the same dependency it had
 src/win-desktop-mcp/Services/DebugBrowserLifecycle.cs -> Infrastructure.ToolErrorReporting
 src/win-desktop-mcp/Services/DesktopStateService.cs -> Infrastructure.ToolErrorReporting
 src/win-desktop-mcp/Services/DialogService.cs -> Infrastructure.AppText
@@ -183,7 +184,6 @@ src/win-desktop-mcp/Services/FileDialogService.cs -> Infrastructure.ToolErrorRep
 src/win-desktop-mcp/Services/LaunchPlanner.cs -> Infrastructure.ToolErrorReporting  # moved out of ProcessService when it was split; the same dependency it had
 src/win-desktop-mcp/Services/LayoutService.cs -> Infrastructure.ToolErrorReporting
 src/win-desktop-mcp/Services/MenuPathService.cs -> Infrastructure.ToolErrorReporting
-src/win-desktop-mcp/Services/ProcessService.cs -> Infrastructure.ToolErrorReporting
 src/win-desktop-mcp/Services/ServerInfoService.cs -> Infrastructure.ServerIdentity
 src/win-desktop-mcp/Services/ServerStartupLog.cs -> Infrastructure.ToolsetSelection
 

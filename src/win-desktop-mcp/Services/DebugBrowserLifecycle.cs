@@ -44,7 +44,7 @@ public sealed class DebugBrowserLifecycle : IDebugBrowserLifecycle
     /// <summary>How long <see cref="AbandonAsync"/> waits for the browser it ends to exit, and tries its profile's delete.</summary>
     private static readonly TimeSpan AbandonTimeout = TimeSpan.FromSeconds(5);
 
-    private readonly IProcessService _processes;
+    private readonly IDebugBrowserLauncher _launcher;
     private readonly INativeProcessWrapper _native;
     private readonly IDebugPortLocator _ports;
     private readonly ITcpPortOwnerResolver _portOwners;
@@ -61,7 +61,7 @@ public sealed class DebugBrowserLifecycle : IDebugBrowserLifecycle
 
     private sealed record StartedBrowser(int ProcessId, DateTime StartTime, string UserDataDir);
 
-    /// <param name="processes">Starts the browser (launch_browser_with_debug's launch).</param>
+    /// <param name="launcher">Starts the browser (launch_browser_with_debug's launch).</param>
     /// <param name="native">Reads process lists, command lines and start times; opens and ends processes.</param>
     /// <param name="ports">Finds a browser's own DevTools port from its command line.</param>
     /// <param name="portOwners">Tells which process listens on a port.</param>
@@ -73,7 +73,7 @@ public sealed class DebugBrowserLifecycle : IDebugBrowserLifecycle
     /// <param name="session">The input session, whose pause a refused gate reports by its cause (the server may have paused
     /// itself).</param>
     public DebugBrowserLifecycle(
-        IProcessService processes,
+        IDebugBrowserLauncher launcher,
         INativeProcessWrapper native,
         IDebugPortLocator ports,
         ITcpPortOwnerResolver portOwners,
@@ -84,7 +84,7 @@ public sealed class DebugBrowserLifecycle : IDebugBrowserLifecycle
         IHostGuard hostGuard,
         IInputSession session)
     {
-        _processes = processes;
+        _launcher = launcher;
         _native = native;
         _ports = ports;
         _portOwners = portOwners;
@@ -137,7 +137,7 @@ public sealed class DebugBrowserLifecycle : IDebugBrowserLifecycle
             _profiles.SweepStaleTemporary(folder => _started.Values.Any(b => DebugBrowserProfiles.SamePath(b.UserDataDir, folder)));
         }
 
-        var result = await _processes.LaunchBrowserWithDebugAsync(request, cancellationToken).ConfigureAwait(false);
+        var result = await _launcher.LaunchBrowserWithDebugAsync(request, cancellationToken).ConfigureAwait(false);
         if (result is { ProcessId: int processId, StartTime: DateTime startTime, UserDataDir: { } profile })
             _started[processId] = new StartedBrowser(processId, startTime, DebugBrowserProfiles.Normalize(profile));
 

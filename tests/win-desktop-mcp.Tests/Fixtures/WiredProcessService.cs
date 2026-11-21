@@ -12,18 +12,14 @@ public sealed class WiredProcessService : ProcessService
         ApplicationLauncher launcher,
         ProcessListingService listing,
         ProcessTerminationService termination,
-        INativeProcessWrapper processWrapper,
-        IHostGuard hostGuard,
-        DebugBrowserLocator debugBrowserLocator,
-        IDebugBrowserReadiness? debugBrowserReadiness,
-        DebugBrowserProfiles? debugBrowserProfiles)
-        : base(planner, launcher, listing, termination, processWrapper, hostGuard, debugBrowserLocator, debugBrowserReadiness,
-            debugBrowserProfiles)
+        DebugBrowserLauncher debugBrowsers)
+        : base(planner, launcher, listing, termination, debugBrowsers)
     {
         Planner = planner;
         Launcher = launcher;
         Listing = listing;
         Termination = termination;
+        DebugBrowsers = debugBrowsers;
     }
 
     /// <summary>Plans the launches.</summary>
@@ -37,6 +33,9 @@ public sealed class WiredProcessService : ProcessService
 
     /// <summary>kill_process.</summary>
     public ProcessTerminationService Termination { get; }
+
+    /// <summary>launch_browser_with_debug's launch.</summary>
+    public DebugBrowserLauncher DebugBrowsers { get; }
 
     /// <summary><see cref="Planner"/>'s <see cref="LaunchPlanner.PlanLaunch"/>.</summary>
     public LaunchPlan PlanLaunch(
@@ -82,16 +81,12 @@ public sealed class WiredProcessService : ProcessService
         };
         var listing = new ProcessListingService(windowService, processWrapper, targetPolicy, securityProbe);
         var termination = new ProcessTerminationService(processWrapper, targetPolicy, hostGuard);
-        if (devToolsPortTimeout is not { } portTimeout)
-        {
-            return new WiredProcessService(planner, launcher, listing, termination, processWrapper, hostGuard, debugBrowserLocator,
-                debugBrowserReadiness, debugBrowserProfiles);
-        }
-
-        return new WiredProcessService(planner, launcher, listing, termination, processWrapper, hostGuard, debugBrowserLocator,
-            debugBrowserReadiness, debugBrowserProfiles)
-        {
-            DevToolsPortTimeout = portTimeout
-        };
+        var debugBrowsers = devToolsPortTimeout is { } portTimeout
+            ? new DebugBrowserLauncher(launcher, processWrapper, hostGuard, debugBrowserLocator, debugBrowserReadiness, debugBrowserProfiles)
+            {
+                DevToolsPortTimeout = portTimeout
+            }
+            : new DebugBrowserLauncher(launcher, processWrapper, hostGuard, debugBrowserLocator, debugBrowserReadiness, debugBrowserProfiles);
+        return new WiredProcessService(planner, launcher, listing, termination, debugBrowsers);
     }
 }

@@ -166,7 +166,7 @@ public class ChromiumSwitchLaunchTests
     public void PlanLaunch_TheDebugBrowsersOwnArguments_PassOnlyForTheDebugLaunch()
     {
         // launch_browser_with_debug's own start (LaunchRequest.DebugBrowserLaunch) opens the port next to a checked profile
-        var arguments = ProcessService.BuildDebugBrowserArguments(0, @"C:\Users\Jane Doe\AppData\Local\Temp\browser-debug-1", "https://example.com/");
+        var arguments = DebugBrowserLauncher.BuildDebugBrowserArguments(0, @"C:\Users\Jane Doe\AppData\Local\Temp\browser-debug-1", "https://example.com/");
 
         CreateSut().PlanLaunch(Edge, arguments.ToArray(), debugBrowserLaunch: true).IsValid.Should().BeTrue();
         CreateSut().PlanLaunch(Edge, arguments.ToArray()).ErrorCode.Should().Be(nameof(LaunchErrorCode.UnsafeChromiumSwitch));

@@ -16,7 +16,7 @@ namespace WinDesktopMcp.Services;
 /// "C:\Program Files (x86)\..." or "C:\Users\O'Brien\..." are accepted. Bare names and relative
 /// paths never legitimately contain shell metacharacters, so they keep the stricter check.
 /// The real cmd.exe injection surface (arguments passed to a target that may be run through cmd.exe) is handled by
-/// <see cref="ProcessService"/> once the launch target has been resolved, and so are interpreters with arguments and
+/// <see cref="LaunchPlanner"/> once the launch target has been resolved, and so are interpreters with arguments and
 /// scripts (<see cref="InterpreterGuard"/>, roadmap M3.F8).
 /// </remarks>
 public partial class InputValidationService : IInputValidationService

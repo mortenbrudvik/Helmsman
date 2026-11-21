@@ -46,7 +46,7 @@ public class LaunchPlanningTests
     {
         // Arrange
         ResolveAs(EdgeX86, LaunchTargetKind.NativeExecutable);
-        var arguments = ProcessService.BuildDebugBrowserArguments(9222, @"C:\Users\Jane Doe\AppData\Local\Temp\browser-debug-1", url: null);
+        var arguments = DebugBrowserLauncher.BuildDebugBrowserArguments(9222, @"C:\Users\Jane Doe\AppData\Local\Temp\browser-debug-1", url: null);
 
         // Act - as launch_browser_with_debug plans it (LaunchRequest.DebugBrowserLaunch): only its own start may open the
         // debug port (review F2)

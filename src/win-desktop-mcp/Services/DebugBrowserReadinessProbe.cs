@@ -134,7 +134,7 @@ public sealed class DebugBrowserReadinessProbe : IDebugBrowserReadiness
 
     /// <summary>
     /// Whether the started browser still runs: its PID has the start time read after the start (any start time when that
-    /// could not be read), as ProcessService tells a running browser from a reused PID.
+    /// could not be read), as DebugBrowserLauncher tells a running browser from a reused PID.
     /// </summary>
     private bool IsRunning(DebugBrowserEndpoint endpoint) =>
         _processes.GetProcessStartTime(endpoint.ProcessId) is { } now && (endpoint.StartTime == null || now == endpoint.StartTime);

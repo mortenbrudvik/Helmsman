@@ -39,13 +39,13 @@ namespace WinDesktopMcp.Infrastructure;
 /// </para>
 /// <para>
 /// launch_browser_with_debug (roadmap M5.1) also keeps the gate after its window wait (10 seconds), while it waits for
-/// the browser's DevToolsActivePort file (up to ProcessService.DevToolsPortTimeout, 10 seconds, for port 0) and for its
-/// DevTools endpoint to answer (up to ProcessService.DebugReadinessTimeout, 10 seconds). Those waits only poll a file and
+/// the browser's DevToolsActivePort file (up to DebugBrowserLauncher.DevToolsPortTimeout, 10 seconds, for port 0) and for its
+/// DevTools endpoint to answer (up to DebugBrowserLauncher.DebugReadinessTimeout, 10 seconds). Those waits only poll a file and
 /// HTTP, but unlike the close tools' waits they cannot be moved outside the gate: a browser whose window wait timed out
 /// is still starting, and its first window can take the foreground at any moment, in the middle of an input call. So a
 /// slow launch can hold the gate about 30 seconds, and an input or window call queued at its start can get InputBusy
 /// (and sends nothing). A browser that exits ends the readiness wait at once. A launch that fails, or is cancelled, after
-/// the start also ends the browser it started and deletes its temporary profile inside the gate (ProcessService.AbandonTimeout
+/// the start also ends the browser it started and deletes its temporary profile inside the gate (DebugBrowserLauncher.AbandonTimeout
 /// and DebugBrowserLifecycle.AbandonTimeout: up to about 5 seconds for the exit and 5 for the delete), and a launch with a
 /// new temporary profile first deletes the ones earlier browsers left; so the longest hold is about 40 seconds.
 /// </para>

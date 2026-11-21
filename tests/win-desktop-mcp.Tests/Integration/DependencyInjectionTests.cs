@@ -494,9 +494,9 @@ public class DependencyInjectionTests : IDisposable
         services.AddSingleton<ICdpTransport>(transport);
         services.AddSingleton<ITcpPortOwnerResolver>(new FakePortOwnerResolver(null));
         using var provider = services.BuildServiceProvider();
-        var processService = provider.GetRequiredService<IProcessService>();
-        var readiness = typeof(ProcessService).GetField("_debugBrowserReadiness", BindingFlags.NonPublic | BindingFlags.Instance)!
-            .GetValue(processService);
+        var debugBrowsers = provider.GetRequiredService<IDebugBrowserLauncher>();
+        var readiness = typeof(DebugBrowserLauncher).GetField("_debugBrowserReadiness", BindingFlags.NonPublic | BindingFlags.Instance)!
+            .GetValue(debugBrowsers);
 
         // Act
         var answer = await ((IDebugBrowserReadiness)readiness!).WaitUntilReadyAsync(

@@ -10,7 +10,7 @@ namespace WinDesktopMcp.Services.Interfaces;
 public interface IDebugBrowserLifecycle
 {
     /// <summary>
-    /// Launches a debug browser through <see cref="IProcessService.LaunchBrowserWithDebugAsync"/>: a
+    /// Launches a debug browser through <see cref="IDebugBrowserLauncher.LaunchBrowserWithDebugAsync"/>: a
     /// <see cref="DebugBrowserLaunchRequest.ProfileName"/> becomes its folder under the server's profile root; with
     /// <see cref="DebugBrowserLaunchRequest.ReuseIfRunning"/>, a debug browser already running with the profile (found by
     /// the --user-data-dir on its main process's command line and its own DevTools port, never by a window title) is

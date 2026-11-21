@@ -9,7 +9,7 @@ namespace WinDesktopMcp.Services;
 /// the user's own browser that a link started) is in its process tree too, and is never ended. One rule for every path that
 /// ends a debug browser: close_debug_browser (<see cref="DebugBrowserLifecycle"/>), a launch abandoned during its placement
 /// (<see cref="DebugBrowserLifecycle.AbandonAsync"/>), and a launch_browser_with_debug call cancelled during the launch
-/// (<see cref="ProcessService.LaunchBrowserWithDebugAsync"/>).
+/// (<see cref="DebugBrowserLauncher.LaunchBrowserWithDebugAsync"/>).
 /// </summary>
 /// <param name="native">Reads the process tree, command lines and start times; opens and ends processes.</param>
 /// <param name="hostGuard">The agent's host, whose processes are never ended.</param>

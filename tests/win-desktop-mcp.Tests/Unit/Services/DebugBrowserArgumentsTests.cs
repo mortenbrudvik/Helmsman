@@ -12,7 +12,7 @@ public class DebugBrowserArgumentsTests
     public void BuildDebugBrowserArguments_StartsWithTheFirstRunSwitches()
     {
         // Act
-        var arguments = ProcessService.BuildDebugBrowserArguments(0, @"C:\Temp\dbg", url: null);
+        var arguments = DebugBrowserLauncher.BuildDebugBrowserArguments(0, @"C:\Temp\dbg", url: null);
 
         // Assert - no welcome, default-browser or search engine screen, and no sync into the exposed profile
         arguments.Should().Equal(
@@ -28,7 +28,7 @@ public class DebugBrowserArgumentsTests
     public void BuildDebugBrowserArguments_UserDataDirWithSpaces_HasNoEmbeddedQuotes()
     {
         // Act
-        var arguments = ProcessService.BuildDebugBrowserArguments(9222, @"C:\Users\Jane Doe\dbg", url: null);
+        var arguments = DebugBrowserLauncher.BuildDebugBrowserArguments(9222, @"C:\Users\Jane Doe\dbg", url: null);
 
         // Assert - quoting is the command-line builder's job; the value itself must stay raw
         arguments.Should().EndWith(["--remote-debugging-port=9222", @"--user-data-dir=C:\Users\Jane Doe\dbg"]);
@@ -38,7 +38,7 @@ public class DebugBrowserArgumentsTests
     public void BuildDebugBrowserArguments_WithUrl_AppendsUrlLast()
     {
         // Act
-        var arguments = ProcessService.BuildDebugBrowserArguments(9333, @"C:\Temp\dbg", "https://example.com/?a=1&b=2");
+        var arguments = DebugBrowserLauncher.BuildDebugBrowserArguments(9333, @"C:\Temp\dbg", "https://example.com/?a=1&b=2");
 
         // Assert
         arguments.Should().EndWith([
@@ -53,17 +53,17 @@ public class DebugBrowserArgumentsTests
     public void BuildDebugBrowserArguments_BlankUrl_IsOmitted(string url)
     {
         // Act
-        var arguments = ProcessService.BuildDebugBrowserArguments(9222, @"C:\Temp\dbg", url);
+        var arguments = DebugBrowserLauncher.BuildDebugBrowserArguments(9222, @"C:\Temp\dbg", url);
 
         // Assert
-        arguments.Should().HaveCount(ProcessService.FirstRunSwitches.Count + 2);
+        arguments.Should().HaveCount(DebugBrowserLauncher.FirstRunSwitches.Count + 2);
     }
 
     [Fact]
     public void BuildDebugBrowserArguments_UserDataDirWithSpaces_IsQuotedOnceOnTheCommandLine()
     {
         // Arrange
-        var arguments = ProcessService.BuildDebugBrowserArguments(9222, @"C:\Users\Jane Doe\AppData\Local\Temp\browser-debug-1\", url: null);
+        var arguments = DebugBrowserLauncher.BuildDebugBrowserArguments(9222, @"C:\Users\Jane Doe\AppData\Local\Temp\browser-debug-1\", url: null);
 
         // Act
         var commandLine = CommandLineBuilder.JoinArguments(arguments);
