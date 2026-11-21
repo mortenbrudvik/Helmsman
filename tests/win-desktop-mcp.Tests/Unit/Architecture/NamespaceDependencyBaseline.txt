@@ -68,6 +68,9 @@ Services.Interfaces.INativeKeyboardLayoutWrapper -> Services.SystemKeyboardHotke
 Services.Interfaces.IOcrService -> Services.OcrTextMatcher
 Services.Interfaces.IScreenshotService -> Services.MinimizedWindowRestore
 
+## Services.Interfaces -> Services (constant): move CdpEndpointValidator.Host (the loopback address ICdpService's endpoints use) to Models
+src/win-desktop-mcp/Services/Interfaces/ICdpService.cs -> Services.CdpEndpointValidator
+
 ## Services.Interfaces -> MCP SDK: let IAuditLog take a model of the call's outcome, which AuditLogToolFilter (Infrastructure) builds from the CallToolResult
 Services.Interfaces.IAuditLog -> ModelContextProtocol.Protocol.CallToolResult
 
@@ -124,7 +127,7 @@ src/win-desktop-mcp/Services/WindowEventJournal.cs -> Native.NativeEnums
 src/win-desktop-mcp/Services/WindowOwnerChain.cs -> Native.NativeEnums
 src/win-desktop-mcp/Services/WindowService.cs -> Native.NativeEnums
 
-## Services -> Infrastructure: move ToolErrorException and AppText inward (Models), and give services ports for what they take from the filters (InputGateToolFilter, AuditScope, ToolsetSelection, ToolJson, CommandLineRedactor)
+## Services -> Infrastructure: move ToolErrorException and AppText inward (Models), give services ports for what they take from the filters (InputGateToolFilter, AuditScope, ToolsetSelection, ToolJson, CommandLineRedactor), and pass them the version instead of ServerVersion
 Services.AppWindowProbe -> Infrastructure.AppText
 Services.AuditLog -> Infrastructure.AuditRecord
 Services.BrowserPageService -> Infrastructure.InputGateToolFilter
@@ -153,7 +156,9 @@ Services.ProcessService -> Infrastructure.RedactedCommandLine
 Services.ServerInfoService -> Infrastructure.AppText
 Services.ServerInfoService -> Infrastructure.ToolsetCatalog
 Services.ServerInfoService -> Infrastructure.ToolsetSelection
+Services.ServerInfoService -> ServerVersion
 Services.ServerStartupLog -> Infrastructure.ToolsetSelection
+Services.ServerStartupLog -> ServerVersion
 Services.TextPages -> Infrastructure.ToolJson
 Services.WindowEventJournal -> Infrastructure.AppText
 Services.WorkspaceService -> Infrastructure.AppText
@@ -181,10 +186,6 @@ src/win-desktop-mcp/Services/ServerStartupLog.cs -> Infrastructure.ToolsetSelect
 
 ## Services -> Tools: move UIElementTextFormat (it formats a model) from Tools to Services, where DesktopStateService and the tools can both use it
 Services.DesktopStateService -> Tools.UIElementTextFormat
-
-## Services -> Host: give the services the version through a port (or pass it in) instead of ServerVersion, which reads the MCP SDK's assembly
-Services.ServerInfoService -> ServerVersion
-Services.ServerStartupLog -> ServerVersion
 
 ## Services -> MCP SDK: let AuditLog take a model of the outcome (see IAuditLog), and move what ServerStartupLog reads from the SDK's options to Infrastructure
 Services.AuditLog -> ModelContextProtocol.Protocol.CallToolResult
@@ -226,9 +227,6 @@ Infrastructure.ResourcesAndPrompts -> Resources.DesktopResources
 
 ## Infrastructure -> Resources (constant): as for Infrastructure -> Resources
 src/win-desktop-mcp/Infrastructure/ResourcesAndPrompts.cs -> Resources.DesktopResources
-
-## Infrastructure -> Host: move ServerVersion into Infrastructure (it reads the MCP SDK's version, so it cannot go further in)
-Infrastructure.ServerIdentity -> ServerVersion
 
 ## Tools -> Services: call services through their ports; move the helpers tools share with services (ElementRefs, ElementCriteria, WindowTitles, BrowserNavigationUrls, CaptureOutputMode...) to Models, and IWorkspaceService to Services.Interfaces
 Tools.BrowserReadingTools -> Services.BrowserNavigationUrls

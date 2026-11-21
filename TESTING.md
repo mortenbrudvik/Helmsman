@@ -3055,8 +3055,9 @@ git diff
 UPDATE_SNAPSHOTS=1 dotnet test --filter "FullyQualifiedName~ToolSurfaceSnapshotTests|FullyQualifiedName~GeneratedToolDocsTests"
 ```
 
-`UPDATE_SNAPSHOTS=1` only makes these tests rewrite their files instead of failing: the three snapshots, and the
-generated regions of README.md, docs/TOOLS.md and the skill (its SKILL.md and tools.md). It changes nothing else about a run (desktop
+`UPDATE_SNAPSHOTS=1` only makes these tests rewrite their files instead of failing: the three snapshots, the
+generated regions of README.md, docs/TOOLS.md and the skill (its SKILL.md and tools.md), and the layering baseline
+(below; there it only deletes stale lines and sorts). It changes nothing else about a run (desktop
 tests stay skipped). Without it, CI fails on a stale snapshot or table. A run where `CI`, `GITHUB_ACTIONS` or
 `TF_BUILD` is set to anything but `false` or `0` refuses it (the tests fail with a message), because there it would turn the guards into rewrites
 that pass. Each regenerated file replaces the old one in one step, so a test that reads it in parallel never sees it

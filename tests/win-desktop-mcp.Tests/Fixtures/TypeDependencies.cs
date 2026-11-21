@@ -10,7 +10,7 @@ namespace WinDesktopMcp.Tests.Fixtures;
 /// <remarks>
 /// What the compiler leaves no trace of is not seen: a constant (const field, enum member used as a value) is copied into the
 /// code that uses it, a nameof is a string, and a type used only in a doc comment or a using directive is not compiled. The
-/// assembly's own attributes have no owner type and are not read.
+/// signature of a calli (an InlineSig token) is not read. The assembly's own attributes have no owner type and are not read.
 /// </remarks>
 public static class TypeDependencies
 {

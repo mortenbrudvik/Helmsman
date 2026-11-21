@@ -32,7 +32,12 @@ namespace WinDesktopMcp.Tests.Unit.Architecture;
 /// search is textual: it misses a constant named through a using static or an alias, and an enum member that is only
 /// converted to a number ((int)SomeEnum.Value); the IL sees an enum wherever a signature, local or field has its type. A
 /// nameof is a string, and a type named only in a doc comment or a using directive is not compiled, so those are not seen
-/// either. The assembly's own attributes have no owner type and are not read.</para>
+/// either. The signature of a calli (a call through a function pointer, an InlineSig token) is not read, so a type named only
+/// there is not seen. The assembly's own attributes have no owner type and are not read.</para>
+/// <para>The layers' namespaces are exact, and Host has none: Program and ServiceRegistration are placed by type
+/// (<see cref="TypeLayers"/>), so a new namespace or a new type in the root namespace fails
+/// <see cref="EveryServerType_IsInExactlyOneLayer"/> until it is given a layer. The MCP SDK is recognised by its namespaces and
+/// by its assemblies, which also define types in Microsoft.Extensions.*.</para>
 /// </remarks>
 public class NamespaceDependencyTests
 {
@@ -68,15 +73,22 @@ public class NamespaceDependencyTests
             "The MCP prompts are an outer layer like the tools."),
         new("Resources", ["WinDesktopMcp.Resources"], ["Infrastructure", "Services.Interfaces", "Models"], McpSdk: true,
             "The MCP resources are an outer layer like the tools."),
-        new("Host", ["WinDesktopMcp", ""], ["Models", "Services.Interfaces", "Native", "Services", "Infrastructure", "Tools", "Prompts", "Resources"], McpSdk: true,
-            "Program, ServerVersion and the composition root wire every layer together, so they may use all of them."),
+        new("Host", [], ["Models", "Services.Interfaces", "Native", "Services", "Infrastructure", "Tools", "Prompts", "Resources"], McpSdk: true,
+            "Program and the composition root (ServiceRegistration) wire every layer together, so they may use all of them."),
     ];
 
-    /// <summary>Types whose layer is not their namespace's, and why. Keep it short: a type in the wrong folder should move.</summary>
+    /// <summary>
+    /// Types whose layer is not their namespace's (or that have no namespace of a layer), and why. Keep it short: a type in the
+    /// wrong folder should move. Host has no namespace of its own, so a new type in the root namespace has no layer until it is
+    /// placed here.
+    /// </summary>
     private static readonly Dictionary<string, (string Layer, string Why)> TypeLayers = new()
     {
+        ["Program"] = ("Host", "Program.cs's top-level statements build and run the host"),
         ["WinDesktopMcp.Infrastructure.ServiceRegistration"] =
             ("Host", "the composition root: it registers every wrapper, service and tool, which is its job, not a layering violation"),
+        ["WinDesktopMcp.ServerVersion"] =
+            ("Infrastructure", "the version serverInfo reports, read from the server's and the MCP SDK's assemblies: MCP plumbing in the root namespace"),
     };
 
     /// <summary>
@@ -106,6 +118,7 @@ public class NamespaceDependencyTests
         ["Models -> Tools"] = "move WindowInfoDto and LaunchPlacementResultDto from Tools to Models",
         ["Services.Interfaces -> Services"] =
             "move the types the ports name (ElementCriteria, SystemKeyboardHotkeys, OcrTextMatcher, MinimizedWindowRestore) to Models or Services.Interfaces",
+        ["Services.Interfaces -> Services (constant)"] = "move CdpEndpointValidator.Host (the loopback address ICdpService's endpoints use) to Models",
         ["Services.Interfaces -> MCP SDK"] =
             "let IAuditLog take a model of the call's outcome, which AuditLogToolFilter (Infrastructure) builds from the CallToolResult",
         ["Native -> Services"] =
@@ -116,11 +129,10 @@ public class NamespaceDependencyTests
         ["Services -> Native (constant)"] =
             "move the Win32 constants the logic computes with (NativeEnums' VK_*, WS_*, WDA_* and the like) to a Models type that NativeEnums refers to",
         ["Services -> Infrastructure"] =
-            "move ToolErrorException and AppText inward (Models), and give services ports for what they take from the filters (InputGateToolFilter, AuditScope, ToolsetSelection, ToolJson, CommandLineRedactor)",
+            "move ToolErrorException and AppText inward (Models), give services ports for what they take from the filters (InputGateToolFilter, AuditScope, ToolsetSelection, ToolJson, CommandLineRedactor), and pass them the version instead of ServerVersion",
         ["Services -> Infrastructure (constant)"] =
             "move ToolErrorReporting's error codes to Models (as for Models), and the AppText, AuditRecord, ServerIdentity and ToolsetSelection constants services read",
         ["Services -> Tools"] = "move UIElementTextFormat (it formats a model) from Tools to Services, where DesktopStateService and the tools can both use it",
-        ["Services -> Host"] = "give the services the version through a port (or pass it in) instead of ServerVersion, which reads the MCP SDK's assembly",
         ["Services -> MCP SDK"] =
             "let AuditLog take a model of the outcome (see IAuditLog), and move what ServerStartupLog reads from the SDK's options to Infrastructure",
         ["Infrastructure -> Services"] =
@@ -131,7 +143,6 @@ public class NamespaceDependencyTests
         ["Infrastructure -> Prompts (constant)"] = "as for Infrastructure -> Prompts",
         ["Infrastructure -> Resources"] = "ResourcesAndPrompts registers the resources: move it to the composition root (Host), or its lists into Prompts and Resources",
         ["Infrastructure -> Resources (constant)"] = "as for Infrastructure -> Resources",
-        ["Infrastructure -> Host"] = "move ServerVersion into Infrastructure (it reads the MCP SDK's version, so it cannot go further in)",
         ["Tools -> Services"] =
             "call services through their ports; move the helpers tools share with services (ElementRefs, ElementCriteria, WindowTitles, BrowserNavigationUrls, CaptureOutputMode...) to Models, and IWorkspaceService to Services.Interfaces",
         ["Tools -> Services (constant)"] =
@@ -171,12 +182,19 @@ public class NamespaceDependencyTests
             return;
         }
 
+        var lines = added
+            .GroupBy(v => v.Rule)
+            .OrderBy(g => RuleRank(g.Key))
+            .Select(g => $"## {g.Key}: {FixOf(g.Key)}\n" +
+                         string.Join("\n", g.OrderBy(v => v.Owner, StringComparer.Ordinal).ThenBy(v => v.Target, StringComparer.Ordinal)
+                             .Select(v => $"{v.Owner} -> {v.Target}  # <why it cannot be avoided yet>")));
         Assert.Fail(
             $"{added.Count} dependencies go against the direction of the layers (NamespaceDependencyTests.Layers):\n" +
-            string.Join("\n", added.Select(Describe)) + "\n" +
+            string.Join("\n", added.Select(Describe)) + "\n\n" +
             "Move the type to the layer it belongs in, or depend on an interface in Services.Interfaces (or a model) instead. Only " +
-            "when that cannot be done yet, add the line shown, with a reason after '  # ', under its '## rule' in " +
-            $"{string.Join('/', BaselineRelativePath)}.");
+            $"when that cannot be done yet, paste these lines at the end of {string.Join('/', BaselineRelativePath)}, replace each " +
+            $"<why ...> with the reason, and run the tests with {Snapshots.UpdateVariable}=1 once to merge them into their groups:\n\n" +
+            string.Join("\n\n", lines));
     }
 
     [Fact]
@@ -289,6 +307,20 @@ public class NamespaceDependencyTests
     [InlineData(typeof(LayeringSamples.ThroughACatchClause), typeof(ToolErrorException))]
     [InlineData(typeof(LayeringSamples.ThroughATypeTokenOnly), typeof(UIElementTextFormat))]
     [InlineData(typeof(LayeringSamples.ThroughAnMcpSdkGenericArgument), typeof(ModelContextProtocol.Protocol.CallToolResult))]
+    [InlineData(typeof(LayeringSamples.ThroughAFieldTypeOnly), typeof(NativeMonitorWrapper))]
+    [InlineData(typeof(LayeringSamples.ThroughAPropertyTypeOnly), typeof(UiaTree))]
+    [InlineData(typeof(LayeringSamples.ThroughAnEventTypeOnly), typeof(ProcessSnapshotEntry))]
+    [InlineData(typeof(LayeringSamples.ThroughABaseClass), typeof(ToolErrorException))]
+    [InlineData(typeof(LayeringSamples.ThroughAGenericConstraint), typeof(INativeWindowWrapper))]
+    [InlineData(typeof(LayeringSamples.ThroughANamedAttributeArgument), typeof(WindowManagerTools))]
+    [InlineData(typeof(LayeringSamples.ThroughAStaticFieldRead), typeof(AccessibilityWarmup))]
+    [InlineData(typeof(LayeringSamples.ThroughACast), typeof(OcrEngineWrapper))]
+    [InlineData(typeof(LayeringSamples.ThroughAnIsCheck), typeof(Uia3Tree))]
+    [InlineData(typeof(LayeringSamples.ThroughABox), typeof(ProcessSnapshotEntry))]
+    [InlineData(typeof(LayeringSamples.ThroughAnIterator), typeof(ServerVersion))]
+    [InlineData(typeof(LayeringSamples.ThroughANestedGenericArgument), typeof(NativeProcessWrapper))]
+    [InlineData(typeof(LayeringSamples.ThroughAnArray), typeof(NativeMonitorWrapper))]
+    [InlineData(typeof(LayeringSamples.ThroughAnMcpSdkExtensionType), typeof(Microsoft.Extensions.DependencyInjection.IMcpServerBuilder))]
     public void TheScan_SeesADependency_AndReportsItAsAViolation(Type sample, Type target)
     {
         // Arrange - the sample stands in for a Models type, which may use no other layer and not the MCP SDK
@@ -314,14 +346,17 @@ public class NamespaceDependencyTests
     [Fact]
     public void TheSourceCheck_SeesAnotherLayersConstant_InTheLayersThatMayNotUseIt()
     {
-        // Arrange - a Models file naming an Infrastructure and a Services constant (qualified, unqualified, in an attribute),
-        // one in a comment, and its own layer's; the same uses in a Tools file are allowed
+        // Arrange - a Models file naming Infrastructure and Services constants (qualified, unqualified, in an attribute, in an
+        // interpolation hole after a string's "//", after a string's "/*" and a char literal's quote), others in comments, and
+        // its own layer's; in a Tools file only the Services ones are against the layering
         const string Uses = """
             [ToolEnum(WinDesktopMcp.Infrastructure.ToolErrorReporting.InvalidArgumentsErrorCode, "value")]
             public enum Sample { A }
             public static class Limits
             {
                 public const int Max = Services.ElementReadService.MaxTextLength; // NativeEnums.WDA_NONE
+                public static string Url() => $"http://{Services.CdpEndpointValidator.Host}:9222"; // ServerIdentity.Name
+                public static string Accept() => "image/*" + AppText.MaxLength + @"C:\" + '"' + "x";
                 /* ToolErrorReporting.ToolErrorCode */
                 public static int Plain() => BrowserContentOptions.MaxMaxLength + ElementReadService . MaxTextLength;
             }
@@ -335,10 +370,17 @@ public class NamespaceDependencyTests
         models.Should().BeEquivalentTo(
         [
             new Violation("Models -> Infrastructure (constant)", "src/win-desktop-mcp/Models/Sample.cs", "Infrastructure.ToolErrorReporting"),
+            new Violation("Models -> Infrastructure (constant)", "src/win-desktop-mcp/Models/Sample.cs", "Infrastructure.AppText"),
             new Violation("Models -> Services (constant)", "src/win-desktop-mcp/Models/Sample.cs", "Services.ElementReadService"),
+            new Violation("Models -> Services (constant)", "src/win-desktop-mcp/Models/Sample.cs", "Services.CdpEndpointValidator"),
         ]);
-        tools.Should().ContainSingle("Tools may use Infrastructure and Models, not a concrete service").Which.Should().Be(
-            new Violation("Tools -> Services (constant)", "src/win-desktop-mcp/Tools/Sample.cs", "Services.ElementReadService"));
+        tools.Should().BeEquivalentTo(
+        [
+            new Violation("Tools -> Services (constant)", "src/win-desktop-mcp/Tools/Sample.cs", "Services.ElementReadService"),
+            new Violation("Tools -> Services (constant)", "src/win-desktop-mcp/Tools/Sample.cs", "Services.CdpEndpointValidator"),
+        ], "Tools may use Infrastructure and Models, not a concrete service");
+        ConstantUses("var a = \"x//y\"; var b = Limits.Max; // Other.Name\nvar c = '/'; /* Hidden.Value */ var d = Shown.Value;")
+            .Should().Equal(("Limits", "Max"), ("Shown", "Value"));
     }
 
     [Fact]
@@ -350,16 +392,30 @@ public class NamespaceDependencyTests
         TypeDependencies.Of(typeof(WindowManagerTools)).Should().Contain(typeof(IWindowService));
         TypeDependencies.Of(typeof(ServiceRegistration)).Should().Contain(typeof(NativeWindowWrapper)).And.Contain(typeof(WindowManagerTools));
 
-        // Every layer is the target of some dependency of another layer, so a scan that saw nothing could not pass
-        var targets = ServerDependencies.Value
+        // Every layer that a layer other than Host may use is the target of a dependency the layering allows, so a scan that
+        // saw nothing could not pass, and fixing the baseline's violations cannot make it fail
+        var allowedTargets = ServerDependencies.Value
+            .Where(owner => LayerOf(owner.Key) != "Host")
             .SelectMany(owner => owner.Value
                 .Where(d => d.Assembly == ServerAssembly)
-                .Select(d => (From: LayerOf(owner.Key), To: LayerOf(d))))
-            .Where(edge => edge.To is not null && edge.To != Unknown && edge.From != edge.To)
+                .Select(d => (From: LayerOf(owner.Key)!, To: LayerOf(d))))
+            .Where(edge => edge.To is not null && edge.To != Unknown && LayerNamed(edge.From).MayUse.Contains(edge.To))
             .Select(edge => edge.To!)
             .ToHashSet();
-        targets.Should().BeEquivalentTo(Layers.Select(l => l.Name));
-        ServerDependencies.Value.Values.SelectMany(d => d).Should().Contain(t => IsMcpSdk(t), "the scan must see the server's MCP SDK types");
+        allowedTargets.Should().BeEquivalentTo(Layers.Where(l => l.Name != "Host").SelectMany(l => l.MayUse).Distinct());
+
+        // Host is no layer's to use; the composition root itself reaches the layers it wires. Prompts and Resources are wired
+        // through Infrastructure.ResourcesAndPrompts today (a baseline line), so they are not required here
+        var program = ServerAssembly.GetType("Program");
+        program.Should().NotBeNull();
+        TypeDependencies.Of(typeof(ServiceRegistration)).Concat(TypeDependencies.Of(program!))
+            .Where(d => d.Assembly == ServerAssembly)
+            .Select(LayerOf)
+            .Should().Contain(["Host", "Models", "Services.Interfaces", "Native", "Services", "Infrastructure", "Tools"]);
+
+        // The MCP SDK, by namespace and by assembly (AddMcpServer's IMcpServerBuilder is in Microsoft.Extensions.DependencyInjection)
+        TypeDependencies.Of(typeof(ServiceRegistration)).Should().Contain(t => IsMcpSdk(t) && t.Namespace == "Microsoft.Extensions.DependencyInjection");
+        ServerDependencies.Value.Values.SelectMany(d => d).Should().Contain(t => IsMcpSdk(t) && t.Namespace!.StartsWith("ModelContextProtocol", StringComparison.Ordinal));
     }
 
     /// <summary>The layer a server type belongs to (its outermost type's), null for generated code, or <see cref="Unknown"/>.</summary>
@@ -415,8 +471,15 @@ public class NamespaceDependencyTests
         }
     }
 
+    /// <summary>
+    /// A type of the MCP SDK: in its namespaces, or defined in one of its assemblies (ModelContextProtocol,
+    /// ModelContextProtocol.Core, ...), which also put extension types such as IMcpServerBuilder in Microsoft.Extensions.*.
+    /// </summary>
     private static bool IsMcpSdk(Type type) =>
-        type.Namespace is { } ns && (ns == "ModelContextProtocol" || ns.StartsWith("ModelContextProtocol.", StringComparison.Ordinal));
+        IsSdkName(type.Namespace) || IsSdkName(type.Assembly.GetName().Name);
+
+    private static bool IsSdkName(string? name) =>
+        name is not null && (name == "ModelContextProtocol" || name.StartsWith("ModelContextProtocol.", StringComparison.Ordinal));
 
     /// <summary>
     /// The uses of other layers' constants in the server's source files, which the IL cannot show
@@ -471,10 +534,28 @@ public class NamespaceDependencyTests
             .SelectMany(t => t.GetFields(IlCalls.DeclaredMembers).Where(f => f.IsLiteral).Select(f => (Type: t, Field: f)))
             .ToLookup(c => (Regex.Replace(c.Type.Name, @"`\d+$", string.Empty), c.Field.Name), c => c.Type));
 
-    /// <summary>Every Type.Member pair that <paramref name="source"/> names outside comments, in order.</summary>
+    /// <summary>
+    /// The tokens of C# source that can hold "//" or "/*" without starting a comment, and the comments, matched left to right
+    /// so that a string's "http://" or "image/*" is not taken for one: raw string literals (any number of quotes, interpolated
+    /// or not), verbatim and interpolated verbatim strings, regular and interpolated strings, char literals, then the comments.
+    /// An interpolated string whose hole holds another string may end early; the text after it is then read as code, which
+    /// only matters if it holds a "//" or "/*".
+    /// </summary>
+    private static readonly Regex SourceTokens = new(
+        @"(?<string>\$*(?<quotes>""{3,})[\s\S]*?\k<quotes>(?!"")" +
+        @"|(?:\$@|@\$|@)""(?:[^""]|"""")*""" +
+        @"|\$?""(?:[^""\\\n]|\\.)*""" +
+        @"|'(?:[^'\\\n]|\\.)+')" +
+        @"|(?<comment>//[^\n]*|/\*[\s\S]*?\*/)",
+        RegexOptions.Compiled);
+
+    /// <summary>
+    /// Every Type.Member pair that <paramref name="source"/> names outside comments, in order. Strings are kept, because an
+    /// interpolation hole is code; a string whose text spells out Type.Constant of the server would count too.
+    /// </summary>
     private static List<(string Type, string Member)> ConstantUses(string source)
     {
-        var code = Regex.Replace(source, @"/\*.*?\*/|//[^\n]*", " ", RegexOptions.Singleline);
+        var code = SourceTokens.Replace(source, m => m.Groups["comment"].Success ? Regex.Replace(m.Value, @"[^\n]", " ") : m.Value);
         return Regex.Matches(code, @"(?<![\w@])([A-Za-z_]\w*)(?=\s*\.\s*([A-Za-z_]\w*))")
             .Select(m => (m.Groups[1].Value, m.Groups[2].Value))
             .ToList();
@@ -491,12 +572,11 @@ public class NamespaceDependencyTests
     private static string Describe(Violation violation)
     {
         var arrow = violation.Rule.IndexOf(" -> ", StringComparison.Ordinal);
-        var (from, to) = (violation.Rule[..arrow], violation.Rule[(arrow + 4)..]);
+        var (from, to) = (violation.Rule[..arrow], violation.Rule[(arrow + 4)..].Replace(ConstantSuffix, ", through a constant", StringComparison.Ordinal));
         var layer = LayerNamed(from);
         var allowed = layer.MayUse.Length == 0 ? "no other layer" : string.Join(", ", layer.MayUse);
         var sdk = layer.McpSdk ? " and the MCP SDK" : ", not the MCP SDK";
-        return $"  {violation.Owner} ({from}) depends on {violation.Target} ({to}); {from} may use {allowed}{sdk}. {layer.Why}\n" +
-               $"    Baseline line, under '## {violation.Rule}': {violation.Owner} -> {violation.Target}  # <reason>";
+        return $"  {violation.Owner} ({from}) depends on {violation.Target} ({to}); {from} may use {allowed}{sdk}. {layer.Why}";
     }
 
     /// <summary>The order of the rules in the baseline: by the depending layer, then the depended-on layer, inner first.</summary>
@@ -601,6 +681,8 @@ public class NamespaceDependencyTests
 internal sealed class LayeringSampleAttribute(object value) : Attribute
 {
     public object Value { get; } = value;
+
+    public Type? Named { get; set; }
 }
 
 /// <summary>
@@ -663,6 +745,75 @@ internal static class LayeringSamples
     internal sealed class ThroughAnMcpSdkGenericArgument
     {
         public static int Count(IReadOnlyList<ModelContextProtocol.Protocol.CallToolResult> results) => results.Count;
+    }
+
+    internal sealed class ThroughAnMcpSdkExtensionType
+    {
+        public static bool Has(Microsoft.Extensions.DependencyInjection.IMcpServerBuilder? builder) => builder != null;
+    }
+
+    internal sealed class ThroughAFieldTypeOnly
+    {
+        public NativeMonitorWrapper? Field = null;
+    }
+
+    internal sealed class ThroughAPropertyTypeOnly
+    {
+        public UiaTree? Property => null;
+    }
+
+    internal sealed class ThroughAnEventTypeOnly
+    {
+        public event Action<ProcessSnapshotEntry>? Changed { add { } remove { } }
+    }
+
+    internal sealed class ThroughABaseClass() : ToolErrorException("code", "message");
+
+    internal static class ThroughAGenericConstraint
+    {
+        public static int Count<T>(T[] items) where T : INativeWindowWrapper => items.Length;
+    }
+
+    [LayeringSample(0, Named = typeof(WindowManagerTools))]
+    internal sealed class ThroughANamedAttributeArgument;
+
+    internal static class ThroughAStaticFieldRead
+    {
+        public static TimeSpan Wait() => AccessibilityWarmup.MaxWait;
+    }
+
+    internal static class ThroughACast
+    {
+        public static object Cast(object value) => (OcrEngineWrapper)value;
+    }
+
+    internal static class ThroughAnIsCheck
+    {
+        public static bool Is(object value) => value is Uia3Tree;
+    }
+
+    internal static class ThroughABox
+    {
+        public static object Box() => default(ProcessSnapshotEntry);
+    }
+
+    internal static class ThroughAnIterator
+    {
+        public static IEnumerable<int> Lengths()
+        {
+            yield return 1;
+            yield return ServerVersion.WithoutBuildMetadata("1.0.0+abc").Length;
+        }
+    }
+
+    internal static class ThroughANestedGenericArgument
+    {
+        public static int Count() => Enumerable.Empty<IReadOnlyList<KeyValuePair<string, NativeProcessWrapper>>>().Count();
+    }
+
+    internal static class ThroughAnArray
+    {
+        public static int Count(object value) => value is NativeMonitorWrapper[][] rows ? rows.Length : 0;
     }
 
     internal sealed class ThroughAConstantOnly
