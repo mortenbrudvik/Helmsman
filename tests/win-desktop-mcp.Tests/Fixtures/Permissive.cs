@@ -12,7 +12,7 @@ public static class Permissive
     public static TargetPolicySettings NoDenials { get; } = new([], null, "test");
 
     /// <summary>A target policy that denies nothing: <see cref="TargetPolicyExtensions.DeniesAnything"/> is false.</summary>
-    public static ITargetPolicy TargetPolicy { get; } = new TargetPolicy(NoDenials);
+    public static ITargetPolicy TargetPolicy { get; } = new TargetPolicy(NoDenials, new Mock<INativeWindowWrapper>().Object);
 
     /// <summary>A capture check that allows every window, without reading it (the verdict of <see cref="TargetPolicy"/>).</summary>
     public static ICaptureTargetPolicy CapturePolicy { get; } = new AnyCapture();
@@ -22,6 +22,21 @@ public static class Permissive
     /// a service that needs the wrapper only for the target policy's reads, in a test that is about something else.
     /// </summary>
     public static INativeWindowWrapper Windows => new Mock<INativeWindowWrapper>().Object;
+
+    /// <summary>
+    /// A window wrapper on which <paramref name="window"/> is in front, a top-level window with no owner, and every window is
+    /// open and visible: for the clipboard origin's check that the window the agent's input went to is in front when the
+    /// copy happens, in a test about its other rules.
+    /// </summary>
+    public static INativeWindowWrapper WindowInFront(nint window)
+    {
+        var windows = new Mock<INativeWindowWrapper>();
+        windows.Setup(w => w.GetForegroundWindow()).Returns(window);
+        windows.Setup(w => w.GetAncestor(It.IsAny<nint>(), It.IsAny<WindowAncestor>())).Returns((nint h, WindowAncestor _) => h);
+        windows.Setup(w => w.IsWindow(It.IsAny<nint>())).Returns(true);
+        windows.Setup(w => w.IsWindowVisible(It.IsAny<nint>())).Returns(true);
+        return windows.Object;
+    }
 
     /// <summary>An agent host with no process and no window: nothing is the host's.</summary>
     public static IHostGuard HostGuard { get; } = new NoHost();

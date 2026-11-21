@@ -146,7 +146,7 @@ public class InputSimulationServiceDragTests
     /// </summary>
     private InputSimulationService CreateSutWithThePasteRule(string receivingClass, FakeClipboardWrapper clipboard)
     {
-        var origin = new ClipboardOrigin(clipboard, new ManualClock(), System.Threading.Timeout.InfiniteTimeSpan);
+        var origin = new ClipboardOrigin(clipboard, Permissive.Windows, new ManualClock(), System.Threading.Timeout.InfiniteTimeSpan);
         var windows = new Mock<INativeWindowWrapper>();
         windows.Setup(w => w.GetClassName(0x5150)).Returns(receivingClass);
         windows.Setup(w => w.GetWindowThreadProcessId(0x5150)).Returns(77u);

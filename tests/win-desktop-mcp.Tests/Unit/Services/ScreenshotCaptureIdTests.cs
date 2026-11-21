@@ -341,7 +341,7 @@ public class ScreenshotCaptureIdTests
         policy.Setup(p => p.Check(denied)).Returns(new CaptureRefusal(ScreenshotErrorCode.TargetDeniedByPolicy, "denied"));
         var registry = new CaptureRegistry(keepSignatures: true);
         var sut = new ScreenshotService(_capture.Object, _monitors.Object, _windows.Object, policy.Object,
-            new TargetPolicy(TargetPolicySettings.Default), Permissive.SecurityProbe, captureRegistry: registry);
+            new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows), Permissive.SecurityProbe, captureRegistry: registry);
 
         // Act
         var metadata = sut.CaptureRegion(10, 20, 300, 200, Defaults).Metadata;

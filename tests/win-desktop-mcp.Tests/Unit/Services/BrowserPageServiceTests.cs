@@ -25,7 +25,7 @@ public class BrowserPageServiceTests
     private readonly Mock<IDebugPortLocator> _locator = new();
     private readonly Mock<IBrowserDialogService> _dialogs = new();
     private readonly InputSession _session = new(new FakeInputWrapper());
-    private ITargetPolicy _policy = new TargetPolicy(TargetPolicySettings.Default);
+    private ITargetPolicy _policy = new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows);
     private FakePortOwnerResolver _owners = new(owner: (int)BrowserPid);
 
     private static readonly CdpTarget Shown = new("SHOWN", "page", "Form", "https://example.com/form", "ws://127.0.0.1:9222/devtools/page/SHOWN", Port);
@@ -79,7 +79,7 @@ public class BrowserPageServiceTests
     [Fact]
     public async Task AWindowThePolicyDenies_IsRefused_AndNothingIsSent()
     {
-        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["msedge"] });
+        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["msedge"] }, Permissive.Windows);
 
         var result = await CreateSut().ClickAsync(ByWindow(), Save, MouseButton.Primary, 1);
 
@@ -91,7 +91,7 @@ public class BrowserPageServiceTests
     [Fact]
     public async Task APortAloneOfAProcessThePolicyDenies_IsRefused()
     {
-        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["msedge"] });
+        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["msedge"] }, Permissive.Windows);
 
         var result = await CreateSut().EvaluateAsync(new BrowserTabTarget(null, Port, "SHOWN"), "1", true, 1000);
 

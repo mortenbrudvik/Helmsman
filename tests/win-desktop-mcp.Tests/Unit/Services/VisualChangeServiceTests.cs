@@ -548,7 +548,7 @@ public class VisualChangeServiceTests
         _screen.Frames(before, before.Copy().Paint(150, 120, 20, 20, (0, 0, 0)));
 
         // Act
-        var result = await CreateSut(new TargetPolicy(TargetPolicySettings.Default)).WaitAsync(Request(new VisualTarget.Region(0, 0, 400, 300), timeoutMs: 400));
+        var result = await CreateSut(new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows)).WaitAsync(Request(new VisualTarget.Region(0, 0, 400, 300), timeoutMs: 400));
 
         // Assert
         result.TimedOut.Should().BeTrue("the only change is inside the denied window");
@@ -577,7 +577,7 @@ public class VisualChangeServiceTests
         _screen.Frames(before, before.Copy().Paint(100, 100, 200, 100, (0, 0, 0)));
 
         // Act
-        var result = await CreateSut(new TargetPolicy(TargetPolicySettings.Default)).WaitAsync(Request(new VisualTarget.Region(0, 0, 400, 300), timeoutMs: 400));
+        var result = await CreateSut(new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows)).WaitAsync(Request(new VisualTarget.Region(0, 0, 400, 300), timeoutMs: 400));
 
         // Assert
         result.TimedOut.Should().BeTrue("the only change is the denied window itself");
@@ -872,7 +872,7 @@ public class VisualChangeServiceTests
         _capturePolicy.Setup(p => p.Check(denied)).Returns(new CaptureRefusal(ScreenshotErrorCode.TargetDeniedByPolicy, "denied"));
         var before = new VisualFrames(400, 300);
         _screen.Frames(before);
-        var sut = CreateSut(new TargetPolicy(TargetPolicySettings.Default));
+        var sut = CreateSut(new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows));
         var first = await sut.WaitAsync(Request(new VisualTarget.Region(0, 0, 400, 300), timeoutMs: 200));
         open = false;
         _screen.Frames(before.Copy().Paint(100, 100, 200, 100, (0, 0, 0)));
@@ -903,7 +903,7 @@ public class VisualChangeServiceTests
         _screen.Frames(before, before.Copy().Paint(120, 120, 40, 40, (0, 0, 0)));
 
         // Act
-        var result = await CreateSut(new TargetPolicy(TargetPolicySettings.Default)).WaitAsync(Request(TheWindow(), timeoutMs: 400));
+        var result = await CreateSut(new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows)).WaitAsync(Request(TheWindow(), timeoutMs: 400));
 
         // Assert
         result.TimedOut.Should().BeTrue("the only change is inside the denied window");
@@ -940,7 +940,7 @@ public class VisualChangeServiceTests
         _screen.Frames(before, before.Copy().Paint(120, 120, 40, 40, (0, 0, 0)));
 
         // Act
-        var result = await CreateSut(new TargetPolicy(TargetPolicySettings.Default)).WaitAsync(Request(TheWindow(), timeoutMs: 400));
+        var result = await CreateSut(new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows)).WaitAsync(Request(TheWindow(), timeoutMs: 400));
 
         // Assert
         result.TimedOut.Should().BeTrue("the only change is inside the denied window");
@@ -961,7 +961,7 @@ public class VisualChangeServiceTests
         _screen.Frames(WindowFrame().Paint(100, 100, 200, 100, (0, 0, 0)), WindowFrame().Paint(400, 300, 100, 100, (0, 0, 0)));
 
         // Act
-        var result = await CreateSut(new TargetPolicy(TargetPolicySettings.Default)).WaitAsync(Request(TheWindow(), timeoutMs: 400));
+        var result = await CreateSut(new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows)).WaitAsync(Request(TheWindow(), timeoutMs: 400));
 
         // Assert
         result.TimedOut.Should().BeTrue("the only change is the denied window, which moved");
@@ -979,7 +979,7 @@ public class VisualChangeServiceTests
         _screen.Frames(atOldPlace, atOldPlace, WindowFrame().Paint(400, 300, 100, 100, (0, 0, 0)));
 
         // Act
-        var result = await CreateSut(new TargetPolicy(TargetPolicySettings.Default)).WaitAsync(Request(TheWindow(), timeoutMs: 400));
+        var result = await CreateSut(new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows)).WaitAsync(Request(TheWindow(), timeoutMs: 400));
 
         // Assert
         result.TimedOut.Should().BeTrue("the only changes are where the denied window was and where it is");
@@ -997,7 +997,7 @@ public class VisualChangeServiceTests
         _screen.Frames(before, before, before.Copy().Paint(100, 100, 200, 100, (0, 0, 0)));
 
         // Act
-        var result = await CreateSut(new TargetPolicy(TargetPolicySettings.Default)).WaitAsync(Request(TheWindow(), timeoutMs: 400));
+        var result = await CreateSut(new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows)).WaitAsync(Request(TheWindow(), timeoutMs: 400));
 
         // Assert
         result.TimedOut.Should().BeTrue("the only change is the denied window itself");
@@ -1013,7 +1013,7 @@ public class VisualChangeServiceTests
         _screen.Frames(before, before.Copy().Paint(120, 120, 40, 40, (0, 0, 0)));
 
         // Act
-        var result = await CreateSut(new TargetPolicy(TargetPolicySettings.Default)).WaitAsync(Request(TheWindow(), timeoutMs: 400));
+        var result = await CreateSut(new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows)).WaitAsync(Request(TheWindow(), timeoutMs: 400));
 
         // Assert
         result.Satisfied.Should().BeTrue("the window itself changed under the denied window");
@@ -1165,7 +1165,7 @@ public class VisualChangeServiceTests
             return WindowFrame();
         };
         var sut = new VisualChangeService(_screen, _screenshots.Object, _windows.Object, _monitors.Object, _capturePolicy.Object,
-            new TargetPolicy(new TargetPolicySettings([], null, "test")), Permissive.SecurityProbe, _windowCalls,
+            new TargetPolicy(new TargetPolicySettings([], null, "test"), Permissive.Windows), Permissive.SecurityProbe, _windowCalls,
             _registry, _threads.Object, _clock,
             (pause, token) =>
             {

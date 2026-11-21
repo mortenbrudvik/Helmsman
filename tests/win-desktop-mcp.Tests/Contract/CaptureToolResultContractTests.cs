@@ -237,7 +237,7 @@ public class CaptureToolResultContractTests
     {
         var screenshotService = new ScreenshotService(_captureWrapper.Object, _monitorService.Object, Mock.Of<INativeWindowWrapper>(w => w.IsWindowVisible(It.IsAny<nint>()) == true), Permissive.CapturePolicy, Permissive.TargetPolicy, Permissive.SecurityProbe);
         var tools = new ScreenshotTools(screenshotService, _uiElementService.Object, _windowService.Object,
-            new CaptureTargetPolicy(_windowService.Object, new TargetPolicy(TargetPolicySettings.Default)),
+            new CaptureTargetPolicy(_windowService.Object, new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows)),
             Permissive.Session);
         return InProcessMcpServer.StartAsync([], builder => builder.AddToolErrorReporting().WithServerTools(tools));
     }

@@ -793,7 +793,7 @@ public class ElementSearchScopeTests
         ((FakeUiaNode)_tree.FromHandle(Main)!).CachedChildrenException = new InvalidOperationException("provider failed");
 
         // Act
-        var result = await CreateSut(policy: new TargetPolicy(TargetPolicySettings.Default)).FindAsync(new ElementQuery(
+        var result = await CreateSut(policy: new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows)).FindAsync(new ElementQuery(
             Main, null, null, ControlTypes: ["Edit"], MaxResults: 20, Timeout: TimeSpan.FromSeconds(5)));
 
         // Assert - the field is left out once, by the dialog that met it first; the allowed edit box is the dialog's once

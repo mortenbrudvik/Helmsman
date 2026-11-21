@@ -37,7 +37,7 @@ public class ScreenshotOptionTests
         _mockScreenshotService.Object,
         _mockUIElementService.Object,
         _mockWindowService.Object,
-        new CaptureTargetPolicy(_mockWindowService.Object, new TargetPolicy(TargetPolicySettings.Default)),
+        new CaptureTargetPolicy(_mockWindowService.Object, new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows)),
         Permissive.Session);
 
     [Fact]

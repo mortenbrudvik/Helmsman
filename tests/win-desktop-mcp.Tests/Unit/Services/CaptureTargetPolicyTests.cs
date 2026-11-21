@@ -12,7 +12,7 @@ public class CaptureTargetPolicyTests
     private readonly Mock<IWindowService> _windows = new();
 
     private static TargetPolicy Policy(string? deny = null) =>
-        new(TargetPolicySettings.FromEnvironment(name => name == TargetPolicySettings.DenyVariable ? deny : null));
+        new(TargetPolicySettings.FromEnvironment(name => name == TargetPolicySettings.DenyVariable ? deny : null), Permissive.Windows);
 
     private CaptureTargetPolicy CreateSut(string processName, string? deny = null)
     {

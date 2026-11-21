@@ -1715,7 +1715,7 @@ public class BrowserReadingServiceTests
         var handle = new nint(12345);
         SetupValidBrowserWindow(handle, "chrome", "chrome");
         ShowPage(handle, "https://example.com", "Page text");
-        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["chrome"] });
+        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["chrome"] }, Permissive.Windows);
         var sut = CreateSutWithLocator();
 
         var url = await sut.GetBrowserUrlAsync(handle, new CdpOptions());
@@ -2020,7 +2020,7 @@ public class BrowserReadingServiceTests
         var handle = new nint(12345);
         SetupValidBrowserWindow(handle, "chrome", "chrome");
         ShowPage(handle, "https://example.com/", "Page text");
-        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["chrome"] });
+        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["chrome"] }, Permissive.Windows);
         var sut = CreateSutWithLocator();
 
         var selector = await sut.GetBrowserContentAsync(handle, new BrowserContentOptions(Selector: "main"), new CdpOptions());
@@ -2187,7 +2187,7 @@ public class BrowserReadingServiceTests
         var handle = new nint(12345);
         SetupValidBrowserWindow(handle, "chrome", "chrome");
         ShowPage(handle, "https://example.com", "Page text");
-        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["chrome"] });
+        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["chrome"] }, Permissive.Windows);
         var sut = CreateSut();
 
         // Act
@@ -2212,7 +2212,7 @@ public class BrowserReadingServiceTests
         var handle = new nint(12345);
         SetupValidBrowserWindow(handle, "chrome", "chrome");
         SetupCdpMatch(CdpResult<CdpTarget>.Ok(CdpTab));
-        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["chrome"] });
+        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["chrome"] }, Permissive.Windows);
 
         var result = await CreateSut().GetBrowserUrlAsync(handle, new CdpOptions(Port: CdpPort));
 

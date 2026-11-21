@@ -608,7 +608,7 @@ public sealed class SelfGatedToolsContractTests : IDisposable
         services.Replace(ServiceDescriptor.Singleton<IBrowserTabService>(new BrowserTabService(
             Watched<INativeWindowWrapper>(observer, browser.Windows.Object), new BrowserDetectionService(),
             browser.Reading.Object, Watched<ICdpService>(observer, browser.Cdp.Object), tabs, browser.Owners,
-            new TargetPolicy(TargetPolicySettings.Default), c.Session, browser.Locator.Object)));
+            new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows), c.Session, browser.Locator.Object)));
     }, [Call<ICdpTabService>(method)]);
 
     private static GatedWork BrowserPages(string method) => new((c, services, observer) =>
@@ -619,7 +619,7 @@ public sealed class SelfGatedToolsContractTests : IDisposable
         services.Replace(ServiceDescriptor.Singleton<IBrowserPageService>(new BrowserPageService(
             Watched<INativeWindowWrapper>(observer, browser.Windows.Object), new BrowserDetectionService(),
             browser.Reading.Object, Watched<ICdpService>(observer, browser.Cdp.Object), pages, browser.Owners,
-            Mock.Of<IBrowserViewportLocator>(), new TargetPolicy(TargetPolicySettings.Default), c.Session,
+            Mock.Of<IBrowserViewportLocator>(), new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows), c.Session,
             browser.Locator.Object)));
     }, [Call<ICdpPageService>(method)]);
 

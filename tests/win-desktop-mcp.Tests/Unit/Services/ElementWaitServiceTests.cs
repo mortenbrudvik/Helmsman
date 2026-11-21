@@ -1398,7 +1398,7 @@ public class ElementWaitServiceTests
     private ElementWaitService CreateSutInADeniedApp()
     {
         _windows.Setup(w => w.GetProcessName(300u)).Returns("1Password");
-        var policy = new TargetPolicy(TargetPolicySettings.Default);
+        var policy = new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows);
         var search = new ElementSearchService(_tree, _worker, _registry, _windows.Object, policy, _warmup.Object);
         return new ElementWaitService(search, _registry, _windowWait.Object, _tree, _worker, _windows.Object, policy, _clock, DelayAsync);
     }

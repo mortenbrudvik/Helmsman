@@ -22,7 +22,8 @@ public class SendKeysHeldModifierAcrossBatchesTests
     public SendKeysHeldModifierAcrossBatchesTests()
     {
         _session = new InputSession(_input);
-        _origin = new ClipboardOrigin(_clipboard, new ManualClock(), Timeout.InfiniteTimeSpan);
+        // The guard's receiving window (CreateAllowingInputGuard's Notepad) is in front when the app copies
+        _origin = new ClipboardOrigin(_clipboard, Permissive.WindowInFront(0x5150), new ManualClock(), Timeout.InfiniteTimeSpan);
     }
 
     private InputSimulationService CreateSut(bool allowUserClipboard = false) =>

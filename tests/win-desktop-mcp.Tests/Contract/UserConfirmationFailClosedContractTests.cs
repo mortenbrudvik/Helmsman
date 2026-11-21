@@ -296,7 +296,7 @@ public sealed class UserConfirmationFailClosedContractTests : IDisposable
     {
         // Arrange - the user copied something; the agent's read needs their yes
         _clipboard.UserCopies("hunter2");
-        var service = new ClipboardService(_clipboard, new ClipboardOrigin(_clipboard, new ManualClock(), Timeout.InfiniteTimeSpan),
+        var service = new ClipboardService(_clipboard, new ClipboardOrigin(_clipboard, Permissive.Windows, new ManualClock(), Timeout.InfiniteTimeSpan),
             new ClipboardOptions(false), copyWait: TimeSpan.FromMilliseconds(100));
         await using var server = await StartAsync(failure, revision, builder => builder.WithServerTools(new ClipboardTools(service, AnswerTimeout)));
 

@@ -12,7 +12,7 @@ public class InputSafetyStartupTests
     private readonly RecordingLogger _logger = new();
 
     private async Task Start(TargetPolicySettings policy, InputGuardOptions options) =>
-        await new InputSafetyStartup(new TargetPolicy(policy), options, _logger).StartAsync(CancellationToken.None);
+        await new InputSafetyStartup(new TargetPolicy(policy, Permissive.Windows), options, _logger).StartAsync(CancellationToken.None);
 
     [Fact]
     public async Task StartAsync_LogsThePolicyAndTheChords()

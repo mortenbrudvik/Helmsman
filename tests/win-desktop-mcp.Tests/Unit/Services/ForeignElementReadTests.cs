@@ -24,7 +24,7 @@ public class ForeignElementReadTests
     private readonly InlineUiaWorker _worker = new();
     private readonly Mock<INativeWindowWrapper> _windows = new();
     private readonly ElementRegistry _registry;
-    private readonly TargetPolicy _policy = new(TargetPolicySettings.Default);
+    private readonly TargetPolicy _policy = new(TargetPolicySettings.Default, Permissive.Windows);
     private readonly FakeUiaNode _window = new("Window", "Inbox - Outlook") { ProcessId = AppPid };
 
     public ForeignElementReadTests()
@@ -99,7 +99,7 @@ public class ForeignElementReadTests
     [Fact]
     public void Verdict_WithoutAPolicyThatDeniesAnything_IsAllowed_WithoutAnyRead()
     {
-        var open = new TargetPolicy(new TargetPolicySettings([], null, "test"));
+        var open = new TargetPolicy(new TargetPolicySettings([], null, "test"), Permissive.Windows);
 
         var foreign = UiaTargets.ForeignElementsOf(_windows.Object, open, Handle);
 
@@ -886,7 +886,7 @@ public class ForeignElementReadTests
 
     /// <summary>The default deny list with the WebView2 runtime on it: process 778 is refused.</summary>
     private static readonly TargetPolicy DeniesWebView2 =
-        new(new TargetPolicySettings([.. TargetPolicySettings.DefaultDeniedProcesses, "msedgewebview2"], null, "test"));
+        new(new TargetPolicySettings([.. TargetPolicySettings.DefaultDeniedProcesses, "msedgewebview2"], null, "test"), Permissive.Windows);
 
     /// <summary>
     /// The window hosts a WebView2 (process 778) whose render widget's pane holds <paramref name="page"/>. Chromium builds a

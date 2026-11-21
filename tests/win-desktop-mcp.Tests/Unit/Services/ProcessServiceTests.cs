@@ -1534,7 +1534,7 @@ public class ProcessServiceTests
         _mockProcessWrapper.Setup(w => w.GetProcessCommandLine(It.IsAny<int>())).Returns("KeePass.exe vault.kdbx -pw:hunter2");
 
         // Act
-        var result = CreateListingSut(new TargetPolicy(TargetPolicySettings.Default))
+        var result = CreateListingSut(new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows))
             .GetRunningProcesses(Everything with { NameFilter = "keepass", IncludeCommandLine = true });
 
         // Assert - it is still listed, without its command line
@@ -1549,7 +1549,7 @@ public class ProcessServiceTests
         UseIntegrity();
         UseProcessTable();
         _mockProcessWrapper.Setup(w => w.GetProcessCommandLine(It.IsAny<int>())).Returns("app.exe");
-        var policy = new TargetPolicy(TargetPolicySettings.Default with { AllowedProcesses = ["notepad"] });
+        var policy = new TargetPolicy(TargetPolicySettings.Default with { AllowedProcesses = ["notepad"] }, Permissive.Windows);
 
         // Act
         var result = CreateListingSut(policy).GetRunningProcesses(Everything with { NameFilter = "e", IncludeCommandLine = true });
@@ -1591,7 +1591,7 @@ public class ProcessServiceTests
         _mockProcessWrapper.Setup(w => w.GetProcessCommandLine(It.IsAny<int>())).Returns("KeePass.exe vault.kdbx -pw:hunter2");
 
         // Act
-        var result = CreateListingSut(new TargetPolicy(TargetPolicySettings.Default))
+        var result = CreateListingSut(new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows))
             .GetRunningProcesses(Everything with { ProcessId = Notepad, IncludeCommandLine = true });
 
         // Assert

@@ -234,13 +234,13 @@ public sealed class ContractServices : IDisposable
         services.AddSingleton(Permissive.Takeover);
         services.AddSingleton(Screenshots);
         services.AddSingleton<IOcrEngineWrapper>(Ocr);
-        var ocrPolicy = new TargetPolicy(TargetPolicySettings.Default);
+        var ocrPolicy = new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows);
         services.AddSingleton<IOcrService>(_ => new OcrService(Screenshots, Ocr, NativeWindows.Object,
             new CaptureTargetPolicy(Windows.Object, ocrPolicy), ocrPolicy));
         services.AddSingleton<ICaptureRegistry>(Captures);
         services.AddSingleton<ICoordinateSpaceResolver>(new CoordinateSpaceResolver(
             Captures, _capturedWindows.Object, Mock.Of<INativeHitTestWrapper>(), Screen.Object));
-        services.AddSingleton<ITargetPolicy>(new TargetPolicy(TargetPolicySettings.Default));
+        services.AddSingleton<ITargetPolicy>(new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows));
         // The capture tools' check of a captured window, over the policy above, as the server registers it
         services.AddSingleton<ICaptureTargetPolicy>(sp => new CaptureTargetPolicy(Windows.Object, sp.GetRequiredService<ITargetPolicy>()));
         services.AddSingleton(Audit);
@@ -646,7 +646,7 @@ public sealed class ContractServices : IDisposable
         _capturedWindows.Setup(w => w.GetWindowRect(It.IsAny<nint>())).Returns((0, 100, 1600, 1000));
         _capturedWindows.Setup(w => w.GetWindowThreadProcessId(It.IsAny<nint>())).Returns(4242u);
         // The raw pixel reads of OCR (roadmap M6.3) check the target policy of a window: Notepad is allowed
-        var capturePolicy = new TargetPolicy(TargetPolicySettings.Default);
+        var capturePolicy = new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows);
         Screenshots = new ScreenshotService(
             Screen.Object,
             monitors.Object,

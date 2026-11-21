@@ -1135,7 +1135,7 @@ public class ForegroundServiceTests
         _windows.Setup(w => w.GetProcessName((uint)TerminalPid)).Returns("WindowsTerminal");
         _windows.Setup(w => w.GetProcessName(dialogPid)).Returns((string?)null);
         var windowService = new WindowService(
-            TestDataFactory.CreateMockMonitorService().Object, _windows.Object, Mock.Of<IHostGuard>(), new TargetPolicy(settings));
+            TestDataFactory.CreateMockMonitorService().Object, _windows.Object, Mock.Of<IHostGuard>(), new TargetPolicy(settings, Permissive.Windows));
         _windowService.Setup(w => w.EvaluateTargetPolicy(It.IsAny<nint>())).Returns<nint>(windowService.EvaluateTargetPolicy);
     }
 

@@ -878,7 +878,7 @@ public class ElementSearchServiceTests
         BuildEditor();
         _windows.Setup(w => w.GetProcessName(300u)).Returns("Bitwarden");
         var warmup = new Mock<IAccessibilityWarmup>();
-        var sut = new ElementSearchService(_tree, _worker, _registry, _windows.Object, new TargetPolicy(TargetPolicySettings.Default),
+        var sut = new ElementSearchService(_tree, _worker, _registry, _windows.Object, new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows),
             warmup.Object);
 
         // Act
@@ -903,7 +903,7 @@ public class ElementSearchServiceTests
         var withinRef = _registry.Register(Handle, _tree.ReadElement(options), new ElementOrigin(_registry.NextGeneration()))!;
         _windows.Setup(w => w.GetProcessName(300u)).Returns("Bitwarden");
         var sut = new ElementSearchService(_tree, _worker, _registry, _windows.Object,
-            policy: new TargetPolicy(TargetPolicySettings.Default));
+            policy: new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows));
         var readsBefore = _tree.Reads.Count;
 
         // Act
@@ -920,7 +920,7 @@ public class ElementSearchServiceTests
         BuildEditor();
         _windows.Setup(w => w.GetProcessName(300u)).Returns("notepad");
         var sut = new ElementSearchService(_tree, _worker, _registry, _windows.Object,
-            policy: new TargetPolicy(TargetPolicySettings.Default));
+            policy: new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows));
 
         var result = await sut.FindAsync(Query(name: "Save"));
 

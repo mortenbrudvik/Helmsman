@@ -114,7 +114,7 @@ public class ElementRefArgumentTests
     {
         var sut = new ScreenshotTools(TestDataFactory.CreateMockScreenshotService().Object,
             TestDataFactory.CreateMockUIElementService().Object, TestDataFactory.CreateMockWindowService().Object,
-            new CaptureTargetPolicy(TestDataFactory.CreateMockWindowService().Object, new TargetPolicy(TargetPolicySettings.Default)),
+            new CaptureTargetPolicy(TestDataFactory.CreateMockWindowService().Object, new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows)),
             Permissive.Session, new Mock<IElementRegistry>().Object);
 
         var error = await RefusedAsync(() => sut.CaptureWindow(handle: 0x4242, @ref: "save-button"));

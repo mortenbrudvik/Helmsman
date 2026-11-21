@@ -26,7 +26,8 @@ public class UiaTargetsTests
             TargetPolicySettings.DenyVariable => deny,
             TargetPolicySettings.AllowVariable => allow,
             _ => null
-        }));
+        }),
+        Permissive.Windows);
 
     private void Window(nint handle, string className, uint processId, string? processName)
     {

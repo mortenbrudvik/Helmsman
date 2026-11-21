@@ -21,7 +21,8 @@ public class TargetPolicyEnforcementTests
             TargetPolicySettings.DenyVariable => deny,
             TargetPolicySettings.AllowVariable => allow,
             _ => null
-        }));
+        }),
+        Permissive.Windows);
 
     #region close_window, close_windows_batch
 
@@ -122,7 +123,7 @@ public class TargetPolicyEnforcementTests
         _native.Setup(n => n.GetClassName(coreWindow)).Returns("Windows.UI.Core.CoreWindow");
         _native.Setup(n => n.GetWindowThreadProcessId(coreWindow)).Returns(600u);
         _native.Setup(n => n.GetProcessName(600u)).Returns(app);
-        var sut = CreateWindowService(new TargetPolicy(TargetPolicySettings.Default));
+        var sut = CreateWindowService(new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows));
 
         // Act
         var verdict = sut.EvaluateTargetPolicy(frame);
@@ -146,7 +147,7 @@ public class TargetPolicyEnforcementTests
         _native.Setup(n => n.GetClassName(coreWindow)).Returns("Windows.UI.Core.CoreWindow");
         _native.Setup(n => n.GetWindowThreadProcessId(coreWindow)).Returns(600u);
         _native.Setup(n => n.GetProcessName(600u)).Returns("CredDialogHost");
-        var sut = CreateWindowService(new TargetPolicy(TargetPolicySettings.Default));
+        var sut = CreateWindowService(new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows));
 
         // Act
         var verdict = sut.EvaluateTargetPolicy(frame);

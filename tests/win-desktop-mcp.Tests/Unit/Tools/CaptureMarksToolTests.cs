@@ -39,7 +39,7 @@ public class CaptureMarksToolTests
     }
 
     private ScreenshotTools CreateSut() =>
-        new(_screenshots.Object, _elements.Object, _windows.Object, new CaptureTargetPolicy(_windows.Object, new TargetPolicy(_policy)), Permissive.Session, _registry.Object);
+        new(_screenshots.Object, _elements.Object, _windows.Object, new CaptureTargetPolicy(_windows.Object, new TargetPolicy(_policy, Permissive.Windows)), Permissive.Session, _registry.Object);
 
     private void Resolves(UiaRect bounds, bool offscreen = false, string resolvedRef = Ref, bool moved = false)
     {

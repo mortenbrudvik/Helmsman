@@ -15,7 +15,7 @@ public class TargetPolicyTests
             _ => null
         });
 
-    private static TargetPolicy Policy(string? deny = null, string? allow = null) => new(Settings(deny, allow));
+    private static TargetPolicy Policy(string? deny = null, string? allow = null) => new(Settings(deny, allow), Permissive.Windows);
 
     #region Settings from the environment
 

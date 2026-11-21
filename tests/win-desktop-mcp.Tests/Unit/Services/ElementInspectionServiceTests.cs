@@ -727,7 +727,7 @@ public class ElementInspectionServiceTests
 
     private ElementInspectionService CreateSutWithPolicy(TargetPolicySettings? policy = null) =>
         new(_tree, _worker, _hitTest.Object, _windows.Object, _monitors.Object,
-            new TargetPolicy(policy ?? TargetPolicySettings.Default), _warmup.Object);
+            new TargetPolicy(policy ?? TargetPolicySettings.Default, Permissive.Windows), _warmup.Object);
 
     /// <summary>Makes <paramref name="window"/> a window of process <paramref name="processId"/> named <paramref name="processName"/>.</summary>
     private void WindowOf(nint window, uint processId, string processName)

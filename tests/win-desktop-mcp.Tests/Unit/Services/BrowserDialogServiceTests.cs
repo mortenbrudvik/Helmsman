@@ -158,7 +158,7 @@ public class BrowserDialogServiceTests
     public async Task ADeniedBrowser_IsNeitherReadNorAnswered()
     {
         Show(new FakeChromiumDialog("confirm"));
-        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["chrome"] });
+        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["chrome"] }, Permissive.Windows);
 
         var result = await CreateSut().HandleAsync(Browser, accept: false, promptText: null);
 

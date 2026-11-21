@@ -24,7 +24,7 @@ public class OcrServiceTests
     private OcrService CreateSut()
     {
         var (native, policy) = DeniedWindowMaskTests.Desktop(_desktop);
-        return new OcrService(_screenshots.Object, _engine, native.Object, policy.Object, new TargetPolicy(TargetPolicySettings.Default));
+        return new OcrService(_screenshots.Object, _engine, native.Object, policy.Object, new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows));
     }
 
     /// <summary>The raw capture CapturePixels returns: white pixels of the size and place given.</summary>

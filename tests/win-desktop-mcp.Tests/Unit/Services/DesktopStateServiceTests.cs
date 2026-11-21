@@ -32,7 +32,7 @@ public class DesktopStateServiceTests
     private readonly Mock<IScreenshotService> _screenshots = new();
     private readonly Mock<IProcessSecurityProbe> _security = new();
     private readonly List<(nint Handle, UIElementFilter? Filter)> _walks = [];
-    private ITargetPolicy _policy = new TargetPolicy(TargetPolicySettings.Default);
+    private ITargetPolicy _policy = new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows);
     private ToolsetSelection? _toolsets;
 
     public DesktopStateServiceTests()
@@ -318,7 +318,7 @@ public class DesktopStateServiceTests
     [Fact]
     public async Task AWindowThePolicyDenies_IsNotRead_UnaskedOrNamed()
     {
-        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["notepad"] });
+        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["notepad"] }, Permissive.Windows);
 
         var (unnamed, _) = await CreateSut().GetStateAsync(Request(), CancellationToken.None);
         var (named, _) = await CreateSut().GetStateAsync(Request(window: Notepad), CancellationToken.None);
@@ -381,7 +381,7 @@ public class DesktopStateServiceTests
     public async Task AWindowWhoseProcessCannotBeNamed_IsRead_UnaskedOrNamed_WhenThePolicyDeniesNothing()
     {
         // Arrange
-        _policy = new TargetPolicy(TargetPolicySettings.FromEnvironment(name => name == TargetPolicySettings.DenyVariable ? "none" : null));
+        _policy = new TargetPolicy(TargetPolicySettings.FromEnvironment(name => name == TargetPolicySettings.DenyVariable ? "none" : null), Permissive.Windows);
         var vault = Window(Notepad, "Vault", WindowInfo.UnknownProcessName);
         _windows.Setup(w => w.GetForegroundWindow()).Returns(vault);
         _windows.Setup(w => w.GetWindowInfo(Notepad)).Returns(vault);
@@ -421,7 +421,7 @@ public class DesktopStateServiceTests
     public async Task TheFocus_InADeniedAppInFront_IsNotRead_WhenAnotherWindowIsNamed()
     {
         // Arrange
-        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["keepass"] });
+        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["keepass"] }, Permissive.Windows);
         _windows.Setup(w => w.GetForegroundWindow()).Returns(Window(KeePass, "Passwords.kdbx - KeePass", "KeePass"));
         FocusIn(KeePass);
 
@@ -474,7 +474,7 @@ public class DesktopStateServiceTests
     public async Task TheFocus_InAWindowWhoseProcessCannotBeNamed_IsRead_WhenThePolicyDeniesNothing()
     {
         // Arrange
-        _policy = new TargetPolicy(TargetPolicySettings.FromEnvironment(name => name == TargetPolicySettings.DenyVariable ? "none" : null));
+        _policy = new TargetPolicy(TargetPolicySettings.FromEnvironment(name => name == TargetPolicySettings.DenyVariable ? "none" : null), Permissive.Windows);
         _windows.Setup(w => w.GetWindowInfo(KeePass)).Returns(Window(KeePass, "Vault", WindowInfo.UnknownProcessName));
         FocusIn(KeePass);
 
@@ -503,7 +503,7 @@ public class DesktopStateServiceTests
     public async Task TheFocus_ThatMovedIntoADeniedWindowNamed_IsLeftOut()
     {
         // Arrange - Notepad is in front and allowed; the focus read finds itself in KeePass, which was named
-        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["keepass"] });
+        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["keepass"] }, Permissive.Windows);
         FocusIn(KeePass);
 
         // Act
@@ -520,7 +520,7 @@ public class DesktopStateServiceTests
     public async Task TheFocus_InADeniedWindowThatWasNotNamed_IsLeftOut()
     {
         // Arrange - Notepad is named, but KeePass (denied) is in front and holds the keyboard focus
-        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["keepass"] });
+        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["keepass"] }, Permissive.Windows);
         _windows.Setup(w => w.GetForegroundWindow()).Returns(Window(KeePass, "Passwords.kdbx - KeePass", "KeePass"));
         FocusIn(KeePass);
 
@@ -539,7 +539,7 @@ public class DesktopStateServiceTests
     [Fact]
     public async Task TheFocus_WhoseWindowIsNotKnown_IsJudgedByTheWindowInFront()
     {
-        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["keepass"] });
+        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["keepass"] }, Permissive.Windows);
         _windows.Setup(w => w.GetForegroundWindow()).Returns(Window(KeePass, "Passwords.kdbx - KeePass", "KeePass"));
         FocusIn(null);
 
@@ -1082,7 +1082,7 @@ public class DesktopStateServiceTests
     [Fact]
     public async Task TheScreenshot_OfAWindowThePolicyDenies_IsRefused_EvenWhenNamed()
     {
-        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["notepad"] });
+        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["notepad"] }, Permissive.Windows);
         var include = new HashSet<DesktopStateSection> { DesktopStateSection.Screenshot };
 
         var (state, image) = await CreateSut().GetStateAsync(Request(window: Notepad, include: include), CancellationToken.None);

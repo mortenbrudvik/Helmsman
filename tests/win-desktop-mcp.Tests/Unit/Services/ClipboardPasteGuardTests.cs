@@ -11,6 +11,9 @@ public class ClipboardPasteGuardTests
     private const int AppProcessId = 2001;
     private static readonly nint Terminal = 0x4000, Editor = 0x5000;
 
+    /// <summary>The window the agent's copy keys go to, which is in front when the app copies.</summary>
+    private static readonly nint AppWindow = 0x2010;
+
     private readonly FakeClipboardWrapper _clipboard = new();
     private readonly ManualClock _clock = new();
     private readonly ClipboardOrigin _origin;
@@ -18,7 +21,7 @@ public class ClipboardPasteGuardTests
 
     public ClipboardPasteGuardTests()
     {
-        _origin = new ClipboardOrigin(_clipboard, _clock, Timeout.InfiniteTimeSpan);
+        _origin = new ClipboardOrigin(_clipboard, Permissive.WindowInFront(AppWindow), _clock, Timeout.InfiniteTimeSpan);
         _windows.Setup(w => w.GetClassName(Terminal)).Returns("ConsoleWindowClass");
         _windows.Setup(w => w.GetClassName(Editor)).Returns("Notepad");
     }
@@ -87,7 +90,7 @@ public class ClipboardPasteGuardTests
     [Fact]
     public void CopyThenPasteInOneCall_IsRefused_AfterTheAgentsOwnCopy_AndWithWamAllowUserClipboard()
     {
-        _origin.InputSent(_origin.BeforeInput(Keys("^c"), AppProcessId)!);
+        _origin.InputSent(_origin.BeforeInput(Keys("^c"), AppProcessId, AppWindow)!);
         _clipboard.AppCopies(AppProcessId, "the selection");
 
         Guard().Check(Keys("^c^v"), Editor).Should().Contain("separate calls");
@@ -124,7 +127,7 @@ public class ClipboardPasteGuardTests
         // paste what the copy takes next, unchecked
         var outcome = _clipboard.WriteText("Meeting notes");
         _origin.ServerWrote(outcome.SequenceNumber, "Meeting notes");
-        _origin.InputSent(_origin.BeforeInput(Keys("^c"), AppProcessId)!);
+        _origin.InputSent(_origin.BeforeInput(Keys("^c"), AppProcessId, AppWindow)!);
 
         Guard().Check(Keys("^v"), Editor).Should().Contain("not copied yet").And.Contain("Nothing was sent");
 
@@ -137,8 +140,8 @@ public class ClipboardPasteGuardTests
     {
         var outcome = _clipboard.WriteText("Meeting notes");
         _origin.ServerWrote(outcome.SequenceNumber, "Meeting notes");
-        _origin.InputSent(_origin.BeforeInput(Keys("^c"), AppProcessId)!);
-        _origin.InputSent(_origin.BeforeInput(LeftClick, AppProcessId)!);
+        _origin.InputSent(_origin.BeforeInput(Keys("^c"), AppProcessId, AppWindow)!);
+        _origin.InputSent(_origin.BeforeInput(LeftClick, AppProcessId, AppWindow)!);
 
         Guard().Check(Keys("^v"), Editor).Should().Contain("not copied yet");
     }
@@ -147,7 +150,7 @@ public class ClipboardPasteGuardTests
     public void APasteAfterCopyKeysAndSetClipboard_IsRefused_UntilTheAppCopies()
     {
         // Another change of the clipboard after the keys does not mean the app has acted on them
-        _origin.InputSent(_origin.BeforeInput(Keys("^c"), AppProcessId)!);
+        _origin.InputSent(_origin.BeforeInput(Keys("^c"), AppProcessId, AppWindow)!);
         var outcome = _clipboard.WriteText("Meeting notes");
         _origin.ServerWrote(outcome.SequenceNumber, "Meeting notes");
 
@@ -165,12 +168,12 @@ public class ClipboardPasteGuardTests
         _origin.ServerWrote(outcome.SequenceNumber, "Meeting notes");
         for (var i = 0; i < 3; i++)
         {
-            _origin.InputSent(_origin.BeforeInput(Keys("^c"), AppProcessId)!);
+            _origin.InputSent(_origin.BeforeInput(Keys("^c"), AppProcessId, AppWindow)!);
             _clock.Advance(TimeSpan.FromSeconds(5.1));
         }
 
         // Act
-        _origin.InputSent(_origin.BeforeInput(Keys("^c"), AppProcessId)!);
+        _origin.InputSent(_origin.BeforeInput(Keys("^c"), AppProcessId, AppWindow)!);
 
         // Assert
         Guard().Check(Keys("^v"), Editor).Should().Contain("not copied yet");
@@ -182,7 +185,7 @@ public class ClipboardPasteGuardTests
         // The split the refusal asks for: the paste in its own call is checked against what the copy put there
         var outcome = _clipboard.WriteText("Meeting notes");
         _origin.ServerWrote(outcome.SequenceNumber, "Meeting notes");
-        _origin.InputSent(_origin.BeforeInput(Keys("^c"), AppProcessId)!);
+        _origin.InputSent(_origin.BeforeInput(Keys("^c"), AppProcessId, AppWindow)!);
         _clipboard.AppCopies(AppProcessId, "hunter2", ClipboardPrivacyMarkers.ExcludeFromMonitorProcessing);
 
         Guard().Check(Keys("^v"), Editor).Should().Contain("marked private");
@@ -262,7 +265,7 @@ public class ClipboardPasteGuardTests
     [Fact]
     public void PastingTheAgentsOwnCopy_IsAllowed()
     {
-        _origin.InputSent(_origin.BeforeInput(Keys("^c"), AppProcessId)!);
+        _origin.InputSent(_origin.BeforeInput(Keys("^c"), AppProcessId, AppWindow)!);
         _clipboard.AppCopies(AppProcessId, "the selection");
 
         Guard().Check(Keys("^v"), Editor).Should().BeNull();
@@ -272,7 +275,7 @@ public class ClipboardPasteGuardTests
     public void PastingTheAgentsCopy_MarkedPrivate_IsRefused()
     {
         // The agent clicked a password manager's Copy button: get_clipboard would not return it, so it is not pasted
-        _origin.InputSent(_origin.BeforeInput(Keys("^c"), AppProcessId)!);
+        _origin.InputSent(_origin.BeforeInput(Keys("^c"), AppProcessId, AppWindow)!);
         _clipboard.AppCopies(AppProcessId, "hunter2", ClipboardPrivacyMarkers.ExcludeFromMonitorProcessing);
 
         Guard().Check(Keys("^v"), Editor).Should().Contain("marked private");

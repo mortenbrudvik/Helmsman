@@ -756,7 +756,7 @@ public class ElementReadServiceTextTests
     private ElementReadService CreateSutInADeniedApp()
     {
         _windows.Setup(w => w.GetProcessName(300u)).Returns("KeePass");
-        var policy = new TargetPolicy(TargetPolicySettings.Default);
+        var policy = new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows);
         return new ElementReadService(_tree, _worker, _registry,
             new ElementSearchService(_tree, _worker, _registry, _windows.Object, policy, _warmup.Object),
             _windows.Object, policy, _warmup.Object);

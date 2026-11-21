@@ -68,7 +68,7 @@ public class ScreenshotDisplayAffinityTests
 
     private ScreenshotService CreateSut(ITargetPolicy? policy = null) =>
         new(_capture.Object, _monitors.Object, _windows.Object, _capturePolicy.Object,
-            policy ?? new TargetPolicy(TargetPolicySettings.Default), _security.Object, _calls.Object,
+            policy ?? new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows), _security.Object, _calls.Object,
             captureRegistry: null);
 
     #region Screen copies

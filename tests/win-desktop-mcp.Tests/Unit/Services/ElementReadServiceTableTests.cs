@@ -1391,7 +1391,7 @@ public class ElementReadServiceTableTests
         // Arrange - a password manager's entry list, with its passwords shown
         var elementRef = Add(Grid(Cells(3, 2), "Title", "Password"));
         _windows.Setup(w => w.GetProcessName(300u)).Returns("KeePass");
-        var policy = new TargetPolicy(TargetPolicySettings.Default);
+        var policy = new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows);
         var sut = new ElementReadService(_tree, _worker, _registry,
             new ElementSearchService(_tree, _worker, _registry, _windows.Object, policy: policy), _windows.Object, policy: policy);
         var readsBefore = _tree.Reads.Count;

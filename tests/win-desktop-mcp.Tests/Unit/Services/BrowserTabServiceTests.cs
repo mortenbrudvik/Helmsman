@@ -20,7 +20,7 @@ public class BrowserTabServiceTests
     private readonly Mock<ICdpTabService> _tabs = new();
     private readonly Mock<IDebugPortLocator> _locator = new();
     private readonly InputSession _session = new(new FakeInputWrapper());
-    private ITargetPolicy _policy = new TargetPolicy(TargetPolicySettings.Default);
+    private ITargetPolicy _policy = new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows);
     private FakePortOwnerResolver _owners = new(owner: (int)BrowserPid);
 
     private static readonly CdpTarget Shown = new("SHOWN", "page", "Docs", "https://example.com/docs/", "ws://127.0.0.1:9222/devtools/page/SHOWN", Port);
@@ -73,7 +73,7 @@ public class BrowserTabServiceTests
     [Fact]
     public async Task AWindowThePolicyDenies_IsRefused_BeforeItsCommandLineIsRead()
     {
-        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["chrome"] });
+        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["chrome"] }, Permissive.Windows);
 
         var result = await CreateSut().NavigateAsync(ByWindow(), new BrowserNavigateOptions("https://example.com/", false, BrowserWaitUntil.Load, 15_000));
 
@@ -87,7 +87,7 @@ public class BrowserTabServiceTests
     public async Task ThePolicy_AppliesAlsoWithAnExplicitCdpPort()
     {
         // The reads exempt an explicit cdpPort (M5.3); an action does not
-        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["chrome"] });
+        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["chrome"] }, Permissive.Windows);
 
         var result = await CreateSut().ActivateTabAsync(ByWindow("OTHER", cdpPort: Port));
 
@@ -154,7 +154,7 @@ public class BrowserTabServiceTests
     [Fact]
     public async Task APortAlone_ThePolicyAppliesToItsListener()
     {
-        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["chrome"] });
+        _policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["chrome"] }, Permissive.Windows);
 
         var result = await CreateSut().ListTabsAsync(new BrowserTabTarget(null, Port));
 

@@ -431,7 +431,8 @@ public class InputSimulationServiceScrollTests
 
     #region The agent's copies (get_clipboard, roadmap M2.16)
 
-    private ClipboardOrigin NewOrigin(FakeClipboardWrapper clipboard) => new(clipboard, new ManualClock(), Timeout.InfiniteTimeSpan);
+    private ClipboardOrigin NewOrigin(FakeClipboardWrapper clipboard) =>
+        new(clipboard, Permissive.WindowInFront((nint)Notepad.Handle), new ManualClock(), Timeout.InfiniteTimeSpan);
 
     [Fact]
     public async Task SendKeys_CopyKeys_StartTheCopyWindow()

@@ -1434,7 +1434,7 @@ public class AccessibilityWarmupTests
 
     /// <summary>The default deny list, and the WebView2 runtime on it too.</summary>
     private static readonly TargetPolicy DeniesWebView2 =
-        new(new TargetPolicySettings([.. TargetPolicySettings.DefaultDeniedProcesses, "msedgewebview2"], null, "test"));
+        new(new TargetPolicySettings([.. TargetPolicySettings.DefaultDeniedProcesses, "msedgewebview2"], null, "test"), Permissive.Windows);
 
     private AccessibilityWarmup CreateSut(ITargetPolicy policy) => new(_tree, _windows.Object, _processes.Object, policy, _clock,
     (delay, token) =>
@@ -1488,7 +1488,7 @@ public class AccessibilityWarmupTests
         WpfWithWebView2();
         _windows.Setup(w => w.GetProcessName(WebViewProcess)).Returns((string?)null);
         var asked = WindowsAskedFor();
-        var sut = CreateSut(new TargetPolicy(TargetPolicySettings.Default));
+        var sut = CreateSut(new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows));
 
         // Act
         var info = sut.WarmUp(Browser, Budget, CancellationToken.None);
@@ -1505,7 +1505,7 @@ public class AccessibilityWarmupTests
     {
         // Arrange
         var pane = WpfWithWebView2();
-        var sut = CreateSut(new TargetPolicy(TargetPolicySettings.Default));
+        var sut = CreateSut(new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows));
 
         // Act
         var info = sut.WarmUp(Browser, Budget, CancellationToken.None);
@@ -1547,7 +1547,7 @@ public class AccessibilityWarmupTests
         }
 
         var asked = WindowsAskedFor();
-        var sut = CreateSut(denied ? DeniesWebView2 : new TargetPolicy(TargetPolicySettings.Default));
+        var sut = CreateSut(denied ? DeniesWebView2 : new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows));
 
         // Act
         var info = sut.WarmUp(App, Budget, CancellationToken.None);
@@ -1565,7 +1565,7 @@ public class AccessibilityWarmupTests
     {
         AppWithVisualWebView(documentChildren: 3);
 
-        var info = CreateSut(new TargetPolicy(TargetPolicySettings.Default)).WarmUp(App, Budget, CancellationToken.None);
+        var info = CreateSut(new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows)).WarmUp(App, Budget, CancellationToken.None);
 
         info.Should().Be(new AccessibilityWarmupInfo(AccessibilityWarmupStatus.Ready, WebContentHost.WebView2, 0, 1, 3));
     }
@@ -1581,7 +1581,7 @@ public class AccessibilityWarmupTests
         _desktop[vault] = new FakeWindow(AccessibilityWarmup.RenderWidgetHostClass, vaultProcess, App);
         _windows.Setup(w => w.GetProcessName(vaultProcess)).Returns("KeePass");
         var asked = WindowsAskedFor();
-        var policy = new TargetPolicy(TargetPolicySettings.Default);
+        var policy = new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows);
         var sut = CreateSut(policy);
 
         // Act
@@ -1606,7 +1606,7 @@ public class AccessibilityWarmupTests
         const uint vaultProcess = 7000;
         AppWithVisualWebView(documentChildren: 3);
         _windows.Setup(w => w.GetProcessName(vaultProcess)).Returns("KeePass");
-        var sut = CreateSut(new TargetPolicy(TargetPolicySettings.Default));
+        var sut = CreateSut(new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows));
         sut.WarmUp(App, Budget, CancellationToken.None)!.Status.Should().Be(AccessibilityWarmupStatus.Ready);
         _desktop[vault] = new FakeWindow(AccessibilityWarmup.RenderWidgetHostClass, vaultProcess, App);
         var asked = WindowsAskedFor();
@@ -1764,7 +1764,7 @@ public class AccessibilityWarmupTests
     {
         // Arrange
         var pane = WpfWithWebView2();
-        var sut = CreateSut(new TargetPolicy(new TargetPolicySettings([], null, "test")));
+        var sut = CreateSut(new TargetPolicy(new TargetPolicySettings([], null, "test"), Permissive.Windows));
 
         // Act
         var info = sut.WarmUpForSearch(Browser, Budget, CancellationToken.None);

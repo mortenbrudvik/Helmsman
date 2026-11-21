@@ -354,7 +354,7 @@ public class WindowServiceOwnedWindowsTests
         var terminal = _desktop.Add("pwsh", "CASCADIA_HOSTING_WINDOW_CLASS");
         var denied = _desktop.Add("Bank", "BankApp", processId: 800, processName: "bank");
         _hostGuard.Setup(g => g.IsHostWindow(terminal)).Returns(true);
-        var policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["bank"] });
+        var policy = new TargetPolicy(TargetPolicySettings.Default with { DeniedProcesses = ["bank"] }, Permissive.Windows);
         var sut = CreateSut(policy);
 
         // Act + Assert

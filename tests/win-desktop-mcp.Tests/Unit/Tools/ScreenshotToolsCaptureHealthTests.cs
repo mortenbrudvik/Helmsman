@@ -22,7 +22,7 @@ public class ScreenshotToolsCaptureHealthTests
     private readonly List<string> _events = [];
 
     private ScreenshotTools CreateSut(TargetPolicySettings? policy = null) =>
-        new(_screenshots.Object, _elements.Object, _windows.Object, new CaptureTargetPolicy(_windows.Object, new TargetPolicy(policy ?? TargetPolicySettings.Default)), _session.Object);
+        new(_screenshots.Object, _elements.Object, _windows.Object, new CaptureTargetPolicy(_windows.Object, new TargetPolicy(policy ?? TargetPolicySettings.Default, Permissive.Windows)), _session.Object);
 
     #region capture_with_elements and the walk
 
@@ -413,7 +413,7 @@ public class ScreenshotToolsCaptureHealthTests
         native.Setup(n => n.GetWindowThreadProcessId(window)).Returns(processId);
         native.Setup(n => n.GetProcessName(processId)).Returns((string?)null);
         var windowService = new WindowService(
-            TestDataFactory.CreateMockMonitorService().Object, native.Object, Mock.Of<IHostGuard>(), new TargetPolicy(policy));
+            TestDataFactory.CreateMockMonitorService().Object, native.Object, Mock.Of<IHostGuard>(), new TargetPolicy(policy, Permissive.Windows));
         _windows.Setup(w => w.EvaluateTargetPolicy(window)).Returns(() => windowService.EvaluateTargetPolicy(window));
     }
 

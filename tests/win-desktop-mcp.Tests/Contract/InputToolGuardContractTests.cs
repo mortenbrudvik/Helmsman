@@ -96,7 +96,7 @@ public class InputToolGuardContractTests
         var guard = new InputTargetGuard(
             _windows.Object, _hitTest.Object, _threads.Object, new Mock<INativeProcessWrapper>().Object,
             _windowService.Object, _foreground.Object, _security.Object, _hostGuard.Object,
-            new TargetPolicy(TargetPolicySettings.Default), InputGuardOptions.Default);
+            new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows), InputGuardOptions.Default);
         var service = new InputSimulationService(monitors.Object, _input.Object, guard, new InputSession(_input.Object), Permissive.PasteGuard,
             Permissive.Takeover, hitTest: _hitTest.Object, systemInfo: _systemInfo.Object);
         return InProcessMcpServer.StartAsync(

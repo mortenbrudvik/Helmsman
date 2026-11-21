@@ -89,12 +89,12 @@ public class CaptureCoordinateContractTests
         var guard = new InputTargetGuard(
             _windows.Object, _hitTest.Object, _threads.Object, new Mock<INativeProcessWrapper>().Object,
             _windowService.Object, _foreground.Object, _security.Object, _hostGuard.Object,
-            new TargetPolicy(TargetPolicySettings.Default), InputGuardOptions.Default);
+            new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows), InputGuardOptions.Default);
         var input = new InputSimulationService(monitors.Object, _input.Object, guard, new InputSession(_input.Object), Permissive.PasteGuard, Permissive.Takeover, hitTest: _hitTest.Object);
         var screenshots = new ScreenshotService(_capture.Object, monitors.Object, _windows.Object, Permissive.CapturePolicy, Permissive.TargetPolicy, Permissive.SecurityProbe, captureRegistry: _registry);
         var resolver = new CoordinateSpaceResolver(_registry, _windows.Object, _hitTest.Object, _capture.Object);
         var screenshotTools = new ScreenshotTools(screenshots, _uiElements.Object, _windowService.Object,
-            new CaptureTargetPolicy(_windowService.Object, new TargetPolicy(TargetPolicySettings.Default)),
+            new CaptureTargetPolicy(_windowService.Object, new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows)),
             Permissive.Session, _elementRegistry.Object);
         return InProcessMcpServer.StartAsync(
             [],

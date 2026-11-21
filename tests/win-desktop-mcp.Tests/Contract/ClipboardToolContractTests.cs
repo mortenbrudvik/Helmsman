@@ -20,7 +20,7 @@ public sealed class ClipboardToolContractTests
 
     public ClipboardToolContractTests()
     {
-        _origin = new ClipboardOrigin(_clipboard, new ManualClock(), Timeout.InfiniteTimeSpan);
+        _origin = new ClipboardOrigin(_clipboard, Permissive.Windows, new ManualClock(), Timeout.InfiniteTimeSpan);
     }
 
     private Task<InProcessMcpServer> StartAsync(Func<ElicitRequestParams, ElicitResult>? answer = null, bool allowUserClipboard = false,

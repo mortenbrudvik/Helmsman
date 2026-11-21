@@ -12,13 +12,13 @@ public sealed class TargetPolicy : ITargetPolicy
 {
     private readonly HashSet<string> _denied;
     private readonly HashSet<string>? _allowed;
-    private readonly INativeWindowWrapper? _windows;
+    private readonly INativeWindowWrapper _windows;
     private readonly bool _deniesSecurityPrompts;
 
     /// <param name="settings">The deny and allow lists.</param>
     /// <param name="windows">The Win32 window reads that recognize a security prompt by its structure
-    /// (<see cref="EvaluateWindow"/>); null to recognize none.</param>
-    public TargetPolicy(TargetPolicySettings settings, INativeWindowWrapper? windows = null)
+    /// (<see cref="EvaluateWindow"/>).</param>
+    public TargetPolicy(TargetPolicySettings settings, INativeWindowWrapper windows)
     {
         Settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _denied = new HashSet<string>(settings.DeniedProcesses.Select(TargetPolicySettings.NormalizeProcessName),
@@ -27,7 +27,7 @@ public sealed class TargetPolicy : ITargetPolicy
             ? null
             : new HashSet<string>(settings.AllowedProcesses.Select(TargetPolicySettings.NormalizeProcessName),
                 StringComparer.OrdinalIgnoreCase);
-        _windows = windows;
+        _windows = windows ?? throw new ArgumentNullException(nameof(windows));
 
         // The prompt goes with the default list's security prompts (consent, smartscreen): a list that drops them drops it
         _deniesSecurityPrompts = TargetPolicySettings.DefaultDeniedProcesses.All(_denied.Contains);
@@ -65,7 +65,7 @@ public sealed class TargetPolicy : ITargetPolicy
 
     public TargetPolicyVerdict EvaluateWindow(nint window)
     {
-        if (_windows == null || !_deniesSecurityPrompts || !SecurityPrompts.IsOpenFileSecurityWarning(_windows, window))
+        if (!_deniesSecurityPrompts || !SecurityPrompts.IsOpenFileSecurityWarning(_windows, window))
         {
             return TargetPolicyVerdict.Allow;
         }
@@ -87,7 +87,7 @@ public sealed class TargetPolicy : ITargetPolicy
     {
         try
         {
-            var processId = _windows!.GetWindowThreadProcessId(window);
+            var processId = _windows.GetWindowThreadProcessId(window);
             return processId == 0 ? null : _windows.GetProcessName(processId);
         }
         catch (Exception)

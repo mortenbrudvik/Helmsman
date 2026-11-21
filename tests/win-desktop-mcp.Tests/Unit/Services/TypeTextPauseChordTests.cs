@@ -23,7 +23,7 @@ public class TypeTextPauseChordTests
 
     public TypeTextPauseChordTests()
     {
-        _origin = new ClipboardOrigin(_clipboard, new ManualClock(), Timeout.InfiniteTimeSpan);
+        _origin = new ClipboardOrigin(_clipboard, Permissive.Windows, new ManualClock(), Timeout.InfiniteTimeSpan);
         _windows.Setup(w => w.GetClassName(Window)).Returns("Notepad");
         _windows.Setup(w => w.GetWindowThreadProcessId(Window)).Returns(77u);
         _windows.Setup(w => w.GetProcessName(77u)).Returns("notepad");

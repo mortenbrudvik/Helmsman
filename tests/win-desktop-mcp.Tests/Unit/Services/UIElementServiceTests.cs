@@ -1632,7 +1632,7 @@ public class UIElementServiceTests
         windows.Setup(w => w.GetWindowThreadProcessId(Handle)).Returns(3001u);
         windows.Setup(w => w.GetProcessName(3001u)).Returns("KeePass");
         var warmup = new Mock<IAccessibilityWarmup>();
-        var sut = new UIElementService(_tree, _worker, windows.Object, new TargetPolicy(TargetPolicySettings.Default),
+        var sut = new UIElementService(_tree, _worker, windows.Object, new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows),
             Permissive.SecurityProbe, warmup.Object);
 
         // Act
@@ -1659,7 +1659,7 @@ public class UIElementServiceTests
         windows.Setup(w => w.GetProcessName(2001u)).Returns("notepad");
 
         // Act
-        var result = await new UIElementService(_tree, _worker, windows.Object, new TargetPolicy(TargetPolicySettings.Default), Permissive.SecurityProbe)
+        var result = await new UIElementService(_tree, _worker, windows.Object, new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows), Permissive.SecurityProbe)
             .GetUIElementsAsync(Handle);
 
         // Assert
@@ -2210,7 +2210,7 @@ public class UIElementServiceTests
 
     /// <summary>The default deny list, and the WebView2 runtime on it too.</summary>
     private static readonly TargetPolicy DeniesWebView2 =
-        new(new TargetPolicySettings([.. TargetPolicySettings.DefaultDeniedProcesses, "msedgewebview2"], null, "test"));
+        new(new TargetPolicySettings([.. TargetPolicySettings.DefaultDeniedProcesses, "msedgewebview2"], null, "test"), Permissive.Windows);
 
     /// <summary>The walk with the real warm-up and <paramref name="policy"/>, over <see cref="_win32"/>; the window's app is allowed.</summary>
     /// <param name="warmupChecksPolicy">Whether the warm-up is given the policy too, as the server wires it.</param>
@@ -2275,7 +2275,7 @@ public class UIElementServiceTests
     {
         WpfWithWebView2();
 
-        var result = await PolicySut(new TargetPolicy(TargetPolicySettings.Default)).GetUIElementsAsync(Handle, maxDepth: 5);
+        var result = await PolicySut(new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows)).GetUIElementsAsync(Handle, maxDepth: 5);
 
         Shape(result.Elements).Should().Be(
             "HwndHost(WAM fixture web content(Chrome Legacy Window(Heading,Web button)," +
@@ -2296,7 +2296,7 @@ public class UIElementServiceTests
             new FakeUiaNode("Button", "OK"));
 
         // Act
-        var result = await PolicySut(new TargetPolicy(TargetPolicySettings.Default),
+        var result = await PolicySut(new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows),
             windows => windows.Setup(w => w.GetProcessName(vaultProcess)).Returns("KeePass")).GetUIElementsAsync(Handle);
 
         // Assert
@@ -2350,7 +2350,7 @@ public class UIElementServiceTests
     [Fact]
     public async Task GetUIElements_OfAWinUi3WebView2OfAnAllowedProcess_ListsItsPage()
     {
-        var (sut, app) = WinUi3Sut(policy: new TargetPolicy(TargetPolicySettings.Default));
+        var (sut, app) = WinUi3Sut(policy: new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows));
         app.ServeWebViewFrom((int)WebViewProcess);
 
         var result = await sut.GetUIElementsAsync(Handle, maxDepth: 10);
@@ -2370,7 +2370,7 @@ public class UIElementServiceTests
             Node("Button", "Reply"));
 
         // Act
-        var result = await PolicySut(new TargetPolicy(TargetPolicySettings.Default),
+        var result = await PolicySut(new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows),
             windows => windows.Setup(w => w.GetProcessName(7300u)).Returns("KeePass")).GetUIElementsAsync(Handle);
 
         // Assert
@@ -2391,7 +2391,7 @@ public class UIElementServiceTests
             .Children[0].CachedChildrenException = new System.Runtime.InteropServices.COMException("cache request failed");
 
         // Act
-        var result = await PolicySut(new TargetPolicy(TargetPolicySettings.Default),
+        var result = await PolicySut(new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows),
             windows => windows.Setup(w => w.GetProcessName(7300u)).Returns("KeePass")).GetUIElementsAsync(Handle);
 
         // Assert - each is read once, with the walk's properties (its process among them), not with its properties alone
@@ -2408,7 +2408,7 @@ public class UIElementServiceTests
         Window(Node("Pane", "Body").With(Node("Button", "Reply")))
             .Children[0].CachedChildrenException = new System.Runtime.InteropServices.COMException("cache request failed");
 
-        var result = await PolicySut(new TargetPolicy(new TargetPolicySettings([], null, "test"))).GetUIElementsAsync(Handle);
+        var result = await PolicySut(new TargetPolicy(new TargetPolicySettings([], null, "test"), Permissive.Windows)).GetUIElementsAsync(Handle);
 
         Shape(result.Elements).Should().Be("Body(Reply)");
         _tree.Reads.Should().Contain("Read:Reply").And.NotContain("Element:Reply");
@@ -2541,9 +2541,9 @@ public class UIElementServiceTests
     }
 
     [Fact]
-    public async Task GetUIElements_WithoutTheWin32Reads_LeavesNothingOut()
+    public async Task GetUIElements_WhenTheWin32ReadsNameNoOwner_LeavesNothingOut()
     {
-        // Arrange - no window wrapper: whether a child is owned cannot be told
+        // Arrange - a window wrapper that knows no window (Permissive.Windows): no child is known to be owned
         Window(new FakeUiaNode("Window", "Delete File") { NativeWindowHandle = Dialog }.With(Node("Button", "Yes")), Node("Button", "Save"));
 
         // Act

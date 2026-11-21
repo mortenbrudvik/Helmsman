@@ -17,7 +17,7 @@ public class PasteClipboardTests
 
     public PasteClipboardTests()
     {
-        _origin = new ClipboardOrigin(_clipboard, new ManualClock(), Timeout.InfiniteTimeSpan);
+        _origin = new ClipboardOrigin(_clipboard, Permissive.Windows, new ManualClock(), Timeout.InfiniteTimeSpan);
     }
 
     private PasteClipboard CreateSut() => new(_clipboard, _origin, _windows.Object);

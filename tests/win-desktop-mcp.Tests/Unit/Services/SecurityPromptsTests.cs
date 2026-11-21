@@ -201,7 +201,7 @@ public class SecurityPromptsTests
     {
         SecurityPromptWindows.Add(_windows, Prompt);
 
-        new TargetPolicy(TargetPolicySettings.Default).EvaluateWindow(Prompt).Should().Be(TargetPolicyVerdict.Allow);
+        new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows).EvaluateWindow(Prompt).Should().Be(TargetPolicyVerdict.Allow);
     }
 
     [Fact]

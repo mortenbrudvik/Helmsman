@@ -211,7 +211,7 @@ public sealed class ClipboardOrigin : IClipboardOrigin, IDisposable
     private const ushort VkC = 0x43, VkV = 0x56, VkX = 0x58;
 
     private readonly INativeClipboardWrapper _clipboard;
-    private readonly INativeWindowWrapper? _windows;
+    private readonly INativeWindowWrapper _windows;
     private readonly TimeProvider _time;
     private readonly TimeSpan _pollInterval;
     private readonly object _lock = new();
@@ -225,22 +225,21 @@ public sealed class ClipboardOrigin : IClipboardOrigin, IDisposable
     private ITimer? _timer;
 
     /// <param name="clipboard">The clipboard, for its sequence number and owner.</param>
+    /// <param name="windows">
+    /// The windows, to check that the window the agent's input went to is in front when the copy happens.
+    /// </param>
     /// <param name="time">The clock; default the system's.</param>
     /// <param name="pollInterval">
     /// How often the copy window reads the sequence number; default <see cref="PollInterval"/>. Tests pass
     /// <see cref="Timeout.InfiniteTimeSpan"/> and call <see cref="Poll"/> themselves (or let a read poll).
     /// </param>
-    /// <param name="windows">
-    /// The windows, to check that the window the agent's input went to is in front when the copy happens. The server
-    /// always passes it; without it (tests of the other rules) the check is skipped.
-    /// </param>
-    public ClipboardOrigin(INativeClipboardWrapper clipboard, TimeProvider? time = null, TimeSpan? pollInterval = null,
-        INativeWindowWrapper? windows = null)
+    public ClipboardOrigin(INativeClipboardWrapper clipboard, INativeWindowWrapper windows, TimeProvider? time = null,
+        TimeSpan? pollInterval = null)
     {
         _clipboard = clipboard ?? throw new ArgumentNullException(nameof(clipboard));
         _time = time ?? TimeProvider.System;
         _pollInterval = pollInterval ?? PollInterval;
-        _windows = windows;
+        _windows = windows ?? throw new ArgumentNullException(nameof(windows));
     }
 
     /// <summary>
@@ -398,7 +397,7 @@ public sealed class ClipboardOrigin : IClipboardOrigin, IDisposable
         ArgumentNullException.ThrowIfNull(mark);
 
         // Read without the lock (native calls): the windows that own the receiving window, for a menu that closes
-        var owners = _windows == null || mark.ReceivingWindow == 0
+        var owners = mark.ReceivingWindow == 0
             ? []
             : WindowOwnerChain.SelfAndOwners(_windows, mark.ReceivingWindow).Skip(1).ToList();
 
@@ -682,15 +681,10 @@ public sealed class ClipboardOrigin : IClipboardOrigin, IDisposable
     /// <summary>
     /// True when a window the run's input went to (or that the caller targeted) is in front or owns the window in front,
     /// or the input went to popups that have closed since and their owner is in front; null when no window is in front;
-    /// otherwise false. Always true when the server cannot read windows (tests of the other rules).
+    /// otherwise false.
     /// </summary>
     private bool? InFront(Pending run)
     {
-        if (_windows == null)
-        {
-            return true;
-        }
-
         IReadOnlyList<nint> targets;
         IReadOnlyList<nint> receivers;
         IReadOnlyList<nint> popupOwners;

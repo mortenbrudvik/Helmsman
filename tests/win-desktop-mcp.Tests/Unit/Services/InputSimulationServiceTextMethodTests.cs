@@ -27,7 +27,7 @@ public class InputSimulationServiceTextMethodTests
     public InputSimulationServiceTextMethodTests()
     {
         _session = new InputSession(_input);
-        _origin = new ClipboardOrigin(_clipboard, new ManualClock(), Timeout.InfiniteTimeSpan);
+        _origin = new ClipboardOrigin(_clipboard, Permissive.Windows, new ManualClock(), Timeout.InfiniteTimeSpan);
         WindowIs("Notepad", "notepad");
     }
 

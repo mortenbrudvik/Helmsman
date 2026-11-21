@@ -10,8 +10,8 @@ namespace WinDesktopMcp.Tests.Unit.Services;
 /// </summary>
 public class DisplayAffinityScanTests
 {
-    private static readonly TargetPolicy DeniesSome = new(TargetPolicySettings.Default);
-    private static readonly TargetPolicy DeniesNothing = new(new TargetPolicySettings([], null, "test"));
+    private static readonly TargetPolicy DeniesSome = new(TargetPolicySettings.Default, Permissive.Windows);
+    private static readonly TargetPolicy DeniesNothing = new(new TargetPolicySettings([], null, "test"), Permissive.Windows);
 
     private static IReadOnlyList<ExcludedWindow> Read(params FakeWindow[] windows)
     {

@@ -32,7 +32,7 @@ public class ScreenshotToolsTests
         _mockScreenshotService.Object,
         _mockUIElementService.Object,
         _mockWindowService.Object,
-        new CaptureTargetPolicy(_mockWindowService.Object, new TargetPolicy(_policy)),
+        new CaptureTargetPolicy(_mockWindowService.Object, new TargetPolicy(_policy, Permissive.Windows)),
         Permissive.Session);
 
     #region T9.3.2-T9.3.4: TakeScreenshot Tests

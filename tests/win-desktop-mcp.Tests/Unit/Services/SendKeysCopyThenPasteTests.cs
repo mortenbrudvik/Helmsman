@@ -16,7 +16,7 @@ public class SendKeysCopyThenPasteTests
 
     public SendKeysCopyThenPasteTests()
     {
-        _origin = new ClipboardOrigin(_clipboard, new ManualClock(), Timeout.InfiniteTimeSpan);
+        _origin = new ClipboardOrigin(_clipboard, Permissive.Windows, new ManualClock(), Timeout.InfiniteTimeSpan);
 
         // The window's app copies what the copy keys select: a password its password field marks private
         _input.BeforeSend = batch =>

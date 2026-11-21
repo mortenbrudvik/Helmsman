@@ -14,13 +14,16 @@ public class ClipboardServiceTests
 
     private const uint LeftDown = 0x0002, LeftUp = 0x0004;
 
+    /// <summary>The window the agent's input goes to, which is in front when the app copies.</summary>
+    private static readonly nint AppWindow = 0x2010;
+
     private readonly FakeClipboardWrapper _clipboard = new();
     private readonly ManualClock _clock = new();
     private readonly ClipboardOrigin _origin;
 
     public ClipboardServiceTests()
     {
-        _origin = new ClipboardOrigin(_clipboard, _clock, Timeout.InfiniteTimeSpan);
+        _origin = new ClipboardOrigin(_clipboard, Permissive.WindowInFront(AppWindow), _clock, Timeout.InfiniteTimeSpan);
     }
 
     private ClipboardService CreateSut(bool allowUserClipboard = false, TimeSpan? copyWait = null) =>
@@ -29,10 +32,10 @@ public class ClipboardServiceTests
     private Task<GetClipboardResult> ReadAsync(ClipboardService sut, ClipboardFormat format = ClipboardFormat.Text, int maxLength = 20_000,
         ClipboardConsent? consent = null) => sut.ReadAsync(format, maxLength, consent, CancellationToken.None);
 
-    private void CopyKeysSent() => _origin.InputSent(_origin.BeforeInput(SendKeysParser.Parse("^c"), AppProcessId)!);
+    private void CopyKeysSent() => _origin.InputSent(_origin.BeforeInput(SendKeysParser.Parse("^c"), AppProcessId, AppWindow)!);
 
     private void ClickSent() => _origin.InputSent(_origin.BeforeInput(
-        [InputEvent.MouseMoveAbsolute(1, 1), InputEvent.Mouse(LeftDown), InputEvent.Mouse(LeftUp)], AppProcessId)!);
+        [InputEvent.MouseMoveAbsolute(1, 1), InputEvent.Mouse(LeftDown), InputEvent.Mouse(LeftUp)], AppProcessId, AppWindow)!);
 
     private void AgentCopies(string text)
     {

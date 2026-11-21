@@ -19,21 +19,22 @@ public class ClipboardOriginTests
 
     public ClipboardOriginTests()
     {
-        _sut = new ClipboardOrigin(_clipboard, _clock, Timeout.InfiniteTimeSpan);
+        // The window the agent's input goes to is in front: the check that it is has its own tests below (review PRIVA-2)
+        _sut = new ClipboardOrigin(_clipboard, Permissive.WindowInFront(AgentWindow), _clock, Timeout.InfiniteTimeSpan);
     }
 
     private static InputEvent[] LeftClick => [InputEvent.MouseMoveAbsolute(1, 1), InputEvent.Mouse(LeftDown), InputEvent.Mouse(LeftUp)];
 
     private void CopyKeysSent(int targetProcessId = AppProcessId)
     {
-        var mark = _sut.BeforeInput(SendKeysParser.Parse("^c"), targetProcessId);
+        var mark = _sut.BeforeInput(SendKeysParser.Parse("^c"), targetProcessId, AgentWindow);
         mark.Should().NotBeNull();
         _sut.InputSent(mark!);
     }
 
     private void ClickSent()
     {
-        var mark = _sut.BeforeInput(LeftClick, AppProcessId);
+        var mark = _sut.BeforeInput(LeftClick, AppProcessId, AgentWindow);
         mark.Should().NotBeNull();
         _sut.InputSent(mark!);
     }
@@ -430,7 +431,7 @@ public class ClipboardOriginTests
         // The copy window must see a change even when nothing reads the clipboard within it
         var reads = 0;
         _clipboard.OnSequenceRead = () => Interlocked.Increment(ref reads);
-        using var origin = new ClipboardOrigin(_clipboard, TimeProvider.System, TimeSpan.FromMilliseconds(5));
+        using var origin = new ClipboardOrigin(_clipboard, Permissive.Windows, TimeProvider.System, TimeSpan.FromMilliseconds(5));
 
         origin.InputSent(new ClipboardCopyMark(100, ClipboardCopyTrigger.CopyKeys, AppProcessId));
 
@@ -631,7 +632,7 @@ public class ClipboardOriginTests
     private (ClipboardOrigin Origin, Desktop Desktop) WithWindows()
     {
         var desktop = new Desktop();
-        return (new ClipboardOrigin(_clipboard, _clock, Timeout.InfiniteTimeSpan, desktop.Mock.Object), desktop);
+        return (new ClipboardOrigin(_clipboard, desktop.Mock.Object, _clock, Timeout.InfiniteTimeSpan), desktop);
     }
 
     private static void Sent(ClipboardOrigin origin, string keys, nint receiving, nint anchor = 0) =>
