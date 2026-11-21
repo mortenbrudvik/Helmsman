@@ -63,7 +63,7 @@ public sealed class WorkspaceService : IWorkspaceService
     private readonly IBrowserReadingService _browsers;
     private readonly ICdpTabService? _tabs;
     private readonly INativeShellWindowsWrapper _shell;
-    private readonly IProcessService _processes;
+    private readonly IApplicationLauncher _processes;
     private readonly ITargetPolicy _policy;
     private readonly ILogger<WorkspaceService>? _logger;
 
@@ -73,7 +73,7 @@ public sealed class WorkspaceService : IWorkspaceService
         INativeWindowWrapper native,
         IBrowserReadingService browsers,
         INativeShellWindowsWrapper shell,
-        IProcessService processes,
+        IApplicationLauncher processes,
         ITargetPolicy policy,
         ICdpTabService? tabs = null,
         ILogger<WorkspaceService>? logger = null)

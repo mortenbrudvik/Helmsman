@@ -64,7 +64,7 @@ public class WorkspaceServiceSaveTests : IDisposable
     }
 
     private WorkspaceService CreateSut() =>
-        new(_layouts.Object, _windows.Object, new Mock<INativeWindowWrapper>().Object, _browsers.Object, _shell.Object, _processes.Object,
+        new(_layouts.Object, _windows.Object, new Mock<INativeWindowWrapper>().Object, _browsers.Object, _shell.Object, new Mock<IApplicationLauncher>().Object,
             _policy.Object, new Mock<ICdpTabService>().Object);
 
     /// <summary>The folder File Explorer shows and the page the browser shows (without a debug port, so the only one kept).</summary>

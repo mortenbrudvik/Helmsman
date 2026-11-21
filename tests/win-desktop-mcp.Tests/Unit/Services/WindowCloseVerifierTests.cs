@@ -20,7 +20,7 @@ public class WindowCloseVerifierTests
 
     private readonly Mock<IWindowService> _windows = new();
     private readonly Mock<IUIAutomationWrapper> _automation = new();
-    private readonly Mock<IProcessService> _processes = new();
+    private readonly Mock<IProcessListing> _processes = new();
     private readonly FakeUiaTree _tree = new();
     private readonly InlineUiaWorker _worker = new();
 

@@ -42,7 +42,7 @@ public sealed class WindowCloseVerifier : IWindowCloseVerifier
     private readonly IUiaTree? _tree;
     private readonly IUiaWorker? _worker;
     private readonly IUIAutomationWrapper? _automation;
-    private readonly IProcessService? _processes;
+    private readonly IProcessListing? _processes;
     private readonly TimeSpan _pollInterval;
     private readonly TimeSpan _promptCheckInterval;
     private readonly ILogger<WindowCloseVerifier>? _logger;
@@ -60,7 +60,7 @@ public sealed class WindowCloseVerifier : IWindowCloseVerifier
         IUiaTree? tree = null,
         IUiaWorker? worker = null,
         IUIAutomationWrapper? automation = null,
-        IProcessService? processes = null,
+        IProcessListing? processes = null,
         TimeSpan? pollInterval = null,
         TimeSpan? promptCheckInterval = null,
         ILogger<WindowCloseVerifier>? logger = null)

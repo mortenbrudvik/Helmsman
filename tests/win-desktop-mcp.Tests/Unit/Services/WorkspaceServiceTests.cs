@@ -14,7 +14,7 @@ public class WorkspaceServiceTests : IDisposable
     private readonly Mock<INativeWindowWrapper> _native = new();
     private readonly Mock<IBrowserReadingService> _browsers = new();
     private readonly Mock<INativeShellWindowsWrapper> _shell = new();
-    private readonly Mock<IProcessService> _processes = new();
+    private readonly Mock<IApplicationLauncher> _processes = new();
     private readonly Mock<ICdpTabService> _tabs = new();
     private readonly Mock<ITargetPolicy> _policy = new();
     private readonly string _folder = Path.Combine(Path.GetTempPath(), "WamWorkspaceTests-" + Guid.NewGuid().ToString("N"));
