@@ -92,8 +92,17 @@ jobs:
           name: win-desktop-mcp
           path: publish/
 
+  # The test suite of test.yml, run for the tagged commit, so the release job below waits for it.
+  # test.yml runs by itself on pushes and pull requests to main, so this job runs only for a v* tag.
+  # Its artifacts (coverage-report, test-results, hang-diagnostics) join this run's win-desktop-mcp.
+  test:
+    if: startsWith(github.ref, 'refs/tags/v')
+    uses: ./.github/workflows/test.yml
+
   release:
-    needs: build
+    # Without a status function in its if, the job runs only when both needed jobs succeeded:
+    # failing tests skip it, so no release is created.
+    needs: [build, test]
     runs-on: windows-latest
     if: startsWith(github.ref, 'refs/tags/v')
     # Creating a release needs write access. The repository's default GITHUB_TOKEN is read-only,
