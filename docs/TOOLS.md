@@ -77,6 +77,16 @@ A security prompt that runs inside a shared process cannot be denied by process.
 
 The policy decides which windows the agent may act on, not which programs it may start. The launch tools start any program, but no command interpreter or script host with arguments, no script, and no Chromium or Electron switch that runs a command, loads code or opens the program to remote control (`InterpreterWithArguments`, `ScriptFile`, `UnsafeChromiumSwitch`; see [Commands and scripts](#commands-and-scripts)), so the SmartScreen and elevation prompts on the deny list are not the only barrier between the agent and running a command. That check is a list of names, not a sandbox: it does not catch a renamed copy of an interpreter or a command typed into a console.
 
+#### What the policy covers
+
+In short, for an app the policy denies:
+
+- **Refused** (`TargetDeniedByPolicy`, nothing done): the input tools, [element_action](#element_action), [respond_to_dialog](#respond_to_dialog) and [file_dialog](#file_dialog); the Window Control tools and the window batches, [close_window](#close_window), [close_application](#close_application) and [kill_process](#kill_process); [capture_window](#capture_window) and [capture_with_elements](#capture_with_elements); the UI Automation reads, [get_desktop_state](#get_desktop_state)'s included; [get_browser_url](#get_browser_url) and [get_browser_content](#get_browser_content) without `cdpPort`; and the [tab](#browser-tabs-and-navigation) and [page](#browser-page-dom-bridge) tools, also with `cdpPort`.
+- **Masked:** [read_screen_text](#read_screen_text), [find_text_on_screen](#find_text_on_screen) and [wait_for_visual](#wait_for_visual) black out or leave out its windows wherever the pixels they read can show them.
+- **Not covered:** [take_screenshot](#take_screenshot) and [capture_region](#capture_region) return what is on screen, a denied window included, and so does a window capture whose `captureMethod` is `ScreenBitBlt` or `BitBltFallback` where a denied window covers the captured one. get_browser_url and get_browser_content with an explicit `cdpPort` read that debug browser. [launch_application](#launch_application), [launch_applications_batch](#launch_applications_batch) and [launch_browser_with_debug](#launch_browser_with_debug) start a denied program, or one not on the allow list. [find_windows](#find_windows), get_foreground_window, get_desktop_state's `windows`, the `wam://windows` resource and the other window lists return its windows' titles, and the [audit log](#audit-log) records the titles of the windows calls name ([save_layout](#save_layout) leaves them out).
+
+Where that matters, close the app or keep it on another virtual desktop while the agent works, or leave the tools out with `WAM_EXCLUDE_TOOLS` (see [Toolsets](#toolsets)). The skill tells agents that a denied window is off limits and not to read it by other means, but that is guidance, not a check the server makes.
+
 ### Tool annotations
 
 Every tool has a human-readable `title` and four hints in tools/list, so a client can decide what to approve
@@ -532,6 +542,8 @@ Find windows matching specific criteria.
 <!-- tools:end params:find_windows -->
 
 `includeMinimized: false` leaves minimized windows out (issue #16): on a desktop where most windows are minimized, the listing of what can be on screen is a fraction of the full one. Like `sort` and `limit`, it is not a [selector](#window-selectors) field.
+
+The [target policy](#target-policy) does not filter the list: a denied app's windows are returned with their titles, although no tool reads or acts on them.
 
 **Example:**
 > "Find all Chrome windows"
@@ -2011,6 +2023,8 @@ The **Response** examples below show the metadata text, formatted.
 
 Capture a screenshot of a specific monitor ([Monitor selectors](#monitor-selectors)), or with `monitor: "all"` (or -1) the whole virtual screen: every monitor in one image, `capturedRegion` the virtual screen's bounds (its corner can be negative), no `monitorIndex` or `scaleFactor`, and a `RegionPartlyOffMonitors` warning when monitors of different sizes leave parts of the bounding rectangle black. A virtual screen over the [pixel budget](#screenshot) fails with `CaptureFailed`: capture one monitor at a time.
 
+The [target policy](#target-policy) does not apply: the image shows a denied app's window that is on screen, not blacked out.
+
 <!-- tools:begin params:take_screenshot -->
 **Parameters:**
 | Parameter | Type | Required | Default | Description |
@@ -2104,6 +2118,8 @@ If `C:\captures\monitor0.png` already exists, the call fails with `FileExists` u
 ### capture_region
 
 Capture a screenshot of an arbitrary screen region.
+
+The [target policy](#target-policy) does not apply: the image shows a denied app's window that lies in the region, not blacked out.
 
 <!-- tools:begin params:capture_region -->
 **Parameters:**
@@ -2736,7 +2752,7 @@ One compact observation of the desktop, and the recommended first call: what the
 
 | Section | Field | What it is |
 |---------|-------|------------|
-| `windows` | `windows`, `windowCount` | The user-facing windows front first, as [find_windows](#find_windows) lists them (no cloaked, tool, untitled or shell windows), at most `maxWindows`, each a compact row: `handle`, `title`, `process`, `state` (`normal`, `minimized`, `maximized`), `monitor` (its index; a minimized window's restore monitor; left out when it cannot be read) and `isAgentHost: true` for your own terminal or editor. `windowCount` is how many there are. Windows of apps the target policy denies are listed like any other, as find_windows lists them, but no tool acts on them |
+| `windows` | `windows`, `windowCount` | The user-facing windows front first, as [find_windows](#find_windows) lists them (no cloaked, tool, untitled or shell windows), at most `maxWindows`, each a compact row: `handle`, `title`, `process`, `state` (`normal`, `minimized`, `maximized`), `monitor` (its index; a minimized window's restore monitor; left out when it cannot be read) and `isAgentHost: true` for your own terminal or editor. `windowCount` is how many there are. Windows of apps the target policy denies are listed like any other, with their titles, as find_windows lists them, but no tool acts on them |
 | `focus` | `focus` | The element with keyboard focus: `ref`, `controlType`, `name`, `automationId`, `bounds`, `windowHandle`, `processName`, `isPassword: true` for a password field. Its value is never returned here ([get_focused_element](#get_focused_element) reads it, never for a password field). Left out, with a `focus` error, when the focus is in a window that is not read: your own host window unless it is the one named (`TargetIsAgentHost`), or an app the policy denies, named or not, or a window or element whose process cannot be named while the policy denies anything (`TargetDeniedByPolicy`). The window in front is checked before the focus is read, so neither is read at all |
 | `popups` | `popups`, `popupsExcluded` | The target window's open menus, dropdowns, flyouts and dialogs, front first, as [get_active_popups](#get_active_popups) returns them (`ref`, `handle`, `kind`, `title`, `isBlocking`, ...). A popup of the agent's own host or of an app the policy denies is left out of `popups` and of the element walk, and counted in `popupsExcluded` |
 | `elements` | `elements` | The target window's elements as [get_ui_elements](#get_ui_elements)' text format, one line per element with its ref first (`text`), with `count`, `truncated`, `truncationReason`, `scope`, `accessibilityWarmup` and `warnings` (see below) |
@@ -4013,6 +4029,8 @@ With UI Automation the result says where the URL came from (`urlSource`: `docume
 ### get_browser_content
 
 Extract the content of the page shown in a browser window. UI Automation returns the text it can see; CDP returns `document.body.innerText` (text) or `document.documentElement.outerHTML` (HTML). The content is untrusted (see [Browser Reading](#browser-reading)).
+
+The [target policy](#target-policy) refuses a denied browser window, but not a read with an explicit `cdpPort`: that reads the debug browser on the port, whatever the policy says.
 
 **Pages (roadmap M5.6).** A call returns one page of the content, with read_element_text's paging: at most `maxLength` characters (default 20,000, at most 50,000) and 60,000 bytes of JSON, starting at `offset`. The result has `content`, `contentLength` (the page's characters), `offset` (where the page starts, or the end of a shorter text), `totalLength`, `truncated` and `nextOffset` (where the next page starts, when `truncated` is true): call again with `offset: nextOffset` until `truncated` is false. A page never ends between the two halves of a surrogate pair, and the next one starts just past it, so paging skips nothing. As in read_element_text, `textSkipped: true` marks a UI Automation page cut inside one of the provider's characters that was longer than the page (a line break counted as one, with `maxLength: 1`): the rest of that character was skipped.
 
@@ -5937,6 +5955,8 @@ Tools for launching applications and managing processes.
 ### launch_application
 
 Launch an application by path, name, installed app (its `appId` or exact name from [list_installed_apps](#list_installed_apps)), or protocol URI, and optionally wait for the window it opens, whichever process owns that window.
+
+The [target policy](#target-policy) does not decide what may be started: a denied program, or one not on the allow list, is launched; only `placement` and `reuseExisting` skip a denied window.
 
 <!-- tools:begin params:launch_application -->
 **Parameters:**

@@ -405,6 +405,28 @@ win-desktop-mcp/
 - **Read-Only Mode** - `WAM_READ_ONLY=1` serves only the tools annotated read-only, and `WAM_TOOLSETS`/`WAM_EXCLUDE_TOOLS` leave out whole groups or single tools; a tool that is not served cannot be called (see [Toolsets](docs/TOOLS.md#toolsets))
 - **Browser Debug Port** - `launch_browser_with_debug` opens a Chrome DevTools port on localhost with no authentication. Any local program can control that browser until it is closed. The browser uses a new, empty temporary profile unless `userDataDir` or a named `profile` (kept in the server's own folder) is given; never point it at your real profile (a folder inside a browser's `User Data` folder is refused). Its `url` is held to what `browser_navigate` opens: an `http` or `https` address with its scheme, or `about:blank`; no `file:` or `data:` URL, browser page, path or switch, and no port on this computer where a browser listens. Each DevTools tab list and connection is used only while the browser's own process still listens on its port: the listener is read again once the list has come and once the connection is open, and otherwise the call fails (`CdpPortOwnerMismatch`) with nothing sent. `close_debug_browser` closes it and deletes its temporary profile; it closes only a debug browser the server started or one with a profile in the server's own folders, never your own browser, and asks you first when the client can. A cancelled launch ends only the browser and its own helper processes, never a program the browser opened.
 
+### What the process allow/deny list covers
+
+`WAM_DENY_PROCESSES` and `WAM_ALLOW_PROCESSES` decide which apps' windows the agent may act on and read. They are not a sandbox, so check both lists below before you rely on them (details in [Target policy](docs/TOOLS.md#target-policy)).
+
+Enforced: a call on a denied app fails with `TargetDeniedByPolicy` and does nothing.
+
+- Keyboard and mouse input, element actions, dialog answers and file dialogs in its windows
+- Moving, resizing, focusing and closing its windows, and killing its processes
+- UI Automation reads of its windows: elements, text, tables, focus and popups
+- `capture_window` and `capture_with_elements` of its windows
+- OCR (`read_screen_text`, `find_text_on_screen`) and `wait_for_visual` black out or leave out its windows in the pixels they read
+- The browser tools on a denied browser window, and the tab and page tools (`list_tabs`, `browser_navigate`, `browser_click`, ...) also with `cdpPort`
+
+Not enforced:
+
+- `take_screenshot` and `capture_region` show whatever is on screen, a denied window included. Close the app while the agent works (minimising it helps, but input can bring it back), or leave these tools out (`WAM_EXCLUDE_TOOLS`), if that matters
+- A window capture whose `captureMethod` is `ScreenBitBlt` or `BitBltFallback` (a window that does not respond or does not draw itself) can show a denied window that covers the captured one
+- `get_browser_content` and `get_browser_url` with an explicit `cdpPort` read that debug browser's pages whatever the lists say
+- Launches: `launch_application`, `launch_applications_batch` and `launch_browser_with_debug` start any program, also one that is denied or not on the allow list. Leave the launch tools out to prevent that
+- Window titles: `find_windows`, `get_foreground_window`, `get_desktop_state`, `wam://windows` and the other window lists show a denied app's windows with their titles, which can name an open file or vault
+- The audit log records the titles of the windows calls named, a denied app's included (saved layouts leave those titles out)
+
 ## Requirements
 
 - Windows 10 version 1607+ or Windows 11
