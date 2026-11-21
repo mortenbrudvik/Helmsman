@@ -116,19 +116,13 @@ public class ServerFilterPipelineTests
 
     /// <summary>
     /// The server's tool and filter registrations, plus a fake tool that is on none of the input gate filter's
-    /// lists, and <paramref name="session"/> as the input session when given.
+    /// lists, and <paramref name="session"/> as the input session (one the user never pauses when null).
     /// </summary>
     private static Task<InProcessMcpServer> StartServerAsync(IInputSession? session) =>
         InProcessMcpServer.StartAsync(
             [McpServerTool.Create(() => "done", new McpServerToolCreateOptions { Name = UnclassifiedTool })],
             builder => builder.AddWindowsAppManagerTools(),
-            configureServices: services =>
-            {
-                if (session != null)
-                {
-                    services.AddSingleton(session);
-                }
-            });
+            configureServices: services => services.AddSingleton(session ?? Permissive.Session));
 
     private static List<string> CallLines(InProcessMcpServer server, string tool) =>
         server.Logs.Entries

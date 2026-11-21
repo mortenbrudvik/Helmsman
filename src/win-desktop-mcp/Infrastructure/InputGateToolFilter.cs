@@ -268,7 +268,8 @@ public static class InputGateToolFilter
     /// <summary>
     /// Call-tool filter: a tool that <see cref="RunsInsideTheGate"/> waits for the input gate and holds it
     /// until it returns, or returns PausedByUser while the user has paused input; every other tool, and a name
-    /// the server does not serve, passes straight through.
+    /// the server does not serve, passes straight through. A gated call on a server that registered no <see cref="IInputSession"/>
+    /// throws, so the error filter fails it, instead of running without the pause check.
     /// </summary>
     public static McpRequestHandler<CallToolRequestParams, CallToolResult> Filter(
         McpRequestHandler<CallToolRequestParams, CallToolResult> next) =>
@@ -287,15 +288,19 @@ public static class InputGateToolFilter
                 return await next(request, cancellationToken).ConfigureAwait(false);
             }
 
-            var session = request.Services?.GetService<IInputSession>();
-            if (session?.IsPaused == true)
+            // The user's pause is a safety check, so a server without the input session fails the call instead of running it
+            // unchecked
+            var session = (request.Services ?? throw new InvalidOperationException(
+                    $"The input gate cannot check the user's pause for '{name}': the call has no services."))
+                .GetRequiredService<IInputSession>();
+            if (session.IsPaused)
             {
                 return PausedResult(name, session);
             }
 
             IDisposable? gate;
             using (var wait = CancellationTokenSource.CreateLinkedTokenSource(
-                       cancellationToken, session?.PauseToken ?? CancellationToken.None))
+                       cancellationToken, session.PauseToken))
             {
                 try
                 {
@@ -304,7 +309,7 @@ public static class InputGateToolFilter
                 catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
                 {
                     // The user paused while this call waited for the gate
-                    return PausedResult(name, session!);
+                    return PausedResult(name, session);
                 }
             }
 
@@ -316,7 +321,7 @@ public static class InputGateToolFilter
             using (gate)
             {
                 // The user may have paused just as this call got the gate
-                return session?.IsPaused == true
+                return session.IsPaused
                     ? PausedResult(name, session)
                     : await next(request, cancellationToken).ConfigureAwait(false);
             }

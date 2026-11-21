@@ -164,6 +164,16 @@ public sealed class ProductionWiringTests : IDisposable
         empty.Should().BeEmpty("a server object built without a collaborator the container serves silently goes without it");
     }
 
+    [Theory]
+    [InlineData(typeof(IInputSession))] // InputGateToolFilter: the user's pause of every gated tool
+    [InlineData(typeof(IAuditLog))] // AuditLogToolFilter: the record of every audited tool
+    public void WhatTheCallToolFiltersResolveForEachCall_IsServed(Type service)
+    {
+        // The filters take these from the request's services, not through a constructor, so the checks above do not see them
+        _isService.IsService(service).Should().BeTrue();
+        _provider.GetRequiredService(service).Should().NotBeNull();
+    }
+
     [Fact]
     public void TheNotServedList_NamesOnlyTypesTheContainerReallyDoesNotServe()
     {

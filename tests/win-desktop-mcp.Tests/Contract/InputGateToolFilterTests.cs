@@ -352,9 +352,31 @@ public class InputGateToolFilterTests
             .Should().ContainSingle();
     }
 
+    [Theory]
+    [InlineData("launch_browser_with_debug")]
+    [InlineData("a_tool_nobody_classified")]
+    public async Task AGatedTool_OnAServerWithoutTheInputSession_FailsInsteadOfRunningWithoutThePauseCheck(string tool)
+    {
+        // A lost registration must not switch the user's pause off: the call throws, and the error filter outside fails it
+        var ran = false;
+        var handler = InputGateToolFilter.Filter((_, _) =>
+        {
+            ran = true;
+            return ValueTask.FromResult(new CallToolResult());
+        });
+        var request = CreateRequest(tool);
+        request.Services = new ServiceCollection().BuildServiceProvider();
+
+        var act = async () => await handler(request, CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*IInputSession*");
+        ran.Should().BeFalse();
+    }
+
     /// <summary>
-    /// A call of <paramref name="tool"/>. With <paramref name="servedTools"/> the server serves those tools; without,
-    /// its tool collection is unknown (null), as for a server the filter cannot ask.
+    /// A call of <paramref name="tool"/>, with <paramref name="session"/> (default one the user never pauses) among its
+    /// services. With <paramref name="servedTools"/> the server serves those tools; without, its tool collection is unknown
+    /// (null), as for a server the filter cannot ask.
     /// </summary>
     private static RequestContext<CallToolRequestParams> CreateRequest(
         string tool, IInputSession? session = null, IReadOnlyList<string>? servedTools = null)
@@ -373,7 +395,7 @@ public class InputGateToolFilterTests
 
         return new(server.Object, new JsonRpcRequest { Method = RequestMethods.ToolsCall }, new CallToolRequestParams { Name = tool })
         {
-            Services = session == null ? null : new ServiceCollection().AddSingleton(session).BuildServiceProvider()
+            Services = new ServiceCollection().AddSingleton(session ?? Permissive.Session).BuildServiceProvider()
         };
     }
 }

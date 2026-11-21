@@ -194,11 +194,12 @@ public static class AuditLogToolFilter
     {
         try
         {
-            return services?.GetService<IAuditLog>();
+            // Required, so a server that registered no audit log says so (below) instead of leaving its calls unaudited in silence
+            return services?.GetRequiredService<IAuditLog>();
         }
         catch (Exception e)
         {
-            // A log that cannot even be created never breaks the call, but the call going unaudited is logged
+            // A log that cannot be created, or is not registered, never breaks the call, but the call going unaudited is logged
             Warn(services, logger => logger.LogWarning(e, "The audit log could not be created; the '{Tool}' call runs unaudited", tool));
             return null;
         }
