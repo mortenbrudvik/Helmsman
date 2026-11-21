@@ -86,7 +86,7 @@ Then restart Claude Desktop.
 ### Option 3: Build from Source
 
 ```bash
-git clone https://github.com/mortenbrudvik/WindowsAppManagerMcp.git
+git clone https://github.com/mortenbrudvik/WindowsAppManagerMcp.git win-desktop-mcp
 cd win-desktop-mcp
 dotnet publish src/win-desktop-mcp -c Release -o ./publish
 ```
