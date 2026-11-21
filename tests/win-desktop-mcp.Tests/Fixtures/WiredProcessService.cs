@@ -8,37 +8,40 @@ namespace WinDesktopMcp.Tests.Fixtures;
 public sealed class WiredProcessService : ProcessService
 {
     private WiredProcessService(
+        LaunchPlanner planner,
         ProcessListingService listing,
         ProcessTerminationService termination,
         IWindowService windowService,
-        IInputValidationService validationService,
-        IBrowserDetectionService browserDetection,
-        IExecutableResolver executableResolver,
         IHostGuard hostGuard,
-        ChromiumPrograms chromiumPrograms,
-        InterpreterGuard interpreterGuard,
         DebugBrowserLocator debugBrowserLocator,
         IProcessSecurityProbe securityProbe,
-        ChromiumSwitchGuard switchGuard,
         INativeProcessWrapper processWrapper,
         IWindowWaitService? windowWait,
         IDebugBrowserReadiness? debugBrowserReadiness,
         DebugBrowserProfiles? debugBrowserProfiles,
-        INativeAppsWrapper? appsWrapper,
-        IInstalledAppsService? installedApps)
-        : base(listing, termination, windowService, validationService, browserDetection, executableResolver, hostGuard,
-            chromiumPrograms, interpreterGuard, debugBrowserLocator, securityProbe, switchGuard, processWrapper, windowWait,
-            debugBrowserReadiness, debugBrowserProfiles, appsWrapper, installedApps)
+        INativeAppsWrapper? appsWrapper)
+        : base(planner, listing, termination, windowService, hostGuard, debugBrowserLocator, securityProbe, processWrapper, windowWait,
+            debugBrowserReadiness, debugBrowserProfiles, appsWrapper)
     {
+        Planner = planner;
         Listing = listing;
         Termination = termination;
     }
+
+    /// <summary>Plans the launches.</summary>
+    public LaunchPlanner Planner { get; }
 
     /// <summary>list_processes and the reads of a process's name and path.</summary>
     public ProcessListingService Listing { get; }
 
     /// <summary>kill_process.</summary>
     public ProcessTerminationService Termination { get; }
+
+    /// <summary><see cref="Planner"/>'s <see cref="LaunchPlanner.PlanLaunch"/>.</summary>
+    public LaunchPlan PlanLaunch(
+        string executable, string[]? arguments = null, string? workingDirectory = null, bool forceAccessibility = false,
+        bool runAsAdmin = false, bool debugBrowserLaunch = false) =>
+        Planner.PlanLaunch(executable, arguments, workingDirectory, forceAccessibility, runAsAdmin, debugBrowserLaunch);
 
     /// <summary>
     /// The parts wired together. <paramref name="startTimeout"/>, <paramref name="activationTimeout"/> and
@@ -66,27 +69,26 @@ public sealed class WiredProcessService : ProcessService
         TimeSpan? activationTimeout = null,
         TimeSpan? devToolsPortTimeout = null)
     {
+        var planner = new LaunchPlanner(validationService, browserDetection, executableResolver, chromiumPrograms, interpreterGuard,
+            switchGuard, securityProbe, installedApps);
         var listing = new ProcessListingService(windowService, processWrapper, targetPolicy, securityProbe);
         var termination = new ProcessTerminationService(processWrapper, targetPolicy, hostGuard);
-        WiredProcessService Wire() => new(listing, termination, windowService, validationService, browserDetection, executableResolver,
-            hostGuard, chromiumPrograms, interpreterGuard, debugBrowserLocator, securityProbe, switchGuard, processWrapper, windowWait,
-            debugBrowserReadiness, debugBrowserProfiles, appsWrapper, installedApps)
-        {
-            StartTimeout = startTimeout ?? DefaultStartTimeout,
-            ActivationTimeout = activationTimeout ?? DefaultActivationTimeout
-        };
-
         if (devToolsPortTimeout is not { } portTimeout)
-            return Wire();
+        {
+            return new WiredProcessService(planner, listing, termination, windowService, hostGuard, debugBrowserLocator, securityProbe,
+                processWrapper, windowWait, debugBrowserReadiness, debugBrowserProfiles, appsWrapper)
+            {
+                StartTimeout = startTimeout ?? DefaultStartTimeout,
+                ActivationTimeout = activationTimeout ?? DefaultActivationTimeout
+            };
+        }
 
-        var wired = new WiredProcessService(listing, termination, windowService, validationService, browserDetection, executableResolver,
-            hostGuard, chromiumPrograms, interpreterGuard, debugBrowserLocator, securityProbe, switchGuard, processWrapper, windowWait,
-            debugBrowserReadiness, debugBrowserProfiles, appsWrapper, installedApps)
+        return new WiredProcessService(planner, listing, termination, windowService, hostGuard, debugBrowserLocator, securityProbe,
+            processWrapper, windowWait, debugBrowserReadiness, debugBrowserProfiles, appsWrapper)
         {
             StartTimeout = startTimeout ?? DefaultStartTimeout,
             ActivationTimeout = activationTimeout ?? DefaultActivationTimeout,
             DevToolsPortTimeout = portTimeout
         };
-        return wired;
     }
 }

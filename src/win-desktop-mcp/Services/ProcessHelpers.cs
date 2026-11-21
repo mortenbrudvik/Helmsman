@@ -1,3 +1,4 @@
+using WinDesktopMcp.Models;
 using WinDesktopMcp.Services.Interfaces;
 
 namespace WinDesktopMcp.Services;
@@ -20,5 +21,20 @@ internal static class ProcessHelpers
         {
             return false;
         }
+    }
+
+    /// <summary>The ShellExecute verb that starts a program as administrator.</summary>
+    public const string RunAsVerb = "runas";
+
+    /// <summary>Whether the server itself runs elevated; false when that cannot be read.</summary>
+    public static bool ServerIsElevated(IProcessSecurityProbe securityProbe) =>
+        securityProbe.ServerIntegrity is { } server && (server.IsElevated == true || server.IntegrityRid >= ProcessIntegrity.HighRid);
+
+    /// <summary>Two warnings joined with "; ", either of which may be empty.</summary>
+    public static string? CombineWarnings(string? warning1, string? warning2)
+    {
+        if (string.IsNullOrEmpty(warning1)) return warning2;
+        if (string.IsNullOrEmpty(warning2)) return warning1;
+        return $"{warning1}; {warning2}";
     }
 }

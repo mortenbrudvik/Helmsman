@@ -104,23 +104,10 @@ public interface IProcessService
         DebugBrowserLaunchRequest request,
         CancellationToken cancellationToken = default);
 
-    /// <summary>
-    /// Plans a runAsAdmin request without starting anything (roadmap M6.5, owner decision D11): the program and command
-    /// line it would start, and whether the user must approve them through the client because Windows would not ask (User
-    /// Account Control off or not asking administrators, the built-in Administrator outside Admin Approval Mode, a server
-    /// that already runs elevated, or a policy that cannot be read). launch_application shows the user that launch before
-    /// the input gate and passes the approved one as <see cref="LaunchRequest.ApprovedElevation"/>; without it such a launch
-    /// is ElevationNotConfirmed.
-    /// </summary>
+    /// <inheritdoc cref="ILaunchPlanner.PreviewElevation"/>
     ElevationPreview PreviewElevation(LaunchRequest request);
 
-    /// <summary>
-    /// Plans a request as <see cref="LaunchApplicationAsync(LaunchRequest, bool, int, CancellationToken)"/> would, without
-    /// starting anything (roadmap M6.8, review #3): the file system and the installed apps are only read. Null when the launch
-    /// would be planned; otherwise the error code and message the launch would fail with (ScriptFile, InterpreterWithArguments,
-    /// UnsafeChromiumSwitch, ExecutableNotFound, ...). apply_layout's dry run reports it, and a layout's launch is refused with it before the user is
-    /// asked about it.
-    /// </summary>
+    /// <inheritdoc cref="ILaunchPlanner.CheckLaunch"/>
     LaunchRefusal? CheckLaunch(LaunchRequest request);
 }
 

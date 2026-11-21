@@ -63,7 +63,7 @@ public class PackagedAppLaunchTests
         _output.WriteLine($"Calculator's name here: '{calculator.Name}'.");
 
         // Act - planning starts nothing
-        var plan = ((ProcessService)e2e.Server.Get<IProcessService>()).PlanLaunch(calculator.Name);
+        var plan = e2e.Server.Get<ILaunchPlanner>().PlanLaunch(calculator.Name);
 
         // Assert - one app of that name is its activation; another app of the same name makes it ambiguous
         _output.WriteLine($"Plan: {plan.TargetKind} {plan.StartInfo?.FileName} {plan.ErrorCode} {plan.Warning}");
@@ -88,7 +88,7 @@ public class PackagedAppLaunchTests
         _output.WriteLine($"Windows Terminal's program, from its manifest: {program ?? "(not installed or not readable)"}.");
 
         // Act - planning starts nothing
-        var plan = ((ProcessService)e2e.Server.Get<IProcessService>()).PlanLaunch(TerminalAppId, ["-c", "echo"]);
+        var plan = e2e.Server.Get<ILaunchPlanner>().PlanLaunch(TerminalAppId, ["-c", "echo"]);
 
         // Assert - refused whether Terminal is installed (an interpreter) or not (its program cannot be told)
         plan.ErrorCode.Should().Be(nameof(LaunchErrorCode.InterpreterWithArguments), plan.ErrorMessage);

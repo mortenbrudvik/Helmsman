@@ -150,11 +150,11 @@ Services.ElementRefs -> Infrastructure.ToolErrorException
 Services.FileDialogService -> Infrastructure.AuditScope
 Services.FileDialogService -> Infrastructure.InputGateToolFilter
 Services.FileDialogService -> Infrastructure.ToolErrorException
+Services.LaunchPlanner -> Infrastructure.AppText  # moved out of ProcessService when it was split; the same dependency it had
 Services.PopupService -> Infrastructure.AppText
 Services.ProcessListingService -> Infrastructure.AppText  # moved out of ProcessService when it was split; the same dependency it had
 Services.ProcessListingService -> Infrastructure.CommandLineRedactor  # moved out of ProcessService when it was split; the same dependency it had
 Services.ProcessListingService -> Infrastructure.RedactedCommandLine  # moved out of ProcessService when it was split; the same dependency it had
-Services.ProcessService -> Infrastructure.AppText
 Services.ServerInfoService -> Infrastructure.AppText
 Services.ServerInfoService -> Infrastructure.ToolsetCatalog
 Services.ServerInfoService -> Infrastructure.ToolsetSelection
@@ -180,6 +180,7 @@ src/win-desktop-mcp/Services/ElementActionService.cs -> Infrastructure.ToolError
 src/win-desktop-mcp/Services/ElementRefs.Arguments.cs -> Infrastructure.ToolErrorReporting
 src/win-desktop-mcp/Services/FileDialogPaths.cs -> Infrastructure.ToolErrorReporting
 src/win-desktop-mcp/Services/FileDialogService.cs -> Infrastructure.ToolErrorReporting
+src/win-desktop-mcp/Services/LaunchPlanner.cs -> Infrastructure.ToolErrorReporting  # moved out of ProcessService when it was split; the same dependency it had
 src/win-desktop-mcp/Services/LayoutService.cs -> Infrastructure.ToolErrorReporting
 src/win-desktop-mcp/Services/MenuPathService.cs -> Infrastructure.ToolErrorReporting
 src/win-desktop-mcp/Services/ProcessService.cs -> Infrastructure.ToolErrorReporting
