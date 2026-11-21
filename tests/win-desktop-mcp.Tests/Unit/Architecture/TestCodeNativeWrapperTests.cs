@@ -181,6 +181,11 @@ public class TestCodeNativeWrapperTests
             "resolves the audit log and reads its folder; creating it touches no file",
         [("WinDesktopMcp.Tests.Integration.DependencyInjectionTests", "AddWindowsAppManagerServices_ByDefault_StoresLayoutsWhereFromEnvironmentSays")] =
             "resolves the layout service and reads its path; creating it touches no file",
+        [("WinDesktopMcp.Tests.Integration.ProductionWiringTests", ".ctor")] =
+            "the registrations of Program.cs, whose constructors it inspects and whose services, hosted services and tool, " +
+            "resource and prompt classes it resolves or creates to read their fields; it calls nothing on them and starts nothing",
+        [("WinDesktopMcp.Tests.Integration.ProductionWiringTests", "RegisteredImplementations")] =
+            "lists the registrations' implementation types; no container is built from them",
         [("WinDesktopMcp.Tests.Integration.InputGuardRegistrationTests", ".ctor")] =
             "resolves the input guard, the policy and the safety info with the read-only window wrapper, and reads what they hold",
         [("WinDesktopMcp.Tests.Integration.InputSessionRegistrationTests", ".ctor")] =
