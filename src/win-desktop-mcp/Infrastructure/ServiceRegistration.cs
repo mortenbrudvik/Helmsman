@@ -68,6 +68,9 @@ public static class ServiceRegistration
         services.AddSingleton<IWindowService, WindowService>();
         // Verified close (roadmap M2.5): waits for closed windows and reads their prompts through UI Automation
         services.AddSingleton<IWindowCloseVerifier, WindowCloseVerifier>();
+        // The URI schemes launch_application hands to their app (the built-in ones plus WAM_ALLOWED_PROTOCOLS), read once: the
+        // validation enforces them, and get_server_info and the log at start report them
+        services.AddSingleton(_ => ProtocolAllowlist.FromEnvironment());
         services.AddSingleton<IInputValidationService, InputValidationService>();
         services.AddSingleton<IBrowserDetectionService, BrowserDetectionService>();
         // The reading tools find a debug browser's port themselves (roadmap M5.3): its command line and the TCP table, both read
@@ -85,6 +88,15 @@ public static class ServiceRegistration
 
         // browser_handle_dialog (roadmap M5.8, dialogs): a Chrome or Edge window's JavaScript dialog, through UI Automation
         services.AddSingleton<IBrowserDialogService, BrowserDialogService>();
+        // The launch tools' program lookup and checks: the executable resolution (PATH, App Paths), the Chromium programs that
+        // may get --force-renderer-accessibility, the refusals of an interpreter with a script and of the Chromium switches
+        // that run a command (review F2), and the browser launch_browser_with_debug starts. Created here, so a launch can never
+        // run without them
+        services.AddSingleton<IExecutableResolver>(_ => new ExecutableResolver());
+        services.AddSingleton(_ => new ChromiumPrograms());
+        services.AddSingleton(_ => new InterpreterGuard());
+        services.AddSingleton(_ => new ChromiumSwitchGuard());
+        services.AddSingleton(_ => new DebugBrowserLocator());
         services.AddSingleton<IProcessService, ProcessService>();
         // Packaged app activation and the installed apps (roadmap M6.5): launch_application's AppUserModelIDs and friendly
         // names, and list_installed_apps. The E2E harness refuses the activation (WrapperCatalog: ProcessStart)
@@ -193,6 +205,8 @@ public static class ServiceRegistration
         // Workspaces (roadmap M7.5): File Explorer's folders through the shell's window list, read on a thread of its own
         services.AddSingleton<INativeShellWindowsWrapper, NativeShellWindowsWrapper>();
         services.AddSingleton<IWorkspaceService, WorkspaceService>();
+        // The layout folder's files, which the layout service reads and writes
+        services.AddSingleton<ILayoutFolderAccess, LayoutFolderAccess>();
         services.AddSingleton<ILayoutService>(sp =>
         {
             var windowService = sp.GetRequiredService<IWindowService>();
@@ -203,7 +217,7 @@ public static class ServiceRegistration
             // launchMissing's windows are placed as the launch tools place theirs (roadmap M3.F27); save_layout records a
             // packaged app's window by its appId (roadmap M6.8)
             return new LayoutService(windowService, monitorService, processService, foregroundService, createLayoutStorage(),
-                launchPlacement: sp.GetRequiredService<ILaunchPlacementService>(), apps: sp.GetRequiredService<INativeAppsWrapper>(),
+                folderAccess: sp.GetRequiredService<ILayoutFolderAccess>(), launchPlacement: sp.GetRequiredService<ILaunchPlacementService>(), apps: sp.GetRequiredService<INativeAppsWrapper>(),
                 installedApps: sp.GetRequiredService<IInstalledAppsService>(), logger: sp.GetService<ILogger<LayoutService>>());
         });
 
@@ -231,7 +245,7 @@ public static class ServiceRegistration
             sp.GetService<IOptions<McpServerOptions>>(),
             sp.GetService<ILogger<ServerStartupLog>>(),
             sp.GetService<ClipboardOptions>(),
-            ProtocolAllowlist.FromEnvironment()));
+            sp.GetRequiredService<ProtocolAllowlist>()));
         services.AddSingleton<IServerInfoService>(sp => new ServerInfoService(
             sp.GetRequiredService<INativeSystemInfoWrapper>(),
             sp.GetRequiredService<IProcessSecurityProbe>(),
@@ -244,7 +258,7 @@ public static class ServiceRegistration
             sp.GetService<ToolsetSelection>(), // registered by AddWindowsAppManagerTools
             sp.GetRequiredService<IAuditLog>(),
             sp.GetService<ClipboardOptions>(),
-            ProtocolAllowlist.FromEnvironment(),
+            sp.GetRequiredService<ProtocolAllowlist>(),
             sp.GetService<UiaEngineOptions>(),
             sp.GetService<TopmostPins>()));
 
