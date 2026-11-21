@@ -442,7 +442,7 @@ public class ProcessServiceReuseTests
     [InlineData("https://www.github.com/x", -1)]
     public void ReuseTitleNames_ForATargetLaunchedDirectly(string fileName, int expected)
     {
-        var names = ProcessService.ReuseTitleNames(new ResolvedLaunchTarget(fileName, LaunchTargetKind.Other), null);
+        var names = LaunchDocuments.ReuseTitleNames(new ResolvedLaunchTarget(fileName, LaunchTargetKind.Other), null);
 
         if (expected < 0)
             names.Should().BeNull("no title can be expected to show it");

@@ -36,7 +36,7 @@ public interface IProcessService
     /// <para>
     /// With <see cref="LaunchRequest.ReuseExisting"/> (roadmap M3.13), a valid request first looks for an open window of the
     /// same app that shows what the launch opens; when it finds one nothing is started and the result is
-    /// <see cref="LaunchStatus.AlreadyOpen"/> with that window (no process ID). ProcessService.FindOpenWindow defines which
+    /// <see cref="LaunchStatus.AlreadyOpen"/> with that window (no process ID). ReuseWindowFinder.FindOpenWindow defines which
     /// window counts.
     /// </para>
     /// </summary>
