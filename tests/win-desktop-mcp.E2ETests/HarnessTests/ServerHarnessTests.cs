@@ -105,7 +105,15 @@ public class ServerHarnessTests : IDisposable
         var processService = new ProcessService(
             Mock.Of<IWindowService>(MockBehavior.Strict),
             Mock.Of<IInputValidationService>(MockBehavior.Strict),
-            Mock.Of<IBrowserDetectionService>(MockBehavior.Strict));
+            Mock.Of<IBrowserDetectionService>(MockBehavior.Strict),
+            new ExecutableResolver(),
+            Mock.Of<ITargetPolicy>(),
+            Mock.Of<IHostGuard>(),
+            new ChromiumPrograms(),
+            new InterpreterGuard(),
+            new DebugBrowserLocator(),
+            Mock.Of<IProcessSecurityProbe>(),
+            new ChromiumSwitchGuard());
         var monitorService = new MonitorService();
 
         // Act

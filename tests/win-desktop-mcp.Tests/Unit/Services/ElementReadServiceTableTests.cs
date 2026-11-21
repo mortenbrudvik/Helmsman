@@ -25,7 +25,7 @@ public class ElementReadServiceTableTests
     }
 
     private ElementReadService CreateSut(IUiaWorker? worker = null) =>
-        new(_tree, worker ?? _worker, _registry, new ElementSearchService(_tree, worker ?? _worker, _registry, _windows.Object), _windows.Object);
+        new(_tree, worker ?? _worker, _registry, new ElementSearchService(_tree, worker ?? _worker, _registry, _windows.Object, Permissive.TargetPolicy), _windows.Object, Permissive.TargetPolicy);
 
     private string Add(FakeUiaNode element)
     {

@@ -123,7 +123,7 @@ public sealed class AccessibilityWarmup : IAccessibilityWarmup
     private readonly IUiaTree _tree;
     private readonly INativeWindowWrapper _windows;
     private readonly INativeProcessWrapper _processes;
-    private readonly ITargetPolicy? _policy;
+    private readonly ITargetPolicy _policy;
     private readonly TimeProvider _time;
     private readonly Action<TimeSpan, CancellationToken> _wait;
     private readonly object _gate = new();
@@ -137,25 +137,25 @@ public sealed class AccessibilityWarmup : IAccessibilityWarmup
     /// <param name="tree">The UI Automation tree.</param>
     /// <param name="windows">Finds the render widgets and tells whether a remembered window is still alive.</param>
     /// <param name="processes">Lists the processes, to tell whether a window's process started a WebView2 (roadmap M3.F23).</param>
+    /// <param name="policy">The user's target policy, which a page of another process than the window's must pass before
+    /// anything of it is asked for.</param>
     /// <param name="time">Measures the wait; default the system clock.</param>
     /// <param name="wait">Waits between two checks, returning early when the token is cancelled; default a wait on the
     /// token's handle. Tests pass one that moves a manual clock.</param>
-    /// <param name="policy">The user's target policy, which a page of another process than the window's must pass before
-    /// anything of it is asked for; null to check nothing.</param>
     public AccessibilityWarmup(
         IUiaTree tree,
         INativeWindowWrapper windows,
         INativeProcessWrapper processes,
+        ITargetPolicy policy,
         TimeProvider? time = null,
-        Action<TimeSpan, CancellationToken>? wait = null,
-        ITargetPolicy? policy = null)
+        Action<TimeSpan, CancellationToken>? wait = null)
     {
         _tree = tree;
         _windows = windows;
         _processes = processes;
         _time = time ?? TimeProvider.System;
         _wait = wait ?? ((delay, token) => token.WaitHandle.WaitOne(delay));
-        _policy = policy;
+        _policy = policy ?? throw new ArgumentNullException(nameof(policy));
     }
 
     /// <summary>

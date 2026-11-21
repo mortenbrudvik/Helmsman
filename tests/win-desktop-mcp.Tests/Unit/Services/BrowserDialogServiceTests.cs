@@ -19,7 +19,7 @@ public class BrowserDialogServiceTests
     private readonly Mock<IElementActionService> _actions = new();
     private readonly ElementRegistry _registry;
     private readonly List<ElementActionRequest> _requests = [];
-    private ITargetPolicy? _policy;
+    private ITargetPolicy _policy = Permissive.TargetPolicy;
     private FakeChromiumDialog? _shown;
 
     /// <summary>How many presses Chromium ignores first (a press right after the dialog was shown).</summary>

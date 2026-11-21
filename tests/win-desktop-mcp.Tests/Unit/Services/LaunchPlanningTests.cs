@@ -20,6 +20,13 @@ public class LaunchPlanningTests
         new InputValidationService(ProtocolAllowlist.BuiltIn),
         _mockBrowserDetection.Object,
         _mockResolver.Object,
+        Permissive.TargetPolicy,
+        Permissive.HostGuard,
+        new ChromiumPrograms(),
+        new InterpreterGuard(),
+        new DebugBrowserLocator(),
+        Permissive.SecurityProbe,
+        new ChromiumSwitchGuard(),
         new Mock<INativeProcessWrapper>(MockBehavior.Strict).Object);
 
     private void ResolveAs(string fileName, LaunchTargetKind kind, string? plantedPath = null)
@@ -443,6 +450,13 @@ public class LaunchPlanningTests
                 new InputValidationService(ProtocolAllowlist.BuiltIn),
                 _mockBrowserDetection.Object,
                 resolver,
+                Permissive.TargetPolicy,
+                Permissive.HostGuard,
+                new ChromiumPrograms(),
+                new InterpreterGuard(),
+                new DebugBrowserLocator(),
+                Permissive.SecurityProbe,
+                new ChromiumSwitchGuard(),
                 new Mock<INativeProcessWrapper>(MockBehavior.Strict).Object);
 
             // Act

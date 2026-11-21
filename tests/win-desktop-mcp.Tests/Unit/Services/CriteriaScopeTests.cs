@@ -33,7 +33,7 @@ public class CriteriaScopeTests
 
         SetPopups(truncated: false);
         _registry = new ElementRegistry(_tree, _worker, _windows.Object, ElementRegistry.DefaultCapacity, 1, TimeProvider.System);
-        _search = new ElementSearchService(_tree, _worker, _registry, _windows.Object, popups: _popups.Object);
+        _search = new ElementSearchService(_tree, _worker, _registry, _windows.Object, Permissive.TargetPolicy, popups: _popups.Object);
 
         // Editor > Button "Delete"; its open context menu (a window of its own) > MenuItem "Delete", MenuItem "Rename"
         _tree.WithWindow(Main, new FakeUiaNode("Window", "Editor").With(new FakeUiaNode("Button", "Delete")));
@@ -53,7 +53,7 @@ public class CriteriaScopeTests
     #region read_element_text
 
     private Task<ElementTextResult> ReadText(ElementQuery query) =>
-        new ElementReadService(_tree, _worker, _registry, _search, _windows.Object)
+        new ElementReadService(_tree, _worker, _registry, _search, _windows.Object, Permissive.TargetPolicy)
             .ReadTextAsync(new ElementTextRequest(null, query, 0, 1000, Timeout));
 
     [Fact]
@@ -130,7 +130,7 @@ public class CriteriaScopeTests
             {
                 Satisfied = true, MatchCount = 1, Window = TestDataFactory.CreateWindowInfo((int)Main, "Editor", "editor", 300)
             });
-        var sut = new ElementWaitService(_search, _registry, windowWait.Object, _tree, _worker, _windows.Object,
+        var sut = new ElementWaitService(_search, _registry, windowWait.Object, _tree, _worker, _windows.Object, Permissive.TargetPolicy,
             delay: (_, _) => Task.CompletedTask);
 
         // timeoutMs 0: one check

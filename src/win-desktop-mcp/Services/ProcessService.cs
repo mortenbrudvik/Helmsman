@@ -21,89 +21,87 @@ public class ProcessService : IProcessService
     private readonly IBrowserDetectionService _browserDetection;
     private readonly IExecutableResolver _executableResolver;
     private readonly INativeProcessWrapper _processWrapper;
-    private readonly ITargetPolicy? _targetPolicy;
-    private readonly IHostGuard? _hostGuard;
+    private readonly ITargetPolicy _targetPolicy;
+    private readonly IHostGuard _hostGuard;
     private readonly IWindowWaitService _windowWait;
     private readonly ChromiumPrograms _chromiumPrograms;
     private readonly InterpreterGuard _interpreterGuard;
     private readonly DebugBrowserLocator _debugBrowserLocator;
     private readonly IDebugBrowserReadiness? _debugBrowserReadiness;
     private readonly DebugBrowserProfiles _debugBrowserProfiles;
-    private readonly IProcessSecurityProbe? _securityProbe;
+    private readonly IProcessSecurityProbe _securityProbe;
     private readonly INativeAppsWrapper? _appsWrapper;
     private readonly IInstalledAppsService? _installedApps;
     private readonly ChromiumSwitchGuard _switchGuard;
 
+    /// <param name="executableResolver">Resolves the program a launch starts: a bare name on PATH or in App Paths, a path, or
+    /// a URI (roadmap M1.4).</param>
     /// <param name="targetPolicy">
     /// The server's target policy, which kill_process enforces (roadmap M1.12), and which keeps list_processes from
-    /// reading a denied process's command line (roadmap M6.6). The server always passes it; without it no process is
-    /// refused by policy.
+    /// reading a denied process's command line (roadmap M6.6).
     /// </param>
     /// <param name="hostGuard">
     /// The agent's host as recorded at server start (roadmap M1.1/M1.7): kill_process refuses its
-    /// processes, and a forced kill whose process tree contains one. The server always passes it; without
-    /// it only this server and its live ancestors count as the host.
+    /// processes, and a forced kill whose process tree contains one.
     /// </param>
+    /// <param name="chromiumPrograms">Tells which programs forceAccessibility may add --force-renderer-accessibility to
+    /// (roadmap M3.3).</param>
+    /// <param name="interpreterGuard">Refuses an interpreter with arguments and a script (roadmap M3.F8).</param>
+    /// <param name="debugBrowserLocator">Finds the browser for launch_browser_with_debug (roadmap M5.1).</param>
+    /// <param name="securityProbe">Reads the listed processes' integrity (roadmap M6.6), the server's own (an elevated server
+    /// cannot activate packaged apps) and whether Windows asks before it elevates (runAsAdmin, roadmap M6.5).</param>
+    /// <param name="switchGuard">Refuses the Chromium and Electron switches that run a command, load code or open a program to
+    /// remote control (review F2).</param>
+    /// <param name="processWrapper">The process reads and kills; default the real ones.</param>
     /// <param name="windowWait">
     /// Finds the window a launch opens (roadmap M2.6). The server always passes it; without it a wait reads the real
     /// desktop through a <see cref="NativeWindowWrapper"/> created here (eagerly, so that the E2E reference walk sees it).
     /// </param>
-    /// <param name="chromiumPrograms">Tells which programs forceAccessibility may add --force-renderer-accessibility to
-    /// (roadmap M3.3); default the real file system.</param>
-    /// <param name="interpreterGuard">Refuses an interpreter with arguments and a script (roadmap M3.F8); default one that
-    /// expands 8.3 short names from the real file system.</param>
-    /// <param name="debugBrowserLocator">Finds the browser for launch_browser_with_debug (roadmap M5.1); default the real
-    /// registry and file system.</param>
     /// <param name="debugBrowserReadiness">Confirms that a debug browser's DevTools endpoint answers before the launch
     /// reports success (roadmap M5.1); without it the launch is reported once the browser's port is known.</param>
     /// <param name="debugBrowserProfiles">Where a debug launch's new temporary profile goes, and deletes it again (roadmap
     /// M5.4); default the server's folders under %TEMP% and %LOCALAPPDATA%.</param>
-    /// <param name="securityProbe">Reads the listed processes' integrity (roadmap M6.6), the server's own (an elevated server
-    /// cannot activate packaged apps) and whether Windows asks before it elevates (runAsAdmin, roadmap M6.5). The server always
-    /// passes it; without it list_processes reports no integrity, and runAsAdmin needs the user's confirmation.</param>
     /// <param name="appsWrapper">Activates packaged apps and reads which package a process belongs to (roadmap M6.5). The
     /// server always passes it; without it a packaged app is started through the shell, as before, without a process ID.</param>
     /// <param name="installedApps">The installed apps (roadmap M6.5): a bare name that is no program on disk is looked up by
     /// its exact display name, and an app's program is read before arguments are passed to it. The server always passes it;
     /// without it no name is looked up and no argument is passed to an app whose program the server cannot tell.</param>
-    /// <param name="switchGuard">Refuses the Chromium and Electron switches that run a command, load code or open a program to
-    /// remote control (review F2); default one that expands 8.3 short names from the real file system.</param>
     public ProcessService(
         IWindowService windowService,
         IInputValidationService validationService,
         IBrowserDetectionService browserDetection,
-        IExecutableResolver? executableResolver = null,
+        IExecutableResolver executableResolver,
+        ITargetPolicy targetPolicy,
+        IHostGuard hostGuard,
+        ChromiumPrograms chromiumPrograms,
+        InterpreterGuard interpreterGuard,
+        DebugBrowserLocator debugBrowserLocator,
+        IProcessSecurityProbe securityProbe,
+        ChromiumSwitchGuard switchGuard,
         INativeProcessWrapper? processWrapper = null,
-        ITargetPolicy? targetPolicy = null,
-        IHostGuard? hostGuard = null,
         IWindowWaitService? windowWait = null,
-        ChromiumPrograms? chromiumPrograms = null,
-        InterpreterGuard? interpreterGuard = null,
-        DebugBrowserLocator? debugBrowserLocator = null,
         IDebugBrowserReadiness? debugBrowserReadiness = null,
         DebugBrowserProfiles? debugBrowserProfiles = null,
-        IProcessSecurityProbe? securityProbe = null,
         INativeAppsWrapper? appsWrapper = null,
-        IInstalledAppsService? installedApps = null,
-        ChromiumSwitchGuard? switchGuard = null)
+        IInstalledAppsService? installedApps = null)
     {
         _windowService = windowService;
         _validationService = validationService;
         _browserDetection = browserDetection;
-        _executableResolver = executableResolver ?? new ExecutableResolver();
+        _executableResolver = executableResolver ?? throw new ArgumentNullException(nameof(executableResolver));
         _processWrapper = processWrapper ?? new NativeProcessWrapper();
-        _targetPolicy = targetPolicy;
-        _hostGuard = hostGuard;
+        _targetPolicy = targetPolicy ?? throw new ArgumentNullException(nameof(targetPolicy));
+        _hostGuard = hostGuard ?? throw new ArgumentNullException(nameof(hostGuard));
         _windowWait = windowWait ?? new WindowWaitService(new NativeWindowWrapper(), windowService, _processWrapper);
-        _chromiumPrograms = chromiumPrograms ?? new ChromiumPrograms();
-        _interpreterGuard = interpreterGuard ?? new InterpreterGuard();
-        _debugBrowserLocator = debugBrowserLocator ?? new DebugBrowserLocator();
+        _chromiumPrograms = chromiumPrograms ?? throw new ArgumentNullException(nameof(chromiumPrograms));
+        _interpreterGuard = interpreterGuard ?? throw new ArgumentNullException(nameof(interpreterGuard));
+        _debugBrowserLocator = debugBrowserLocator ?? throw new ArgumentNullException(nameof(debugBrowserLocator));
         _debugBrowserReadiness = debugBrowserReadiness;
         _debugBrowserProfiles = debugBrowserProfiles ?? DebugBrowserProfiles.FromEnvironment();
-        _securityProbe = securityProbe;
+        _securityProbe = securityProbe ?? throw new ArgumentNullException(nameof(securityProbe));
         _appsWrapper = appsWrapper;
         _installedApps = installedApps;
-        _switchGuard = switchGuard ?? new ChromiumSwitchGuard();
+        _switchGuard = switchGuard ?? throw new ArgumentNullException(nameof(switchGuard));
     }
 
     /// <summary>
@@ -192,7 +190,7 @@ public class ProcessService : IProcessService
             return "this server runs elevated, so a program it starts as administrator gets no UAC prompt";
         }
 
-        return (_securityProbe?.GetElevationPrompt() ?? ElevationPrompt.Unknown) switch
+        return _securityProbe.GetElevationPrompt() switch
         {
             ElevationPrompt.Prompts => null,
             ElevationPrompt.Silent => "User Account Control does not ask on this computer (it is off, it does not ask " +
@@ -203,7 +201,7 @@ public class ProcessService : IProcessService
 
     /// <summary>Whether the server itself runs elevated; false when that cannot be read.</summary>
     private bool ServerIsElevated() =>
-        _securityProbe?.ServerIntegrity is { } server && (server.IsElevated == true || server.IntegrityRid >= ProcessIntegrity.HighRid);
+        _securityProbe.ServerIntegrity is { } server && (server.IsElevated == true || server.IntegrityRid >= ProcessIntegrity.HighRid);
 
     public Task<LaunchResult> LaunchApplicationAsync(
         string executable,
@@ -1485,7 +1483,7 @@ public class ProcessService : IProcessService
         // The parents come from a second snapshot (Toolhelp), so a process can be in one list and not the other: a
         // parent that is not in it is not running, and is not reported
         var parentByProcessId = _processWrapper.GetProcessList()?.ToDictionary(p => p.Key, p => p.Value.ParentProcessId);
-        var serverIntegrity = _securityProbe?.ServerIntegrity;
+        var serverIntegrity = _securityProbe.ServerIntegrity;
 
         var result = new List<ProcessInfo>(returned.Count);
         foreach (var (process, windows) in returned)
@@ -1494,7 +1492,7 @@ public class ProcessService : IProcessService
             var parent = parentByProcessId == null
                 ? null
                 : NativeProcessWrapper.FindParent(process.ProcessId, parentByProcessId, id => DetailsOf(id)?.StartTime);
-            var integrity = _securityProbe?.GetIntegrity(process.ProcessId);
+            var integrity = _securityProbe.GetIntegrity(process.ProcessId);
             var commandLine = query.IncludeCommandLine ? ReadCommandLine(process, processDetails) : null;
 
             result.Add(new ProcessInfo(
@@ -1530,7 +1528,7 @@ public class ProcessService : IProcessService
 
         var imageName = Path.GetFileNameWithoutExtension(imagePath);
         if (!string.Equals(imageName, process.Name, StringComparison.OrdinalIgnoreCase) ||
-            _targetPolicy?.Evaluate([process.Name, imageName]) is { Allowed: false })
+            _targetPolicy.Evaluate([process.Name, imageName]) is { Allowed: false })
             return null;
 
         var commandLine = _processWrapper.GetProcessCommandLine(process.ProcessId);
@@ -1981,7 +1979,7 @@ public class ProcessService : IProcessService
         }
 
         // The user's policy (WAM_DENY_PROCESSES, WAM_ALLOW_PROCESSES); no argument overrides it
-        if (_targetPolicy?.Evaluate([processName]) is { Allowed: false } verdict)
+        if (_targetPolicy.Evaluate([processName]) is { Allowed: false } verdict)
         {
             return new KillResult(
                 Success: false,
@@ -2112,15 +2110,10 @@ public class ProcessService : IProcessService
 
     /// <summary>
     /// The first process of a process tree (children, grandchildren, ...) that the target policy refuses,
-    /// or null. Without a policy, nothing is refused.
+    /// or null.
     /// </summary>
     private (int ProcessId, string ImageName, string? Reason)? DeniedDescendant(IReadOnlyList<(int ProcessId, string ImageName)> tree)
     {
-        if (_targetPolicy == null)
-        {
-            return null;
-        }
-
         foreach (var (childId, imageName) in tree)
         {
             if (_targetPolicy.Evaluate([imageName]) is { Allowed: false } verdict)
@@ -2142,7 +2135,7 @@ public class ProcessService : IProcessService
     {
         foreach (var child in tree)
         {
-            if (child.ProcessId == Environment.ProcessId || _hostGuard?.IsHostProcess(child.ProcessId) == true)
+            if (child.ProcessId == Environment.ProcessId || _hostGuard.IsHostProcess(child.ProcessId))
             {
                 return child;
             }
@@ -2300,7 +2293,7 @@ public class ProcessService : IProcessService
     /// </summary>
     private bool? IsHostProcess(int processId)
     {
-        if (_hostGuard?.IsHostProcess(processId) == true)
+        if (_hostGuard.IsHostProcess(processId))
         {
             return true;
         }

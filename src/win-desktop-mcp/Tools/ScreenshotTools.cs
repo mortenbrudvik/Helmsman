@@ -102,17 +102,15 @@ public class ScreenshotTools
     /// <param name="screenshotService">The captures.</param>
     /// <param name="uiElementService">The UI Automation walk of capture_with_elements.</param>
     /// <param name="windowService">Window reads and the target policy of windows a restore would show.</param>
-    /// <param name="targetPolicy">The user's target policy.</param>
+    /// <param name="capturePolicy">
+    /// The target policy's check of a captured window, shared with the raw pixel reads (roadmap M6).
+    /// </param>
     /// <param name="session">
     /// The input session: restoreIfMinimized takes the input gate through it, and refuses while input is paused.
     /// </param>
     /// <param name="elementRegistry">
     /// The element refs (roadmap M3.4): capture_window's ref is resolved through it to the element it crops to (roadmap
     /// M3.11). The server always passes it; without it capture_window refuses a ref.
-    /// </param>
-    /// <param name="capturePolicy">
-    /// The target policy's check of a captured window, shared with the raw pixel reads (roadmap M6); default a
-    /// <see cref="CaptureTargetPolicy"/> over <paramref name="windowService"/> and <paramref name="targetPolicy"/>.
     /// </param>
     /// <param name="monitorService">
     /// Resolves take_screenshot's `monitor` name (roadmap M6.7). The server always passes it; without it a monitor name fails.
@@ -121,19 +119,17 @@ public class ScreenshotTools
         IScreenshotService screenshotService,
         IUIElementService uiElementService,
         IWindowService windowService,
-        ITargetPolicy targetPolicy,
+        ICaptureTargetPolicy capturePolicy,
         IInputSession? session = null,
         IElementRegistry? elementRegistry = null,
-        ICaptureTargetPolicy? capturePolicy = null,
         IMonitorService? monitorService = null)
     {
         _screenshotService = screenshotService;
         _uiElementService = uiElementService;
         _windowService = windowService;
-        ArgumentNullException.ThrowIfNull(targetPolicy);
         _session = session;
         _elementRegistry = elementRegistry;
-        _capturePolicy = capturePolicy ?? new CaptureTargetPolicy(windowService, targetPolicy);
+        _capturePolicy = capturePolicy ?? throw new ArgumentNullException(nameof(capturePolicy));
         _monitorService = monitorService;
     }
 

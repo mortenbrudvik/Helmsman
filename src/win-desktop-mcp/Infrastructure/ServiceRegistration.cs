@@ -138,9 +138,9 @@ public static class ServiceRegistration
         services.AddSingleton<IVisualChangeService>(sp => new VisualChangeService(
             sp.GetRequiredService<IScreenCaptureWrapper>(), sp.GetRequiredService<IScreenshotService>(),
             sp.GetRequiredService<INativeWindowWrapper>(), sp.GetRequiredService<IMonitorService>(),
-            sp.GetRequiredService<ICaptureTargetPolicy>(), sp.GetRequiredService<IWindowCallRunner>(),
-            sp.GetRequiredService<ICaptureRegistry>(), sp.GetRequiredService<INativeThreadInputWrapper>(),
-            sp.GetRequiredService<ITargetPolicy>(), security: sp.GetRequiredService<IProcessSecurityProbe>()));
+            sp.GetRequiredService<ICaptureTargetPolicy>(), sp.GetRequiredService<ITargetPolicy>(),
+            sp.GetRequiredService<IProcessSecurityProbe>(), sp.GetRequiredService<IWindowCallRunner>(),
+            sp.GetRequiredService<ICaptureRegistry>(), sp.GetRequiredService<INativeThreadInputWrapper>()));
         // Windows OCR (roadmap M6.3): read_screen_text and find_text_on_screen read the raw pixels above. The wrapper loads
         // WinRT only on its first call, so a server without the ocr toolset never does
         services.AddSingleton<IOcrEngineWrapper, OcrEngineWrapper>();
@@ -174,8 +174,8 @@ public static class ServiceRegistration
         // The popups of a window (roadmap M3.5): find_ui_elements' windowAndPopups and desktop scopes, get_active_popups,
         // and the tools that act on or wait for a popup
         services.AddSingleton<IPopupService>(sp => new PopupService(
-            sp.GetRequiredService<INativeWindowWrapper>(), sp.GetRequiredService<INativeProcessWrapper>(),
-            sp.GetRequiredService<IHostGuard>(), sp.GetRequiredService<ITargetPolicy>(), sp.GetRequiredService<IUiaTree>(),
+            sp.GetRequiredService<INativeWindowWrapper>(), sp.GetRequiredService<IHostGuard>(), sp.GetRequiredService<ITargetPolicy>(),
+            sp.GetRequiredService<INativeProcessWrapper>(), sp.GetRequiredService<IUiaTree>(),
             sp.GetRequiredService<IUiaWorker>(), sp.GetRequiredService<IElementRegistry>()));
         // read_element_text and read_table (roadmap M3.9): text and tables through the patterns, by ref or find's criteria
         services.AddSingleton<IElementReadService, ElementReadService>();

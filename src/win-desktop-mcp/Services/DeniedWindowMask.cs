@@ -37,13 +37,13 @@ public sealed class DeniedWindowMask
 
     /// <param name="windows">Lists the top-level windows in z-order and reads their state and rectangles.</param>
     /// <param name="capturePolicy">The policy's check of a window capture, which fails closed as capture_window's does.</param>
-    /// <param name="policy">The policy itself: one that denies nothing masks nothing, without listing a window. Null: every
-    /// window is checked.</param>
-    public DeniedWindowMask(INativeWindowWrapper windows, ICaptureTargetPolicy capturePolicy, ITargetPolicy? policy)
+    /// <param name="policy">The policy itself: one that denies nothing masks nothing, without listing a window.</param>
+    public DeniedWindowMask(INativeWindowWrapper windows, ICaptureTargetPolicy capturePolicy, ITargetPolicy policy)
     {
         _windows = windows ?? throw new ArgumentNullException(nameof(windows));
         _capturePolicy = capturePolicy ?? throw new ArgumentNullException(nameof(capturePolicy));
-        _deniesAnything = policy?.DeniesAnything() ?? true;
+        ArgumentNullException.ThrowIfNull(policy);
+        _deniesAnything = policy.DeniesAnything();
     }
 
     /// <summary>The screen areas of the denied windows as the screen shows them now, per window, front to back.</summary>

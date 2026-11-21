@@ -290,7 +290,7 @@ public class WindowCloseToolContractTests
 
     private Task<InProcessMcpServer> StartServerAsync()
     {
-        var windowService = new WindowService(TestDataFactory.CreateMockMonitorService().Object, _native.Object, _hostGuard.Object);
+        var windowService = new WindowService(TestDataFactory.CreateMockMonitorService().Object, _native.Object, _hostGuard.Object, Permissive.TargetPolicy);
         return InProcessMcpServer.StartAsync(
             [],
             builder => builder

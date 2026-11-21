@@ -15,7 +15,7 @@ public class BrowserReadingServiceTests
     private readonly FakeUiaTree _tree = new();
     private readonly InlineUiaWorker _worker = new();
     private readonly Mock<IAccessibilityWarmup> _warmup = new();
-    private ITargetPolicy? _policy;
+    private ITargetPolicy _policy = Permissive.TargetPolicy;
 
     public BrowserReadingServiceTests()
     {
@@ -30,8 +30,8 @@ public class BrowserReadingServiceTests
         _mockCdpService.Object,
         _tree,
         worker ?? _worker,
-        _warmup.Object,
-        _policy);
+        _policy,
+        _warmup.Object);
 
     /// <summary>
     /// Shows a page in the browser window <paramref name="handle"/>: Window <paramref name="title"/> > ToolBar > Edit of
@@ -982,7 +982,7 @@ public class BrowserReadingServiceTests
                 FakeCdpWebSocketFactory.NeverConnects(), new FakePortOwnerResolver(1000)),
             new FakePortOwnerResolver(1000));
         var sut = new BrowserReadingService(
-            _mockNativeWrapper.Object, _mockBrowserDetection.Object, cdp, _tree, _worker, _warmup.Object, _policy);
+            _mockNativeWrapper.Object, _mockBrowserDetection.Object, cdp, _tree, _worker, _policy, _warmup.Object);
 
         var result = await sut.GetActiveBrowserUrlAsync(new CdpOptions(Port: CdpPort, Required: true));
 
@@ -1586,8 +1586,8 @@ public class BrowserReadingServiceTests
         _mockCdpService.Object,
         _tree,
         _worker,
-        _warmup.Object,
         _policy,
+        _warmup.Object,
         _locator.Object);
 
     private void PortLookup(DebugPortLookupStatus status, int? port = null, string detail = "what the lookup found") =>

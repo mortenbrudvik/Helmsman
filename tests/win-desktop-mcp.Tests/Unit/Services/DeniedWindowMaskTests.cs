@@ -81,7 +81,7 @@ public class DeniedWindowMaskTests
     private static IReadOnlyList<DeniedWindowArea> Read(params FakeWindow[] windows)
     {
         var (native, policy) = Desktop(windows);
-        return new DeniedWindowMask(native.Object, policy.Object, null).Read();
+        return new DeniedWindowMask(native.Object, policy.Object, new TargetPolicy(TargetPolicySettings.Default)).Read();
     }
 
     [Fact]
@@ -218,7 +218,7 @@ public class DeniedWindowMaskTests
     {
         var (native, policy) = Desktop(new FakeWindow(3, new Rectangle(0, 0, 10, 10), Visible: false));
 
-        new DeniedWindowMask(native.Object, policy.Object, null).Read();
+        new DeniedWindowMask(native.Object, policy.Object, new TargetPolicy(TargetPolicySettings.Default)).Read();
 
         policy.Verify(p => p.Check(It.IsAny<nint>()), Times.Never);
     }
@@ -346,7 +346,7 @@ public class DeniedWindowMaskTests
         // Fail-closed without throwing: a wait or a capture's signature then compares nothing of the area
         var (native, policy) = Desktop(new FakeWindow(1, new Rectangle(0, 0, 400, 100), Denied: true, RectUnreadable: true));
 
-        var masked = new DeniedWindowMask(native.Object, policy.Object, null).Over(new Rectangle(-50, 10, 500, 300));
+        var masked = new DeniedWindowMask(native.Object, policy.Object, new TargetPolicy(TargetPolicySettings.Default)).Over(new Rectangle(-50, 10, 500, 300));
 
         masked.Should().Equal(new MaskedWindow(1, -50, 10, 500, 300));
     }
@@ -361,7 +361,7 @@ public class DeniedWindowMaskTests
             new FakeWindow(3, new Rectangle(0, 200, 100, 100), Denied: true),
             new FakeWindow(4, new Rectangle(0, 200, 100, 100)));
 
-        var masked = new DeniedWindowMask(native.Object, policy.Object, null).Over(new Rectangle(0, 0, 350, 1000));
+        var masked = new DeniedWindowMask(native.Object, policy.Object, new TargetPolicy(TargetPolicySettings.Default)).Over(new Rectangle(0, 0, 350, 1000));
 
         // Window 1 shows at x 0-100 and 300-350 of the area: one box around both
         masked.Should().Equal(new MaskedWindow(1, 0, 0, 350, 100), new MaskedWindow(3, 0, 200, 100, 100));
@@ -374,7 +374,7 @@ public class DeniedWindowMaskTests
             new FakeWindow(2, new Rectangle(0, 0, 1000, 1000)),
             new FakeWindow(1, new Rectangle(0, 0, 400, 100), Denied: true));
 
-        new DeniedWindowMask(native.Object, policy.Object, null).Over(new Rectangle(0, 0, 500, 500)).Should().BeEmpty();
+        new DeniedWindowMask(native.Object, policy.Object, new TargetPolicy(TargetPolicySettings.Default)).Over(new Rectangle(0, 0, 500, 500)).Should().BeEmpty();
     }
 
     #endregion

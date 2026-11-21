@@ -28,7 +28,7 @@ public class ScreenshotGraphicsCaptureTests
     }
 
     private ScreenshotService CreateSut(bool withGraphics = true) =>
-        new(_capture.Object, _monitors.Object, _windows.Object, _calls.Object, graphicsCapture: withGraphics ? _graphics.Object : null);
+        new(_capture.Object, _monitors.Object, _windows.Object, Permissive.CapturePolicy, Permissive.TargetPolicy, Permissive.SecurityProbe, _calls.Object, graphicsCapture: withGraphics ? _graphics.Object : null);
 
     private static CaptureOptions With(WindowCaptureMethod method) => FullResolution with { CaptureMethod = method };
 

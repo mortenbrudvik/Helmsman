@@ -1,0 +1,81 @@
+namespace WinDesktopMcp.Tests.Fixtures;
+
+/// <summary>
+/// Stand-ins for the server's safety collaborators that refuse nothing, for tests about something else. The services take
+/// these collaborators as required constructor parameters (a missing registration must fail, never silently switch a check
+/// off), so a test that is not about the check passes one of these instead of leaving it out. A test about a check passes
+/// the real one, or a mock that refuses.
+/// </summary>
+public static class Permissive
+{
+    /// <summary>Target policy settings that deny no process (WAM_DENY_PROCESSES=none, no allow list).</summary>
+    public static TargetPolicySettings NoDenials { get; } = new([], null, "test");
+
+    /// <summary>A target policy that denies nothing: <see cref="TargetPolicyExtensions.DeniesAnything"/> is false.</summary>
+    public static ITargetPolicy TargetPolicy { get; } = new TargetPolicy(NoDenials);
+
+    /// <summary>A capture check that allows every window, without reading it (the verdict of <see cref="TargetPolicy"/>).</summary>
+    public static ICaptureTargetPolicy CapturePolicy { get; } = new AnyCapture();
+
+    /// <summary>
+    /// A window wrapper that knows no window: a loose mock, so IsWindow is false and every other read returns its default. For
+    /// a service that needs the wrapper only for the target policy's reads, in a test that is about something else.
+    /// </summary>
+    public static INativeWindowWrapper Windows => new Mock<INativeWindowWrapper>().Object;
+
+    /// <summary>An agent host with no process and no window: nothing is the host's.</summary>
+    public static IHostGuard HostGuard { get; } = new NoHost();
+
+    /// <summary>
+    /// A security probe that knows nothing: every integrity Unknown, the session's lock state Unknown, the input desktop
+    /// available, and whether Windows asks before it elevates Unknown.
+    /// </summary>
+    public static IProcessSecurityProbe SecurityProbe { get; } = new UnknownSecurity();
+
+    /// <summary>Takeover detection off (WAM_TAKEOVER_DETECTION unset): nothing is watched.</summary>
+    public static ITakeoverMonitor Takeover => new StubTakeoverMonitor(TakeoverMode.Off);
+
+    /// <summary>A paste guard that lets every batch paste.</summary>
+    public static IClipboardPasteGuard PasteGuard { get; } = new AnyPaste();
+
+    private sealed class NoHost : IHostGuard
+    {
+        public HostSnapshot Host { get; } = new(Environment.ProcessId, [], nint.Zero, null, null, null);
+
+        public bool IsHostProcess(int processId) => false;
+
+        public bool IsHostWindow(nint hWnd) => false;
+
+        public bool IsHostWindowOnlyWhileAncestorsUnknown(nint hWnd) => false;
+    }
+
+    private sealed class UnknownSecurity : IProcessSecurityProbe
+    {
+        public ProcessIntegrity ServerIntegrity { get; } = Unknown(Environment.ProcessId);
+
+        public ProcessIntegrity GetIntegrity(int processId) => Unknown(processId);
+
+        public bool IsInputDesktopAvailable() => true;
+
+        public bool IsSessionLocked() => false;
+
+        public SessionLockState GetSessionLock() => SessionLockState.Unknown;
+
+        public ElevationPrompt GetElevationPrompt() => ElevationPrompt.Unknown;
+
+        private static ProcessIntegrity Unknown(int processId) =>
+            new(processId, IntegrityLevel.Unknown, null, null, "not read in tests");
+    }
+
+    private sealed class AnyCapture : ICaptureTargetPolicy
+    {
+        public CaptureRefusal? Check(nint windowHandle) => null;
+
+        public TargetPolicyVerdict Verdict(WindowInfo? window) => TargetPolicyVerdict.Allow;
+    }
+
+    private sealed class AnyPaste : IClipboardPasteGuard
+    {
+        public string? Check(IReadOnlyList<InputEvent> batch, nint receivingWindow) => null;
+    }
+}

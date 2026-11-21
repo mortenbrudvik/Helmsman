@@ -238,6 +238,8 @@ public sealed class ContractServices : IDisposable
         services.AddSingleton<ICoordinateSpaceResolver>(new CoordinateSpaceResolver(
             Captures, _capturedWindows.Object, Mock.Of<INativeHitTestWrapper>(), Screen.Object));
         services.AddSingleton<ITargetPolicy>(new TargetPolicy(TargetPolicySettings.Default));
+        // The capture tools' check of a captured window, over the policy above, as the server registers it
+        services.AddSingleton<ICaptureTargetPolicy>(sp => new CaptureTargetPolicy(Windows.Object, sp.GetRequiredService<ITargetPolicy>()));
         services.AddSingleton(Audit);
         // get_server_info: the real report over mocked sources, with the toolsets the server was registered with
         services.AddSingleton<IServerInfoService>(sp => new ServerInfoService(
@@ -641,12 +643,15 @@ public sealed class ContractServices : IDisposable
         _capturedWindows.Setup(w => w.GetWindowRect(It.IsAny<nint>())).Returns((0, 100, 1600, 1000));
         _capturedWindows.Setup(w => w.GetWindowThreadProcessId(It.IsAny<nint>())).Returns(4242u);
         // The raw pixel reads of OCR (roadmap M6.3) check the target policy of a window: Notepad is allowed
+        var capturePolicy = new TargetPolicy(TargetPolicySettings.Default);
         Screenshots = new ScreenshotService(
             Screen.Object,
             monitors.Object,
             _capturedWindows.Object,
-            captureRegistry: Captures,
-            capturePolicy: new CaptureTargetPolicy(Windows.Object, new TargetPolicy(TargetPolicySettings.Default)));
+            new CaptureTargetPolicy(Windows.Object, capturePolicy),
+            capturePolicy,
+            Permissive.SecurityProbe,
+            captureRegistry: Captures);
     }
 
     /// <summary>A launch that started a process and, when it waited, found the window.</summary>

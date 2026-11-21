@@ -194,7 +194,7 @@ public class FixtureOcrTests
             ? new CaptureRefusal(ScreenshotErrorCode.TargetDeniedByPolicy, "the scenario denies WamFixtureApp")
             : null);
         var ocr = new OcrService(e2e.Server.Screenshots, e2e.Server.Get<IOcrEngineWrapper>(), e2e.Server.Get<INativeWindowWrapper>(),
-            policy.Object, null);
+            policy.Object, new TargetPolicy(TargetPolicySettings.Default));
         var lines = canvas.Lines.Select(l => l.Rect).ToList();
         var region = new CaptureTarget.Region(
             lines.Min(r => r.X), lines.Min(r => r.Y),

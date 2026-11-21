@@ -124,11 +124,12 @@ public sealed class DebugBrowserLaunchTests : IDisposable
     };
 
     private ProcessService CreateSut(DebugBrowserLocator? locator = null, IDebugBrowserReadiness? readiness = null) => new(
-        _windows.Object, _validation.Object, TestDataFactory.CreateMockBrowserDetectionService().Object, _resolver.Object,
-        _processes.Object, windowWait: _windowWait.Object,
-        debugBrowserLocator: locator ?? new DebugBrowserLocator(path => path == Chrome, _ => [Chrome], FakeFolder),
-        debugBrowserReadiness: readiness,
-        debugBrowserProfiles: _profiles)
+        _windows.Object, _validation.Object, TestDataFactory.CreateMockBrowserDetectionService().Object,
+        _resolver.Object, Permissive.TargetPolicy, Permissive.HostGuard, new ChromiumPrograms(),
+        new InterpreterGuard(),
+        locator ?? new DebugBrowserLocator(path => path == Chrome, _ => [Chrome], FakeFolder),
+        Permissive.SecurityProbe, new ChromiumSwitchGuard(), _processes.Object, _windowWait.Object, readiness,
+        _profiles)
     {
         DevToolsPortTimeout = TimeSpan.FromMilliseconds(300)
     };

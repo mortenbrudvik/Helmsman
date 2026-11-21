@@ -71,7 +71,7 @@ public class WorkspaceServiceTests : IDisposable
         ]) { Version = 2 };
 
     private WorkspaceService CreateSut() =>
-        new(_layouts.Object, _windows.Object, _native.Object, _browsers.Object, _shell.Object, _processes.Object, _tabs.Object, _policy.Object);
+        new(_layouts.Object, _windows.Object, _native.Object, _browsers.Object, _shell.Object, _processes.Object, _policy.Object, _tabs.Object);
 
     private void Saved(LayoutPreset preset) => _saved = preset;
 

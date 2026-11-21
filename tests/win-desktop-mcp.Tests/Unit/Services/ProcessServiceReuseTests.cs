@@ -34,8 +34,10 @@ public class ProcessServiceReuseTests
     }
 
     private ProcessService CreateSut() => new(
-        _windows.Object, _validation.Object, TestDataFactory.CreateMockBrowserDetectionService().Object, _resolver.Object,
-        _processes.Object, windowWait: _windowWait.Object);
+        _windows.Object, _validation.Object, TestDataFactory.CreateMockBrowserDetectionService().Object,
+        _resolver.Object, Permissive.TargetPolicy, Permissive.HostGuard, new ChromiumPrograms(),
+        new InterpreterGuard(), new DebugBrowserLocator(), Permissive.SecurityProbe, new ChromiumSwitchGuard(),
+        _processes.Object, _windowWait.Object);
 
     private WindowInfo Open(int handle, string process, string title, int processId = 900, bool host = false)
     {

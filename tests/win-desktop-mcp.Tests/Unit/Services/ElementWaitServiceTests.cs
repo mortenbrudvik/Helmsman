@@ -30,7 +30,7 @@ public class ElementWaitServiceTests
         _windows.Setup(w => w.GetWindowThreadProcessId(Handle)).Returns(300u);
         _windows.Setup(w => w.RespondsWithin(Handle, It.IsAny<uint>())).Returns(true);
         _registry = new ElementRegistry(_tree, _worker, _windows.Object, ElementRegistry.DefaultCapacity, 1, TimeProvider.System);
-        _search = new ElementSearchService(_tree, _worker, _registry, _windows.Object, _warmup.Object);
+        _search = new ElementSearchService(_tree, _worker, _registry, _windows.Object, Permissive.TargetPolicy, _warmup.Object);
         WindowWaitReturns(new WindowConditionResult
         {
             Satisfied = true, MatchCount = 1, ElapsedMs = 0, Window = TestDataFactory.CreateWindowInfo((int)Handle, "Editor", "editor", 300)
@@ -50,7 +50,7 @@ public class ElementWaitServiceTests
             .ReturnsAsync(result);
 
     private ElementWaitService CreateSut() =>
-        new(_search, _registry, _windowWait.Object, _tree, _worker, _windows.Object, _clock, DelayAsync);
+        new(_search, _registry, _windowWait.Object, _tree, _worker, _windows.Object, Permissive.TargetPolicy, _clock, DelayAsync);
 
     private Task<WaitForElementResult> WaitAsync(
         ElementQuery? criteria = null,
@@ -475,8 +475,8 @@ public class ElementWaitServiceTests
             [new PopupWindow(Popup, PopupKind.Dialog, "Exporting", "#32770", 300, nint.Zero, PopupRelation.SameProcess, null, false,
                 IsDeniedByPolicy: deniedByPolicy)],
             false));
-        var search = new ElementSearchService(_tree, _worker, _registry, _windows.Object, _warmup.Object, popups.Object);
-        return new ElementWaitService(search, _registry, _windowWait.Object, _tree, _worker, _windows.Object, _clock, DelayAsync);
+        var search = new ElementSearchService(_tree, _worker, _registry, _windows.Object, Permissive.TargetPolicy, _warmup.Object, popups.Object);
+        return new ElementWaitService(search, _registry, _windowWait.Object, _tree, _worker, _windows.Object, Permissive.TargetPolicy, _clock, DelayAsync);
     }
 
     [Fact]
@@ -747,7 +747,7 @@ public class ElementWaitServiceTests
         BuildWindow(Button("OK", enabled: false));
         var okRef = await RefOf("OKBtn");
         var worker = new ExpiringUiaWorker { Expired = true };
-        var sut = new ElementWaitService(_search, _registry, _windowWait.Object, _tree, worker, _windows.Object, _clock, DelayAsync);
+        var sut = new ElementWaitService(_search, _registry, _windowWait.Object, _tree, worker, _windows.Object, Permissive.TargetPolicy, _clock, DelayAsync);
 
         // Act
         var result = await sut.WaitAsync(new ElementWaitRequest { Ref = okRef, Condition = ElementWaitCondition.Enabled, TimeoutMs = 600 });
@@ -1399,8 +1399,8 @@ public class ElementWaitServiceTests
     {
         _windows.Setup(w => w.GetProcessName(300u)).Returns("1Password");
         var policy = new TargetPolicy(TargetPolicySettings.Default);
-        var search = new ElementSearchService(_tree, _worker, _registry, _windows.Object, _warmup.Object, policy: policy);
-        return new ElementWaitService(search, _registry, _windowWait.Object, _tree, _worker, _windows.Object, _clock, DelayAsync, policy);
+        var search = new ElementSearchService(_tree, _worker, _registry, _windows.Object, policy, _warmup.Object);
+        return new ElementWaitService(search, _registry, _windowWait.Object, _tree, _worker, _windows.Object, policy, _clock, DelayAsync);
     }
 
     [Theory]

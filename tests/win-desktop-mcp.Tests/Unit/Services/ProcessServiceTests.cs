@@ -71,8 +71,15 @@ public class ProcessServiceTests
         _mockValidationService.Object,
         browserDetection ?? _mockBrowserDetection.Object,
         _mockResolver.Object,
+        Permissive.TargetPolicy,
+        Permissive.HostGuard,
+        new ChromiumPrograms(),
+        new InterpreterGuard(),
+        new DebugBrowserLocator(),
+        Permissive.SecurityProbe,
+        new ChromiumSwitchGuard(),
         _mockProcessWrapper.Object,
-        windowWait: _mockWindowWait.Object);
+        _mockWindowWait.Object);
 
     private void VerifyNothingStarted() =>
         _mockProcessWrapper.Verify(w => w.StartProcess(It.IsAny<ProcessStartInfo>()), Times.Never);
@@ -352,7 +359,9 @@ public class ProcessServiceTests
         var released = new TaskCompletionSource();
         _mockLaunchedProcess.Setup(p => p.Dispose()).Callback(() => released.TrySetResult());
         var sut = new ProcessService(_mockWindowService.Object, _mockValidationService.Object, _mockBrowserDetection.Object,
-            _mockResolver.Object, _mockProcessWrapper.Object, windowWait: _mockWindowWait.Object)
+            _mockResolver.Object, Permissive.TargetPolicy, Permissive.HostGuard, new ChromiumPrograms(),
+            new InterpreterGuard(), new DebugBrowserLocator(), Permissive.SecurityProbe, new ChromiumSwitchGuard(),
+            _mockProcessWrapper.Object, _mockWindowWait.Object)
         {
             StartTimeout = TimeSpan.FromMilliseconds(100)
         };
@@ -986,15 +995,20 @@ public class ProcessServiceTests
         _ => new(processId, level, null, null, "access denied")
     };
 
-    private ProcessService CreateListingSut(ITargetPolicy? targetPolicy = null, bool withProbe = true) => new(
+    private ProcessService CreateListingSut(ITargetPolicy? targetPolicy = null) => new(
         _mockWindowService.Object,
         _mockValidationService.Object,
         _mockBrowserDetection.Object,
         _mockResolver.Object,
+        targetPolicy ?? Permissive.TargetPolicy,
+        Permissive.HostGuard,
+        new ChromiumPrograms(),
+        new InterpreterGuard(),
+        new DebugBrowserLocator(),
+        _mockSecurityProbe.Object,
+        new ChromiumSwitchGuard(),
         _mockProcessWrapper.Object,
-        targetPolicy: targetPolicy,
-        windowWait: _mockWindowWait.Object,
-        securityProbe: withProbe ? _mockSecurityProbe.Object : null);
+        _mockWindowWait.Object);
 
     [Fact]
     public void GetRunningProcesses_ByDefault_SortsByNameIgnoringCase_ThenByProcessId()
@@ -1440,18 +1454,6 @@ public class ProcessServiceTests
         notepad.AboveServer.Should().Be(notepad.Integrity.IsMorePrivilegedThan(_mockSecurityProbe.Object.ServerIntegrity));
     }
 
-    [Fact]
-    public void GetRunningProcesses_WithoutASecurityProbe_ReportsNoIntegrity()
-    {
-        // Arrange
-        UseProcessTable();
-
-        // Act
-        var result = CreateListingSut(withProbe: false).GetRunningProcesses(Everything);
-
-        // Assert
-        result.Should().OnlyContain(p => p.Integrity == null && !p.AboveServer);
-    }
 
     [Fact]
     public void GetRunningProcesses_ReadsNoCommandLine_UnlessAskedFor()

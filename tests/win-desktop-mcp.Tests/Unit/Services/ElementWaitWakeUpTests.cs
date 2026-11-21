@@ -255,7 +255,7 @@ public class ElementWaitWakeUpTests
             Windows.Setup(w => w.GetWindowThreadProcessId(Handle)).Returns((uint)ProcessId);
             Windows.Setup(w => w.RespondsWithin(Handle, It.IsAny<uint>())).Returns(true);
             _registry = new ElementRegistry(Tree, _worker, Windows.Object, ElementRegistry.DefaultCapacity, 1, TimeProvider.System);
-            _search = new ElementSearchService(Tree, _worker, _registry, Windows.Object, _warmup.Object);
+            _search = new ElementSearchService(Tree, _worker, _registry, Windows.Object, Permissive.TargetPolicy, _warmup.Object);
             _windowWait.Setup(w => w.WaitForConditionAsync(It.IsAny<WindowConditionRequest>(), It.IsAny<IProgress<OperationProgress>?>(),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new WindowConditionResult
@@ -277,7 +277,7 @@ public class ElementWaitWakeUpTests
 
         public ElementWaitService CreateSut(
             IElementEventSource? events, TimeProvider? clock = null, Func<TimeSpan, CancellationToken, Task>? delay = null) =>
-            new(_search, _registry, _windowWait.Object, Tree, _worker, Windows.Object, clock ?? _clock, delay ?? DelayAsync, events: events);
+            new(_search, _registry, _windowWait.Object, Tree, _worker, Windows.Object, Permissive.TargetPolicy, clock ?? _clock, delay ?? DelayAsync, events);
 
         /// <summary>Window "Editor" with a Pane "Body"; returns the pane.</summary>
         public FakeUiaNode BuildWindow(params FakeUiaNode[] children)

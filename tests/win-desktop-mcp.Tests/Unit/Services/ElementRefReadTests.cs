@@ -21,7 +21,7 @@ public class ElementRefReadTests
         _registry = new ElementRegistry(_tree, _worker, _windows.Object, ElementRegistry.DefaultCapacity, 1, TimeProvider.System);
     }
 
-    private UIElementService Walk() => new(_tree, _worker, _windows.Object, registry: _registry);
+    private UIElementService Walk() => new(_tree, _worker, _windows.Object, Permissive.TargetPolicy, Permissive.SecurityProbe, registry: _registry);
 
     private static IEnumerable<UIElementInfo> Flatten(IEnumerable<UIElementInfo> elements) =>
         elements.SelectMany(e => Flatten(e.Children ?? []).Prepend(e));
@@ -148,7 +148,7 @@ public class ElementRefReadTests
     {
         _tree.WithWindow(Handle, new FakeUiaNode("Window", "Main").With(new FakeUiaNode("Button", "Save")));
 
-        var elements = (await new UIElementService(_tree, _worker).GetUIElementsAsync(Handle)).Elements!;
+        var elements = (await new UIElementService(_tree, _worker, Permissive.Windows, Permissive.TargetPolicy, Permissive.SecurityProbe).GetUIElementsAsync(Handle)).Elements!;
 
         elements.Single().Ref.Should().BeNull();
     }
@@ -186,7 +186,7 @@ public class ElementRefReadTests
         var monitors = new Mock<IMonitorService>();
         monitors.Setup(m => m.GetAllMonitors()).Returns(
             [new MonitorInfo(0, @"\\.\DISPLAY1", true, new MonitorRect(0, 0, 1920, 1080), new MonitorRect(0, 0, 1920, 1040), 1.0)]);
-        return new ElementInspectionService(_tree, _worker, hitTest.Object, _windows.Object, monitors.Object, warmup, _registry);
+        return new ElementInspectionService(_tree, _worker, hitTest.Object, _windows.Object, monitors.Object, Permissive.TargetPolicy, warmup, _registry);
     }
 
     [Fact]
@@ -334,7 +334,7 @@ public class ElementRefReadTests
         warmup.Setup(w => w.WarmUp(Handle, It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
             .Callback(() => _registry.Count.Should().Be(0, "the warm-up comes before any element is read and registered"))
             .Returns(Warmed);
-        var sut = new UIElementService(_tree, _worker, _windows.Object, warmup.Object, _registry);
+        var sut = new UIElementService(_tree, _worker, _windows.Object, Permissive.TargetPolicy, Permissive.SecurityProbe, warmup.Object, _registry);
 
         // Act
         var result = await sut.GetUIElementsAsync(Handle);

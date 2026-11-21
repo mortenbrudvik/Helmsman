@@ -15,7 +15,7 @@ public class WindowServiceSetZOrderTests
     private readonly TopmostPins _pins = new();
 
     private WindowService CreateSut() =>
-        new(TestDataFactory.CreateMockMonitorService().Object, _desktop.Native.Object, _desktop.HostGuard.Object, topmostPins: _pins);
+        new(TestDataFactory.CreateMockMonitorService().Object, _desktop.Native.Object, _desktop.HostGuard.Object, Permissive.TargetPolicy, topmostPins: _pins);
 
     [Theory]
     [InlineData(ZOrderMode.Top, 0)]

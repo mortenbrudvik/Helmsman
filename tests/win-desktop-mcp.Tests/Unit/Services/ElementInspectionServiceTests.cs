@@ -32,7 +32,7 @@ public class ElementInspectionServiceTests
     }
 
     private ElementInspectionService CreateSut(IUiaWorker? worker = null) =>
-        new(_tree, worker ?? _worker, _hitTest.Object, _windows.Object, _monitors.Object);
+        new(_tree, worker ?? _worker, _hitTest.Object, _windows.Object, _monitors.Object, Permissive.TargetPolicy);
 
     /// <summary>
     /// Window "Sign in" (hwnd TopLevel) > Pane "Form" (hwnd ChildWindow) > Group "Credentials" > Edit "Email"
@@ -627,7 +627,7 @@ public class ElementInspectionServiceTests
     private readonly Mock<IAccessibilityWarmup> _warmup = new();
 
     private ElementInspectionService CreateSutWithWarmup() =>
-        new(_tree, _worker, _hitTest.Object, _windows.Object, _monitors.Object, _warmup.Object);
+        new(_tree, _worker, _hitTest.Object, _windows.Object, _monitors.Object, Permissive.TargetPolicy, _warmup.Object);
 
     [Fact]
     public async Task GetFocusedElement_WarmsUpTheForegroundWindowFirst_WithinAThirdOfTheTimeout()
@@ -726,8 +726,8 @@ public class ElementInspectionServiceTests
     private static readonly nint Prompt = 0x6000;
 
     private ElementInspectionService CreateSutWithPolicy(TargetPolicySettings? policy = null) =>
-        new(_tree, _worker, _hitTest.Object, _windows.Object, _monitors.Object, _warmup.Object,
-            policy: new TargetPolicy(policy ?? TargetPolicySettings.Default));
+        new(_tree, _worker, _hitTest.Object, _windows.Object, _monitors.Object,
+            new TargetPolicy(policy ?? TargetPolicySettings.Default), _warmup.Object);
 
     /// <summary>Makes <paramref name="window"/> a window of process <paramref name="processId"/> named <paramref name="processName"/>.</summary>
     private void WindowOf(nint window, uint processId, string processName)

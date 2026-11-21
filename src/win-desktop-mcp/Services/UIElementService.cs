@@ -113,44 +113,42 @@ public class UIElementService : IUIElementService
 
     private readonly IUiaTree _tree;
     private readonly IUiaWorker _worker;
-    private readonly INativeWindowWrapper? _windows;
+    private readonly INativeWindowWrapper _windows;
     private readonly IAccessibilityWarmup? _warmup;
     private readonly IElementRegistry? _registry;
-    private readonly ITargetPolicy? _policy;
-    private readonly IProcessSecurityProbe? _security;
+    private readonly ITargetPolicy _policy;
+    private readonly IProcessSecurityProbe _security;
 
     /// <param name="tree">The UI Automation tree.</param>
     /// <param name="worker">Runs the walk under a deadline.</param>
     /// <param name="windows">Checks that the window responds before it is read, and identifies the application
     /// whose window is read (for a UWP app its own process, see <see cref="UwpFrames"/>), so a hung application blocks
     /// only reads of itself (see <see cref="IUiaWorker"/>), and tells the windows the window owns, which the walk leaves
-    /// out (roadmap M3.F9). Without it all reads share one count, nothing is checked first and nothing is left out.</param>
+    /// out (roadmap M3.F9); and reads the window for the target policy.</param>
+    /// <param name="policy">The user's target policy, which refuses reads of a window of an app it denies.</param>
+    /// <param name="security">Tells a window whose process runs at a higher integrity level than the server, whose tree UI
+    /// Automation cannot read (roadmap M3.F16).</param>
     /// <param name="warmup">Warms up the web content of Chromium, Electron and WebView2 windows before they are read
     /// (roadmap M3.3), and finds the pages of their render widgets, which the walk lists under their hosts (roadmap
     /// M3.F35). The server always passes it; without it no window is warmed up, and a page is listed only where the walk
     /// reaches it.</param>
     /// <param name="registry">Gives every returned element its ref (roadmap M3.4). Without it the elements have none.</param>
-    /// <param name="policy">The user's target policy, which refuses reads of a window of an app it denies. The server always
-    /// passes it; without it (or without <paramref name="windows"/>) no window is refused.</param>
-    /// <param name="security">Tells a window whose process runs at a higher integrity level than the server, whose tree UI
-    /// Automation cannot read (roadmap M3.F16). The server always passes it; without it (or without
-    /// <paramref name="windows"/>) no such warning is given.</param>
     public UIElementService(
         IUiaTree tree,
         IUiaWorker worker,
-        INativeWindowWrapper? windows = null,
+        INativeWindowWrapper windows,
+        ITargetPolicy policy,
+        IProcessSecurityProbe security,
         IAccessibilityWarmup? warmup = null,
-        IElementRegistry? registry = null,
-        ITargetPolicy? policy = null,
-        IProcessSecurityProbe? security = null)
+        IElementRegistry? registry = null)
     {
         _tree = tree;
         _worker = worker;
-        _windows = windows;
+        _windows = windows ?? throw new ArgumentNullException(nameof(windows));
         _warmup = warmup;
         _registry = registry;
-        _policy = policy;
-        _security = security;
+        _policy = policy ?? throw new ArgumentNullException(nameof(policy));
+        _security = security ?? throw new ArgumentNullException(nameof(security));
     }
 
     /// <inheritdoc />
@@ -218,17 +216,12 @@ public class UIElementService : IUIElementService
     /// <summary>
     /// The state of the window's top-level window (<paramref name="root"/>, the window itself when it has none above it):
     /// Minimized when it, or the window itself, is minimized (its elements are offscreen), Maximized or Normal otherwise.
-    /// Null without a window wrapper, or when the handle is no window. These are reads Windows answers without the window's
+    /// Null when the handle is no window. These are reads Windows answers without the window's
     /// thread, so a hung application does not block them.
     /// </summary>
     private WindowState? ReadWindowState(nint windowHandle, out nint root)
     {
         root = windowHandle;
-        if (_windows == null)
-        {
-            return null;
-        }
-
         try
         {
             if (!_windows.IsWindow(windowHandle))
@@ -302,11 +295,6 @@ public class UIElementService : IUIElementService
     /// </summary>
     private string? ElevationWarning(nint windowHandle)
     {
-        if (_security == null || _windows == null)
-        {
-            return null;
-        }
-
         try
         {
             var server = _security.ServerIntegrity;

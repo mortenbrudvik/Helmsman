@@ -41,6 +41,13 @@ public class ChromiumSwitchLaunchTests
         new InputValidationService(ProtocolAllowlist.BuiltIn),
         TestDataFactory.CreateMockBrowserDetectionService().Object,
         _resolver.Object,
+        Permissive.TargetPolicy,
+        Permissive.HostGuard,
+        new ChromiumPrograms(),
+        new InterpreterGuard(),
+        new DebugBrowserLocator(),
+        Permissive.SecurityProbe,
+        new ChromiumSwitchGuard(),
         _processes.Object,
         appsWrapper: _apps.Object,
         installedApps: _installed.Object);

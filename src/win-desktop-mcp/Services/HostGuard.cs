@@ -58,10 +58,10 @@ public sealed class HostGuard : IHostGuard
 
     /// <summary>
     /// <see cref="AncestorsUnknownNote"/> when one of <paramref name="windows"/> counts as the host's only while the ancestors are
-    /// unknown (<see cref="IHostGuard.IsHostWindowOnlyWhileAncestorsUnknown"/>); empty otherwise, also without a guard.
+    /// unknown (<see cref="IHostGuard.IsHostWindowOnlyWhileAncestorsUnknown"/>); empty otherwise.
     /// </summary>
-    public static string AncestorsUnknownNoteFor(IHostGuard? guard, params nint[] windows) =>
-        guard != null && windows.Any(guard.IsHostWindowOnlyWhileAncestorsUnknown) ? AncestorsUnknownNote : string.Empty;
+    public static string AncestorsUnknownNoteFor(IHostGuard guard, params nint[] windows) =>
+        windows.Any(guard.IsHostWindowOnlyWhileAncestorsUnknown) ? AncestorsUnknownNote : string.Empty;
 
     private readonly INativeWindowWrapper _windows;
     private readonly INativeProcessWrapper _processes;

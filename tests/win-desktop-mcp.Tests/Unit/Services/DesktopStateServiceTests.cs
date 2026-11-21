@@ -851,7 +851,7 @@ public class DesktopStateServiceTests
             new FakeUiaNode("Window", "notes.txt - Notepad").With(new FakeUiaNode("Button", "Save") { ActionPatterns = ["Invoke"] }, panel));
         var clock = new ManualTimerClock();
         var timeout = TimeSpan.FromSeconds(2);
-        var sut = new DesktopStateService(_windows.Object, _session, _input, _inspection.Object, new UIElementService(tree, new UiaWorker()),
+        var sut = new DesktopStateService(_windows.Object, _session, _input, _inspection.Object, new UIElementService(tree, new UiaWorker(), Permissive.Windows, Permissive.TargetPolicy, Permissive.SecurityProbe),
             _popups.Object, _screenshots.Object, _policy, _security.Object, time: clock);
 
         try
@@ -898,7 +898,7 @@ public class DesktopStateServiceTests
         _popups.Setup(p => p.GetPopupList(Notepad)).Returns(new PopupList(
             [new PopupWindow(dialogHandle, PopupKind.Dialog, "Save As", "#32770", 4242, Notepad, PopupRelation.Owned, null, false)], false));
         var sut = new DesktopStateService(_windows.Object, _session, _input, _inspection.Object,
-            new UIElementService(tree, new UiaWorker(), native.Object), _popups.Object, _screenshots.Object, _policy, _security.Object);
+            new UIElementService(tree, new UiaWorker(), native.Object, Permissive.TargetPolicy, Permissive.SecurityProbe), _popups.Object, _screenshots.Object, _policy, _security.Object);
 
         // Act
         var (state, _) = await sut.GetStateAsync(Request(window: Notepad), CancellationToken.None);

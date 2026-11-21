@@ -37,15 +37,15 @@ public class VisualChangeServiceTests
     }
 
     private VisualChangeService CreateSut(ITargetPolicy? policy = null, IProcessSecurityProbe? security = null) => new(
-        _screen, _screenshots.Object, _windows.Object, _monitors.Object, _capturePolicy.Object, _windowCalls, _registry, _threads.Object,
-        policy ?? new TargetPolicy(new TargetPolicySettings([], null, "test")), _clock,
+        _screen, _screenshots.Object, _windows.Object, _monitors.Object, _capturePolicy.Object,
+        policy ?? Permissive.TargetPolicy, security ?? Permissive.SecurityProbe, _windowCalls,
+        _registry, _threads.Object, _clock,
         (pause, token) =>
         {
             token.ThrowIfCancellationRequested();
             _clock.Advance(pause);
             return Task.CompletedTask;
-        },
-        security);
+        });
 
     private static VisualWaitRequest Request(VisualTarget target, VisualWaitCondition condition = VisualWaitCondition.Changed,
         int timeoutMs = 2000, int stableMs = 500, double minChangedPercent = 0) => new()
@@ -1165,7 +1165,8 @@ public class VisualChangeServiceTests
             return WindowFrame();
         };
         var sut = new VisualChangeService(_screen, _screenshots.Object, _windows.Object, _monitors.Object, _capturePolicy.Object,
-            _windowCalls, _registry, _threads.Object, new TargetPolicy(new TargetPolicySettings([], null, "test")), _clock,
+            new TargetPolicy(new TargetPolicySettings([], null, "test")), Permissive.SecurityProbe, _windowCalls,
+            _registry, _threads.Object, _clock,
             (pause, token) =>
             {
                 _clock.Advance(pause > TimeSpan.FromMilliseconds(1) ? pause - TimeSpan.FromMilliseconds(1) : pause);

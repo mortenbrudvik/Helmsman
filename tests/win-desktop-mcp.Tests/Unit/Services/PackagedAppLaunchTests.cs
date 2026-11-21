@@ -70,9 +70,15 @@ public class PackagedAppLaunchTests
         new InputValidationService(ProtocolAllowlist.BuiltIn),
         TestDataFactory.CreateMockBrowserDetectionService().Object,
         _resolver.Object,
+        Permissive.TargetPolicy,
+        Permissive.HostGuard,
+        new ChromiumPrograms(),
+        new InterpreterGuard(),
+        new DebugBrowserLocator(),
+        _security.Object,
+        new ChromiumSwitchGuard(),
         _processes.Object,
-        windowWait: _windowWait.Object,
-        securityProbe: _security.Object,
+        _windowWait.Object,
         appsWrapper: withApps ? _apps.Object : null,
         installedApps: withApps ? _installed.Object : null)
     {

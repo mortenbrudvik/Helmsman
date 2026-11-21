@@ -30,7 +30,7 @@ public class PopupServiceTests
     private PopupService CreateSut()
     {
         Registry = new ElementRegistry(_tree, _worker, _desktop.Native.Object, ElementRegistry.DefaultCapacity, 1, TimeProvider.System);
-        return new PopupService(_desktop.Native.Object, _processes.Object, _desktop.HostGuard.Object, _policy.Object, _tree, _worker, Registry);
+        return new PopupService(_desktop.Native.Object, _desktop.HostGuard.Object, _policy.Object, _processes.Object, _tree, _worker, Registry);
     }
 
     /// <summary>An app's main window: a title bar, no owner.</summary>
@@ -798,7 +798,7 @@ public class PopupServiceTests
         var menu = AddPopup("", PopupService.MenuClass, owner: main);
         _tree.WithWindow(menu, new FakeUiaNode("Menu", "Context") { OnRead = () => release.Wait(TimeSpan.FromSeconds(3)) });
         Registry = new ElementRegistry(_tree, _worker, _desktop.Native.Object, ElementRegistry.DefaultCapacity, 1, TimeProvider.System);
-        var sut = new PopupService(_desktop.Native.Object, _processes.Object, _desktop.HostGuard.Object, _policy.Object, _tree,
+        var sut = new PopupService(_desktop.Native.Object, _desktop.HostGuard.Object, _policy.Object, _processes.Object, _tree,
             new UiaWorker(), Registry);
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 

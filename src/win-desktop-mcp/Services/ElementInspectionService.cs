@@ -37,22 +37,21 @@ public class ElementInspectionService : IElementInspectionService
     private readonly IMonitorService _monitors;
     private readonly IAccessibilityWarmup? _warmup;
     private readonly IElementRegistry? _registry;
-    private readonly ITargetPolicy? _policy;
+    private readonly ITargetPolicy _policy;
 
+    /// <param name="policy">The user's target policy, which refuses reads of a window of an app it denies.</param>
     /// <param name="warmup">Warms up the web content of Chromium, Electron and WebView2 windows before they are read
     /// (roadmap M3.3). The server always passes it; without it no window is warmed up.</param>
     /// <param name="registry">Gives the element its ref (roadmap M3.4); without it the element has none.</param>
-    /// <param name="policy">The user's target policy, which refuses reads of a window of an app it denies. The server always
-    /// passes it; without it no window is refused.</param>
     public ElementInspectionService(
         IUiaTree tree,
         IUiaWorker worker,
         INativeHitTestWrapper hitTest,
         INativeWindowWrapper windows,
         IMonitorService monitors,
+        ITargetPolicy policy,
         IAccessibilityWarmup? warmup = null,
-        IElementRegistry? registry = null,
-        ITargetPolicy? policy = null)
+        IElementRegistry? registry = null)
     {
         _tree = tree;
         _worker = worker;
@@ -61,7 +60,7 @@ public class ElementInspectionService : IElementInspectionService
         _monitors = monitors;
         _warmup = warmup;
         _registry = registry;
-        _policy = policy;
+        _policy = policy ?? throw new ArgumentNullException(nameof(policy));
     }
 
     /// <inheritdoc />
@@ -334,11 +333,6 @@ public class ElementInspectionService : IElementInspectionService
     /// </summary>
     private string? ElementRefusal(nint window, nint checkedWindow, string? processName)
     {
-        if (_policy == null)
-        {
-            return null;
-        }
-
         if (window != checkedWindow && UiaTargets.PolicyRefusal(_windows, _policy, window) is { } denied)
         {
             return denied;

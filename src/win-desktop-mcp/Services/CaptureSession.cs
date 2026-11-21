@@ -11,16 +11,11 @@ public static class CaptureSession
 {
     /// <summary>
     /// The warning code for the session now: <see cref="CaptureWarnings.SessionLocked"/> when it is locked, else
-    /// <see cref="CaptureWarnings.DesktopUnavailable"/> when the input desktop cannot be reached; null otherwise, and without
-    /// the probe. A lock state that cannot be read does not warn.
+    /// <see cref="CaptureWarnings.DesktopUnavailable"/> when the input desktop cannot be reached; null otherwise. A lock state that cannot be read does not warn.
     /// </summary>
-    public static string? WarningCode(IProcessSecurityProbe? security)
+    public static string? WarningCode(IProcessSecurityProbe security)
     {
-        if (security == null)
-        {
-            return null;
-        }
-
+        ArgumentNullException.ThrowIfNull(security);
         if (security.GetSessionLock() == SessionLockState.Locked)
         {
             return CaptureWarnings.SessionLocked;

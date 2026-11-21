@@ -22,7 +22,7 @@ public class ScreenshotToolsCaptureHealthTests
     private readonly List<string> _events = [];
 
     private ScreenshotTools CreateSut(TargetPolicySettings? policy = null) =>
-        new(_screenshots.Object, _elements.Object, _windows.Object, new TargetPolicy(policy ?? TargetPolicySettings.Default), _session.Object);
+        new(_screenshots.Object, _elements.Object, _windows.Object, new CaptureTargetPolicy(_windows.Object, new TargetPolicy(policy ?? TargetPolicySettings.Default)), _session.Object);
 
     #region capture_with_elements and the walk
 
@@ -439,7 +439,9 @@ public class ScreenshotToolsCaptureHealthTests
 
         // The real restore over the fake window: SW_SHOWNOACTIVATE now, SW_SHOWMINNOACTIVE on Dispose
         var service = new ScreenshotService(TestDataFactory.CreateMockScreenCaptureWrapper().Object,
-            TestDataFactory.CreateMockMonitorService().Object, native.Object, calls.Object, TimeSpan.Zero, TimeSpan.FromMilliseconds(100));
+            TestDataFactory.CreateMockMonitorService().Object, native.Object, Permissive.CapturePolicy,
+            Permissive.TargetPolicy, Permissive.SecurityProbe, calls.Object, TimeSpan.Zero,
+            TimeSpan.FromMilliseconds(100));
         return service.RestoreForCapture(Window, Window, includeFrame: true);
     }
 
@@ -452,7 +454,9 @@ public class ScreenshotToolsCaptureHealthTests
         var calls = new Mock<IWindowCallRunner>();
         calls.Setup(c => c.Run(It.IsAny<nint>(), It.IsAny<Func<bool>>())).Returns((nint _, Func<bool> call) => call());
         var service = new ScreenshotService(TestDataFactory.CreateMockScreenCaptureWrapper().Object,
-            TestDataFactory.CreateMockMonitorService().Object, native.Object, calls.Object, TimeSpan.Zero, TimeSpan.FromMilliseconds(20));
+            TestDataFactory.CreateMockMonitorService().Object, native.Object, Permissive.CapturePolicy,
+            Permissive.TargetPolicy, Permissive.SecurityProbe, calls.Object, TimeSpan.Zero,
+            TimeSpan.FromMilliseconds(20));
         var restore = service.RestoreForCapture(Window, Window, includeFrame: true);
         restore.Failure.Should().NotBeNull(failure.Message);
         return restore;

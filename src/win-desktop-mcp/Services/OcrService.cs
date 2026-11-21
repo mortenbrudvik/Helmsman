@@ -41,21 +41,21 @@ public sealed class OcrService : IOcrService
     private readonly IOcrEngineWrapper _engine;
     private readonly INativeWindowWrapper _windows;
     private readonly ICaptureTargetPolicy _capturePolicy;
-    private readonly ITargetPolicy? _policy;
+    private readonly ITargetPolicy _policy;
 
     /// <param name="screenshots">The raw pixel seam and the capture registry (CapturePixels, RegisterRaw).</param>
     /// <param name="engine">Windows OCR.</param>
     /// <param name="windows">Lists the top-level windows for the mask of denied windows.</param>
     /// <param name="capturePolicy">The policy's check of each window for the mask, capture_window's.</param>
-    /// <param name="policy">The policy itself: one that denies nothing masks nothing. Null: every window is checked.</param>
+    /// <param name="policy">The policy itself: one that denies nothing masks nothing.</param>
     public OcrService(IScreenshotService screenshots, IOcrEngineWrapper engine, INativeWindowWrapper windows,
-        ICaptureTargetPolicy capturePolicy, ITargetPolicy? policy)
+        ICaptureTargetPolicy capturePolicy, ITargetPolicy policy)
     {
         _screenshots = screenshots ?? throw new ArgumentNullException(nameof(screenshots));
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         _windows = windows ?? throw new ArgumentNullException(nameof(windows));
         _capturePolicy = capturePolicy ?? throw new ArgumentNullException(nameof(capturePolicy));
-        _policy = policy;
+        _policy = policy ?? throw new ArgumentNullException(nameof(policy));
     }
 
     /// <inheritdoc />

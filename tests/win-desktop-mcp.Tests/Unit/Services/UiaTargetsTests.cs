@@ -158,10 +158,10 @@ public class UiaTargetsTests
     }
 
     [Fact]
-    public void ReadVerdict_WithoutAPolicy_ReadsNothing()
+    public void ReadVerdict_WithAPolicyThatDeniesNothing_ReadsNothing()
     {
         // Act
-        var verdict = UiaTargets.ReadVerdict(_windows.Object, policy: null, KeePass);
+        var verdict = UiaTargets.ReadVerdict(_windows.Object, Permissive.TargetPolicy, KeePass);
 
         // Assert
         verdict.Allowed.Should().BeTrue();

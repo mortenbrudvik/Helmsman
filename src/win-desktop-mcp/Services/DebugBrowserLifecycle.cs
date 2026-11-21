@@ -51,8 +51,8 @@ public sealed class DebugBrowserLifecycle : IDebugBrowserLifecycle
     private readonly ICdpService _cdp;
     private readonly IWindowService _windows;
     private readonly DebugBrowserProfiles _profiles;
-    private readonly ITargetPolicy? _targetPolicy;
-    private readonly IHostGuard? _hostGuard;
+    private readonly ITargetPolicy _targetPolicy;
+    private readonly IHostGuard _hostGuard;
     private readonly IInputSession? _session;
     private readonly DebugBrowserProcesses _browserProcesses;
 
@@ -68,8 +68,8 @@ public sealed class DebugBrowserLifecycle : IDebugBrowserLifecycle
     /// <param name="cdp">Reads /json/version and sends Browser.close.</param>
     /// <param name="windows">Finds a reused browser's window.</param>
     /// <param name="profiles">The server's profile folders.</param>
-    /// <param name="targetPolicy">The user's target policy, which close_debug_browser respects; the server always passes it.</param>
-    /// <param name="hostGuard">The agent's host, which is never closed; the server always passes it.</param>
+    /// <param name="targetPolicy">The user's target policy, which close_debug_browser respects.</param>
+    /// <param name="hostGuard">The agent's host, which is never closed.</param>
     /// <param name="session">The input session, whose pause a refused gate reports by its cause (the server may have paused
     /// itself); the server always passes it.</param>
     public DebugBrowserLifecycle(
@@ -80,8 +80,8 @@ public sealed class DebugBrowserLifecycle : IDebugBrowserLifecycle
         ICdpService cdp,
         IWindowService windows,
         DebugBrowserProfiles profiles,
-        ITargetPolicy? targetPolicy = null,
-        IHostGuard? hostGuard = null,
+        ITargetPolicy targetPolicy,
+        IHostGuard hostGuard,
         IInputSession? session = null)
     {
         _processes = processes;
@@ -91,8 +91,8 @@ public sealed class DebugBrowserLifecycle : IDebugBrowserLifecycle
         _cdp = cdp;
         _windows = windows;
         _profiles = profiles;
-        _targetPolicy = targetPolicy;
-        _hostGuard = hostGuard;
+        _targetPolicy = targetPolicy ?? throw new ArgumentNullException(nameof(targetPolicy));
+        _hostGuard = hostGuard ?? throw new ArgumentNullException(nameof(hostGuard));
         _session = session;
         _browserProcesses = new DebugBrowserProcesses(native, hostGuard);
     }
@@ -255,7 +255,7 @@ public sealed class DebugBrowserLifecycle : IDebugBrowserLifecycle
 
         // A port the server finds by itself is the target policy's to refuse (roadmap M5.3)
         var processName = Path.GetFileNameWithoutExtension(imageName);
-        if (_targetPolicy?.Evaluate([processName]) is { Allowed: false } verdict)
+        if (_targetPolicy.Evaluate([processName]) is { Allowed: false } verdict)
         {
             return Failed($"reuseIfRunning: the '{processName}' running with this profile is refused by the server's target policy: " +
                           $"{verdict.Reason}. Nothing was launched.") with { ErrorCode = nameof(ProcessErrorCode.TargetDeniedByPolicy) };
@@ -442,7 +442,7 @@ public sealed class DebugBrowserLifecycle : IDebugBrowserLifecycle
                 "the user to close it.");
         }
 
-        var isHost = _hostGuard?.IsHostProcess(pid) == true ? true : IsAncestorOfServer(pid);
+        var isHost = _hostGuard.IsHostProcess(pid) ? true : IsAncestorOfServer(pid);
         if (isHost == true)
         {
             return Refuse(pid, nameof(ProcessErrorCode.CannotTerminateHost),
@@ -457,7 +457,7 @@ public sealed class DebugBrowserLifecycle : IDebugBrowserLifecycle
         }
 
         var processName = Path.GetFileNameWithoutExtension(imageName);
-        if (_targetPolicy?.Evaluate([processName]) is { Allowed: false } verdict)
+        if (_targetPolicy.Evaluate([processName]) is { Allowed: false } verdict)
         {
             return Refuse(pid, nameof(ProcessErrorCode.TargetDeniedByPolicy),
                 $"'{processName}' (processId {shown}) is refused by the server's target policy: {verdict.Reason}. Nothing was closed. " +

@@ -50,7 +50,7 @@ public class WindowInfoAgentHostTests
     }
 
     private WindowService CreateSut(IHostGuard? hostGuard = null) =>
-        new(TestDataFactory.CreateMockMonitorService().Object, _native.Object, hostGuard ?? _hostGuard.Object);
+        new(TestDataFactory.CreateMockMonitorService().Object, _native.Object, hostGuard ?? _hostGuard.Object, Permissive.TargetPolicy);
 
     [Fact]
     public void Listing_MarksOnlyTheHostWindow()

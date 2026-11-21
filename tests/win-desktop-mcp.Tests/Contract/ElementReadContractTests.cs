@@ -49,7 +49,7 @@ public class ElementReadContractTests
         var registry = new ElementRegistry(tree, worker, windows.Object, ElementRegistry.DefaultCapacity, 1, TimeProvider.System);
         var elementRef = registry.Register(Handle, tree.ReadElement(element), new ElementOrigin(registry.NextGeneration())) ??
                          throw new InvalidOperationException("The element got no ref.");
-        var reads = new ElementReadService(tree, worker, registry, new ElementSearchService(tree, worker, registry, windows.Object), windows.Object);
+        var reads = new ElementReadService(tree, worker, registry, new ElementSearchService(tree, worker, registry, windows.Object, Permissive.TargetPolicy), windows.Object, Permissive.TargetPolicy);
 
         return (services =>
         {

@@ -36,7 +36,7 @@ public class ElementSearchVirtualizedTests
         string? name = null, string? automationId = null, string[]? controlTypes = null, bool searchVirtualized = true,
         int maxResults = 20, string? withinRef = null, ElementDetail detail = ElementDetail.Minimal,
         ElementNameMatch nameMatch = ElementNameMatch.Exact, TimeSpan? timeout = null, string? className = null) =>
-        new ElementSearchService(_tree, _worker, _registry, _windows.Object).FindAsync(
+        new ElementSearchService(_tree, _worker, _registry, _windows.Object, Permissive.TargetPolicy).FindAsync(
             new ElementQuery(Handle, withinRef, name, nameMatch, automationId, controlTypes, className, MaxResults: maxResults,
                 Detail: detail, Timeout: timeout ?? TimeSpan.FromSeconds(5)) { SearchVirtualized = searchVirtualized });
 
@@ -589,7 +589,7 @@ public class ElementSearchVirtualizedTests
 
         ElementSearchService.VirtualizedArgumentError(query).Should().Contain("automationId, or name with nameMatch exact");
         ElementSearchService.VirtualizedArgumentError(query with { SearchVirtualized = false }).Should().BeNull();
-        FluentActions.Awaiting(() => new ElementSearchService(_tree, _worker, _registry).FindAsync(query))
+        FluentActions.Awaiting(() => new ElementSearchService(_tree, _worker, _registry, Permissive.Windows, Permissive.TargetPolicy).FindAsync(query))
             .Should().ThrowAsync<ArgumentException>();
     }
 

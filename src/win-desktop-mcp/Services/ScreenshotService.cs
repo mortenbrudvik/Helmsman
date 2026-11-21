@@ -80,11 +80,11 @@ public class ScreenshotService : IScreenshotService
     private readonly TimeSpan _restoreSettleTimeout;
     private readonly TimeSpan _restoreStateTimeout;
     private readonly ICaptureRegistry? _captureRegistry;
-    private readonly ICaptureTargetPolicy? _capturePolicy;
-    private readonly ITargetPolicy? _targetPolicy;
+    private readonly ICaptureTargetPolicy _capturePolicy;
+    private readonly ITargetPolicy _targetPolicy;
     private readonly INativeVirtualDesktopWrapper? _virtualDesktops;
     private readonly IGraphicsCaptureWrapper? _graphicsCapture;
-    private readonly IProcessSecurityProbe? _security;
+    private readonly IProcessSecurityProbe _security;
 
     // The windows restoreIfMinimized has restored for a capture, by how many restores: they are minimized again afterwards,
     // so their captures keep no visual signature (roadmap M6.4)
@@ -100,6 +100,19 @@ public class ScreenshotService : IScreenshotService
     /// cut to the visible frame, and a DPI-scaled window gets a warning. restoreIfMinimized shows and minimizes the
     /// window through it.
     /// </param>
+    /// <param name="capturePolicy">
+    /// The target policy's check of a window whose pixels <see cref="CapturePixels"/> reads (roadmap M6), and of the windows
+    /// over a screen capture's visual signature. The capture tools check the policy themselves, so the capture members that
+    /// return images do not ask it.
+    /// </param>
+    /// <param name="targetPolicy">
+    /// The user's target policy, so the visual signature of a screen capture lists the denied windows over it only when the
+    /// policy denies anything (roadmap M6.4, owner decision D8).
+    /// </param>
+    /// <param name="security">
+    /// Whether the session is locked or the input desktop cannot be reached when the pixels are read (issue #17): the capture
+    /// then warns that its image may show the lock screen, and is not refused.
+    /// </param>
     /// <param name="windowCalls">
     /// Runs PrintWindow, which waits for the window's thread, and the restore with a deadline; default a
     /// <see cref="WindowCallRunner"/> over <paramref name="windows"/>. A window that does not answer is copied from
@@ -111,15 +124,6 @@ public class ScreenshotService : IScreenshotService
     /// Where successful captures are registered under their captureId (roadmap M3.11), for the mouse tools' image space.
     /// Without it captures have no captureId. The server always passes it.
     /// </param>
-    /// <param name="capturePolicy">
-    /// The target policy's check of a window whose pixels <see cref="CapturePixels"/> reads (roadmap M6). Without it
-    /// <see cref="CapturePixels"/> refuses every window. The capture tools check the policy themselves, so the capture
-    /// members that return images do not ask it. The server always passes it.
-    /// </param>
-    /// <param name="targetPolicy">
-    /// The user's target policy, so the visual signature of a screen capture lists the denied windows over it only when the
-    /// policy denies anything (roadmap M6.4, owner decision D8). Null: every window over it is checked.
-    /// </param>
     /// <param name="virtualDesktops">
     /// The shell's virtual desktop manager (roadmap M7.3): a Cloaked refusal says whether the window is on another virtual
     /// desktop. The server always passes it; without it the refusal names every cause.
@@ -128,30 +132,25 @@ public class ScreenshotService : IScreenshotService
     /// Windows.Graphics.Capture (roadmap M7.1): window captures fall back to it (method auto) or use it (method wgc). The server
     /// always passes it; without it a window capture reads with PrintWindow or from the screen, as before.
     /// </param>
-    /// <param name="security">
-    /// Whether the session is locked or the input desktop cannot be reached when the pixels are read (issue #17): the capture
-    /// then warns that its image may show the lock screen, and is not refused. The server always passes it; without it no
-    /// capture says so.
-    /// </param>
     public ScreenshotService(
         IScreenCaptureWrapper captureWrapper,
         IMonitorService monitorService,
         INativeWindowWrapper windows,
+        ICaptureTargetPolicy capturePolicy,
+        ITargetPolicy targetPolicy,
+        IProcessSecurityProbe security,
         IWindowCallRunner? windowCalls = null,
         TimeSpan? restoreSettleTimeout = null,
         TimeSpan? restoreStateTimeout = null,
         ICaptureRegistry? captureRegistry = null,
-        ICaptureTargetPolicy? capturePolicy = null,
-        ITargetPolicy? targetPolicy = null,
         INativeVirtualDesktopWrapper? virtualDesktops = null,
-        IGraphicsCaptureWrapper? graphicsCapture = null,
-        IProcessSecurityProbe? security = null)
+        IGraphicsCaptureWrapper? graphicsCapture = null)
     {
-        _security = security;
+        _security = security ?? throw new ArgumentNullException(nameof(security));
         _virtualDesktops = virtualDesktops;
         _graphicsCapture = graphicsCapture;
-        _capturePolicy = capturePolicy;
-        _targetPolicy = targetPolicy;
+        _capturePolicy = capturePolicy ?? throw new ArgumentNullException(nameof(capturePolicy));
+        _targetPolicy = targetPolicy ?? throw new ArgumentNullException(nameof(targetPolicy));
         _captureRegistry = captureRegistry;
         _captureWrapper = captureWrapper;
         _monitorService = monitorService;
@@ -214,10 +213,7 @@ public class ScreenshotService : IScreenshotService
             // tool in front of it, so it checks here, before anything of the window is read
             if (target is CaptureTarget.Window window)
             {
-                ThrowIfRefused(_capturePolicy != null
-                    ? _capturePolicy.Check(window.Handle)
-                    : new CaptureRefusal(ScreenshotErrorCode.TargetDeniedByPolicy,
-                        "The window's pixels cannot be read: this server has no target policy check for captures. Nothing was captured."));
+                ThrowIfRefused(_capturePolicy.Check(window.Handle));
             }
 
             acquired = Acquire(target);
@@ -1198,7 +1194,7 @@ public class ScreenshotService : IScreenshotService
         }
 
         var signature = VisualSignature.Of(PixelView.Of(capture));
-        if (windowCapture || _capturePolicy == null)
+        if (windowCapture)
         {
             return signature;
         }

@@ -98,68 +98,14 @@ public class DependencyInjectionTests : IDisposable
     }
 
     [Fact]
-    public void EveryUiAutomationRead_GetsTheTargetPolicy()
+    public void TheFullWindowRead_GetsTheSecurityProbe()
     {
-        // The user's target policy refuses the reads of a window of an app it denies: a read service built without it would
-        // read every window
-        var policy = _serviceProvider.GetRequiredService<ITargetPolicy>();
-
-        foreach (var service in new object[]
-                 {
-                     _serviceProvider.GetRequiredService<IUIElementService>(),
-                     _serviceProvider.GetRequiredService<IElementInspectionService>(),
-                     _serviceProvider.GetRequiredService<IElementSearchService>(),
-                     _serviceProvider.GetRequiredService<IElementReadService>(),
-                     _serviceProvider.GetRequiredService<IElementWaitService>(),
-                     _serviceProvider.GetRequiredService<IPopupService>(),
-                     _serviceProvider.GetRequiredService<IDesktopStateService>()
-                 })
-        {
-            service.GetType().GetField("_policy", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(service)
-                .Should().BeSameAs(policy, "{0} reads UI Automation", service.GetType().Name);
-        }
-    }
-
-    [Fact]
-    public void TheTreeWalk_GetsTheSecurityProbe_ForItsElevationWarning()
-    {
-        // get_ui_elements warns about a window it cannot read because it runs elevated (roadmap M3.F16), with the probe the
-        // input guard uses; a walk built without it would never say so
-        var walk = _serviceProvider.GetRequiredService<IUIElementService>();
-
-        typeof(UIElementService).GetField("_security", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(walk)
-            .Should().BeSameAs(_serviceProvider.GetRequiredService<IProcessSecurityProbe>());
-    }
-
-    [Fact]
-    public void TheProcessListAndTheFullWindowRead_GetTheSecurityProbe_AndTheListGetsThePolicy()
-    {
-        // list_processes reports integrity and aboveServer with the input guard's probe, and never reads the command line of
-        // a process the policy denies; get_window_info's 'full' reports the window's integrity (roadmap M6.6). Built
-        // without them, the fields would silently be left out and a denied process's command line would be read
-        var processes = _serviceProvider.GetRequiredService<IProcessService>();
+        // get_window_info's 'full' reports the window's integrity (roadmap M6.6). Built without the probe, the field would
+        // silently be left out
         var windowTools = _serviceProvider.GetRequiredService<WindowFinderTools>();
-        var probe = _serviceProvider.GetRequiredService<IProcessSecurityProbe>();
 
-        typeof(ProcessService).GetField("_securityProbe", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(processes)
-            .Should().BeSameAs(probe);
-        typeof(ProcessService).GetField("_targetPolicy", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(processes)
-            .Should().BeSameAs(_serviceProvider.GetRequiredService<ITargetPolicy>());
         typeof(WindowFinderTools).GetField("_securityProbe", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(windowTools)
-            .Should().BeSameAs(probe);
-    }
-
-    [Fact]
-    public void TheCapturesAndTheVisualWait_GetTheSecurityProbe_ForTheirLockWarning()
-    {
-        // Issue #17: a capture or a wait while the session is locked warns that it may show the lock screen; built without
-        // the probe, it would silently never say so
-        var probe = _serviceProvider.GetRequiredService<IProcessSecurityProbe>();
-        static object? Field(object service, string name) =>
-            service.GetType().GetField(name, BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(service);
-
-        Field(_serviceProvider.GetRequiredService<IScreenshotService>(), "_security").Should().BeSameAs(probe);
-        Field(_serviceProvider.GetRequiredService<IVisualChangeService>(), "_security").Should().BeSameAs(probe);
+            .Should().BeSameAs(_serviceProvider.GetRequiredService<IProcessSecurityProbe>());
     }
 
     [Fact]
@@ -293,7 +239,6 @@ public class DependencyInjectionTests : IDisposable
 
         journal.Should().BeOfType<WindowEventJournal>().Which.IsRecording.Should().BeFalse();
         Field(journal, "_source").Should().BeSameAs(_serviceProvider.GetRequiredService<IWindowEventSource>());
-        Field(journal, "_hostGuard").Should().BeSameAs(_serviceProvider.GetRequiredService<IHostGuard>());
         Field(_serviceProvider.GetRequiredService<WindowFinderTools>(), "_journal").Should().BeSameAs(journal);
     }
 
@@ -425,20 +370,6 @@ public class DependencyInjectionTests : IDisposable
         // We verify it works by testing that it can perform operations
         layoutService.Should().BeOfType<LayoutService>();
         layoutService.GetAllPresets().Should().NotBeNull();
-    }
-
-    [Fact]
-    public void UIElementService_ReceivesTheWindowWrapper_SoStuckReadsAreCountedPerApplication()
-    {
-        // Act - the window wrapper is an optional constructor parameter; without it every walk would
-        // share one stuck-read count, and one hung application would block all of them
-        var service = _serviceProvider.GetRequiredService<IUIElementService>();
-        var windows = typeof(UIElementService)
-            .GetField("_windows", BindingFlags.Instance | BindingFlags.NonPublic)!
-            .GetValue(service);
-
-        // Assert
-        windows.Should().BeSameAs(_serviceProvider.GetRequiredService<INativeWindowWrapper>());
     }
 
     #endregion

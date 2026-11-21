@@ -14,7 +14,7 @@ public class WindowServiceUndoTopmostTests
     private readonly TopmostPins _pins = new();
 
     private WindowService CreateSut() =>
-        new(TestDataFactory.CreateMockMonitorService().Object, _desktop.Native.Object, _desktop.HostGuard.Object, topmostPins: _pins);
+        new(TestDataFactory.CreateMockMonitorService().Object, _desktop.Native.Object, _desktop.HostGuard.Object, Permissive.TargetPolicy, topmostPins: _pins);
 
     /// <summary>Front to back: a topmost clock, a topmost overlay and a normal editor; the editor goes above the overlay.</summary>
     private (nint Clock, nint Overlay, nint Editor) Desktop()

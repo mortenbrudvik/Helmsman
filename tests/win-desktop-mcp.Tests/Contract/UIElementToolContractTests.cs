@@ -27,7 +27,7 @@ public class UIElementToolContractTests
         TaskCompletionSource<RequestId>? requestId = null,
         TaskCompletionSource? callEnded = null)
     {
-        var tools = new UIElementTools(new UIElementService(_tree, new UiaWorker()), _inspection.Object);
+        var tools = new UIElementTools(new UIElementService(_tree, new UiaWorker(), Permissive.Windows, Permissive.TargetPolicy, Permissive.SecurityProbe), _inspection.Object);
         return InProcessMcpServer.StartAsync(
             [],
             builder => builder

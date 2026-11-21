@@ -25,7 +25,7 @@ internal sealed class BrowserCdpTargets
     private readonly IBrowserReadingService _reading;
     private readonly ICdpService _cdp;
     private readonly ITcpPortOwnerResolver _portOwners;
-    private readonly ITargetPolicy? _policy;
+    private readonly ITargetPolicy _policy;
     private readonly IDebugPortLocator? _portLocator;
 
     public BrowserCdpTargets(
@@ -34,7 +34,7 @@ internal sealed class BrowserCdpTargets
         IBrowserReadingService reading,
         ICdpService cdp,
         ITcpPortOwnerResolver portOwners,
-        ITargetPolicy? policy,
+        ITargetPolicy policy,
         IDebugPortLocator? portLocator)
     {
         _windows = windows;
@@ -42,7 +42,7 @@ internal sealed class BrowserCdpTargets
         _reading = reading;
         _cdp = cdp;
         _portOwners = portOwners;
-        _policy = policy;
+        _policy = policy ?? throw new ArgumentNullException(nameof(policy));
         _portLocator = portLocator;
     }
 
@@ -138,7 +138,7 @@ internal sealed class BrowserCdpTargets
                 "Nothing was done.");
         }
 
-        if (_policy != null && _policy.EvaluateFailClosed([processName]) is { Allowed: false } verdict)
+        if (_policy.EvaluateFailClosed([processName]) is { Allowed: false } verdict)
             return ResolvedBrowser.Refused(nameof(BrowserErrorCode.TargetDeniedByPolicy), PolicyRefusal($"The browser on port {port}", verdict));
 
         if (_reading.GetBrowserType(nint.Zero, processName) == "firefox")

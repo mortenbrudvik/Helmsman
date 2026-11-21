@@ -132,7 +132,7 @@ public sealed class HungWindowContractTests : IDisposable
         _flow = InputGate.TagFlow();
         var runner = new WindowCallRunner(_native.Object, deadline ?? Deadline, maxStuckCallsPerProcess: 1, maxStuckCalls: 8);
         var windows = new WindowService(TestDataFactory.CreateMockMonitorService().Object, _native.Object, Mock.Of<IHostGuard>(),
-            windowCalls: runner);
+            Permissive.TargetPolicy, runner);
         return InProcessMcpServer.StartAsync(
             [],
             builder => builder

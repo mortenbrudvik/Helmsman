@@ -36,7 +36,7 @@ public class WindowServiceGeometryTests
     }
 
     private WindowService CreateSut() =>
-        new(_monitors.Object, _native.Object, Mock.Of<IHostGuard>(), stateChangeTimeout: TimeSpan.Zero);
+        new(_monitors.Object, _native.Object, Mock.Of<IHostGuard>(), Permissive.TargetPolicy, stateChangeTimeout: TimeSpan.Zero);
 
     private void UseScales(double monitor0, double monitor1) =>
         _monitorList = [_monitorList[0] with { ScaleFactor = monitor0 }, _monitorList[1] with { ScaleFactor = monitor1 }];

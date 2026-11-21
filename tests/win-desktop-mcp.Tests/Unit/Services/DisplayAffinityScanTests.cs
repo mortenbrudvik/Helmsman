@@ -89,7 +89,7 @@ public class DisplayAffinityScanTests
     }
 
     [Fact]
-    public void Read_WithoutAPolicyCheck_OrWhenTheCheckFails_NamesNoWindow()
+    public void Read_WhenTheCheckFails_NamesNoWindow()
     {
         // Fail-closed: a window whose process cannot be checked is listed as a denied one is
         var (native, policy) = Desktop(
@@ -97,10 +97,8 @@ public class DisplayAffinityScanTests
             new FakeWindow(2, new Rectangle(0, 0, 100, 100), Affinity: WdaExcludeFromCapture, Title: "Bar", ProcessName: "app",
                 PolicyThrows: true));
 
-        var withoutCheck = new DisplayAffinityScan(native.Object, capturePolicy: null, DeniesSome).Read();
         var failing = new DisplayAffinityScan(native.Object, policy.Object, DeniesSome).Read();
 
-        withoutCheck.Should().HaveCount(2).And.OnlyContain(w => w.ProcessName == null && w.Title == null);
         failing.Single(w => w.Handle == 2).Should().Match<ExcludedWindow>(w => w.ProcessName == null && w.Title == null);
         failing.Single(w => w.Handle == 1).Title.Should().Be("Toast");
     }

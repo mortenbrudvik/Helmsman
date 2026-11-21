@@ -1236,7 +1236,7 @@ public sealed class ElementActionServiceTests : IDisposable
         // Arrange - find_ui_elements' search with the same tree and registry
         var list = new FakeVirtualList(10_000, realized: 30, i => $"Item {i:D5}", Pid);
         _window.With(list.List);
-        var search = new ElementSearchService(_tree, _worker, _registry, _windows.Object);
+        var search = new ElementSearchService(_tree, _worker, _registry, _windows.Object, Permissive.TargetPolicy);
         var query = new ElementQuery(Handle, Name: "Item 07500", Timeout: TimeSpan.FromSeconds(5));
         (await search.FindAsync(query)).MatchCount.Should().Be(0);
         var found = await search.FindAsync(query with { SearchVirtualized = true });
@@ -1261,7 +1261,7 @@ public sealed class ElementActionServiceTests : IDisposable
         // fails a whole read, as WPF's does
         var list = new FakeVirtualList(10_000, realized: 30, i => $"Item {i:D5}", Pid);
         _window.With(list.List);
-        var search = new ElementSearchService(_tree, _worker, _registry, _windows.Object);
+        var search = new ElementSearchService(_tree, _worker, _registry, _windows.Object, Permissive.TargetPolicy);
         var query = new ElementQuery(Handle, Name: "Item 09000", ControlTypes: ["ListItem"], VisibleOnly: false, EnabledOnly: false,
             MaxResults: 2, Detail: ElementDetail.Minimal, Timeout: TimeSpan.FromSeconds(5))
         {
@@ -1290,7 +1290,7 @@ public sealed class ElementActionServiceTests : IDisposable
         // not realized, which the action used to refuse ("The element has no runtime id")
         var list = new FakeVirtualList(10_000, realized: 30, i => $"Item {i:D5}", Pid).WithExplorerPlaceholders();
         _window.With(list.List);
-        var search = new ElementSearchService(_tree, _worker, _registry, _windows.Object);
+        var search = new ElementSearchService(_tree, _worker, _registry, _windows.Object, Permissive.TargetPolicy);
         var query = new ElementQuery(Handle, Name: "Item 09000", ControlTypes: ["ListItem"], VisibleOnly: false, EnabledOnly: false,
             MaxResults: 2, Detail: ElementDetail.Minimal, Timeout: TimeSpan.FromSeconds(5))
         {
@@ -1322,7 +1322,7 @@ public sealed class ElementActionServiceTests : IDisposable
         // Arrange - the call measured on Explorer: handle, name, maxScrolls 20, and the natural controlType
         var list = new FakeVirtualList(300, realized: 42, i => $"item-{i:D3}.txt", Pid).WithExplorerPlaceholders();
         _window.With(list.List);
-        var tool = new ElementActionTools(CreateSut(), new ElementSearchService(_tree, _worker, _registry, _windows.Object), _registry);
+        var tool = new ElementActionTools(CreateSut(), new ElementSearchService(_tree, _worker, _registry, _windows.Object, Permissive.TargetPolicy), _registry);
 
         // Act
         var result = await tool.ElementAction(ElementActionKind.Realize, handle: Handle, name: "item-250.txt", controlType: "ListItem",
@@ -1342,7 +1342,7 @@ public sealed class ElementActionServiceTests : IDisposable
         // Arrange
         var list = new FakeVirtualList(100, realized: 10, i => $"Item {i:D5}", Pid).WithExplorerPlaceholders();
         _window.With(list.List);
-        var found = await new ElementSearchService(_tree, _worker, _registry, _windows.Object).FindAsync(
+        var found = await new ElementSearchService(_tree, _worker, _registry, _windows.Object, Permissive.TargetPolicy).FindAsync(
             new ElementQuery(Handle, Name: "Item 00050", Timeout: TimeSpan.FromSeconds(5)) { SearchVirtualized = true });
         _session.Pause(InputControlSources.Hotkey);
 

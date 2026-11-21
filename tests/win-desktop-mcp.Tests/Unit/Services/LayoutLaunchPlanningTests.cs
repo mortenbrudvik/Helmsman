@@ -25,8 +25,15 @@ public class LayoutLaunchPlanningTests : IDisposable
             new InputValidationService(ProtocolAllowlist.BuiltIn),
             TestDataFactory.CreateMockBrowserDetectionService().Object,
             new ExecutableResolver(),
+            Permissive.TargetPolicy,
+            Permissive.HostGuard,
+            new ChromiumPrograms(),
+            new InterpreterGuard(),
+            new DebugBrowserLocator(),
+            Permissive.SecurityProbe,
+            new ChromiumSwitchGuard(),
             _processes.Object,
-            windowWait: new Mock<IWindowWaitService>(MockBehavior.Strict).Object);
+            new Mock<IWindowWaitService>(MockBehavior.Strict).Object);
         return new LayoutService(_windows.Object, TestDataFactory.CreateMockMonitorService().Object, processService,
             TestDataFactory.CreateMockForegroundService().Object, Path.Combine(_root, "layouts"),
             new Mock<ILaunchPlacementService>(MockBehavior.Strict).Object);

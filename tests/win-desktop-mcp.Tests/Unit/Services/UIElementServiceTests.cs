@@ -11,7 +11,7 @@ public class UIElementServiceTests
     private readonly FakeUiaTree _tree = new();
     private readonly InlineUiaWorker _worker = new();
 
-    private UIElementService CreateSut() => new(_tree, _worker);
+    private UIElementService CreateSut() => new(_tree, _worker, Permissive.Windows, Permissive.TargetPolicy, Permissive.SecurityProbe);
 
     private static FakeUiaNode Node(string controlType, string name) => new(controlType, name);
 
@@ -479,10 +479,11 @@ public class UIElementServiceTests
     [Fact]
     public async Task GetUIElements_ActionableOnly_ReadOneAtATime_ReadsThePatternsOfTheCandidatesOnly()
     {
-        // Arrange - the cached fetch fails, so the children are read one at a time
+        // Arrange - the cached fetch fails, so the children are read one at a time. The label is not the window's first child:
+        // the first is read whole anyway, to tell whether it is a window the window owns (roadmap M3.F9)
         Window(
-            new FakeUiaNode("Text", "Label"),
             new FakeUiaNode("Button", "Go") { ActionPatterns = ["Invoke"] },
+            new FakeUiaNode("Text", "Label"),
             new FakeUiaNode("Edit", "Field") { IsKeyboardFocusable = true })
             .CachedChildrenException = new System.Runtime.InteropServices.COMException("cache request failed");
 
@@ -624,17 +625,18 @@ public class UIElementServiceTests
     [Fact]
     public async Task GetUIElements_WhenInteractionPropertiesCannotBeRead_LeavesOutOnlyThatElement()
     {
-        // Arrange - a container whose provider fails a pattern query
+        // Arrange - a container whose provider fails a pattern query. It is not the window's first child, which is read whole
+        // anyway, to tell whether it is a window the window owns (roadmap M3.F9)
         Window(
+            new FakeUiaNode("Button", "Good") { ActionPatterns = ["Invoke"] },
             new FakeUiaNode("Pane", "Bad") { InteractionException = new System.Runtime.InteropServices.COMException("pattern query failed") }.With(
-                new FakeUiaNode("Button", "Inside") { ActionPatterns = ["Invoke"] }),
-            new FakeUiaNode("Button", "Good") { ActionPatterns = ["Invoke"] });
+                new FakeUiaNode("Button", "Inside") { ActionPatterns = ["Invoke"] }));
 
         // Act
         var result = await CreateSut().GetUIElementsAsync(Handle, filter: new UIElementFilter(InteractableOnly: true));
 
         // Assert - the filters decide about the element itself, so its interactable children stay
-        Shape(result.Elements).Should().Be("Inside,Good");
+        Shape(result.Elements).Should().Be("Good,Inside");
         result.SkippedElementCount.Should().Be(1);
         result.Truncated.Should().BeTrue();
         result.TruncationReason.Should().Be(UIElementTruncationReason.ElementsSkipped);
@@ -643,11 +645,12 @@ public class UIElementServiceTests
     [Fact]
     public async Task GetUIElements_WhenAnElementVanishesWhileItsInteractionIsRead_SkipsItsSubtree()
     {
-        // Arrange - the element is gone, and the elements inside it with it
+        // Arrange - the element is gone, and the elements inside it with it. It is not the window's first child, which is read
+        // whole anyway, to tell whether it is a window the window owns (roadmap M3.F9)
         Window(
+            new FakeUiaNode("Button", "Good") { ActionPatterns = ["Invoke"] },
             new FakeUiaNode("Pane", "Gone") { InteractionException = FakeUiaTree.Vanished() }.With(
-                new FakeUiaNode("Button", "Inside") { ActionPatterns = ["Invoke"] }),
-            new FakeUiaNode("Button", "Good") { ActionPatterns = ["Invoke"] });
+                new FakeUiaNode("Button", "Inside") { ActionPatterns = ["Invoke"] }));
 
         // Act
         var result = await CreateSut().GetUIElementsAsync(Handle, filter: new UIElementFilter(InteractableOnly: true));
@@ -828,7 +831,7 @@ public class UIElementServiceTests
         windows.Setup(w => w.GetWindowThreadProcessId(Handle)).Returns(4242u);
 
         // Act
-        await new UIElementService(_tree, _worker, windows.Object).GetUIElementsAsync(Handle);
+        await new UIElementService(_tree, _worker, windows.Object, Permissive.TargetPolicy, Permissive.SecurityProbe).GetUIElementsAsync(Handle);
 
         // Assert - a hung application then blocks only walks of its own windows
         _worker.LastTargetProcessId.Should().Be(4242);
@@ -849,7 +852,7 @@ public class UIElementServiceTests
             .Callback<nint, Func<nint, bool>>((_, callback) => callback(coreWindow));
 
         // Act
-        await new UIElementService(_tree, _worker, windows.Object).GetUIElementsAsync(Handle);
+        await new UIElementService(_tree, _worker, windows.Object, Permissive.TargetPolicy, Permissive.SecurityProbe).GetUIElementsAsync(Handle);
 
         // Assert - a hung UWP app then blocks only walks of itself, not of every other UWP app
         _worker.LastTargetProcessId.Should().Be(7000);
@@ -866,7 +869,7 @@ public class UIElementServiceTests
         windows.Setup(w => w.IsIconic(Handle)).Returns(true);
 
         // Act
-        var result = await new UIElementService(_tree, _worker, windows.Object).GetUIElementsAsync(Handle);
+        var result = await new UIElementService(_tree, _worker, windows.Object, Permissive.TargetPolicy, Permissive.SecurityProbe).GetUIElementsAsync(Handle);
 
         // Assert - sent by name, as the tool results serialize it
         result.WindowState.Should().Be(WindowState.Minimized);
@@ -887,7 +890,7 @@ public class UIElementServiceTests
         windows.Setup(w => w.IsZoomed(root)).Returns(true);
 
         // Act
-        var result = await new UIElementService(_tree, _worker, windows.Object).GetUIElementsAsync(Handle);
+        var result = await new UIElementService(_tree, _worker, windows.Object, Permissive.TargetPolicy, Permissive.SecurityProbe).GetUIElementsAsync(Handle);
 
         // Assert
         result.WindowState.Should().Be(WindowState.Maximized);
@@ -903,7 +906,7 @@ public class UIElementServiceTests
         windows.Setup(w => w.RespondsWithin(Handle, It.IsAny<uint>())).Returns(true);
 
         // Act
-        var normal = await new UIElementService(_tree, _worker, windows.Object).GetUIElementsAsync(Handle);
+        var normal = await new UIElementService(_tree, _worker, windows.Object, Permissive.TargetPolicy, Permissive.SecurityProbe).GetUIElementsAsync(Handle);
         var unknown = await CreateSut().GetUIElementsAsync(Handle);
 
         // Assert
@@ -920,7 +923,7 @@ public class UIElementServiceTests
         windows.Setup(w => w.GetWindowThreadProcessId(Handle)).Throws(new InvalidOperationException("gone"));
 
         // Act
-        var result = await new UIElementService(_tree, _worker, windows.Object).GetUIElementsAsync(Handle);
+        var result = await new UIElementService(_tree, _worker, windows.Object, Permissive.TargetPolicy, Permissive.SecurityProbe).GetUIElementsAsync(Handle);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -937,7 +940,7 @@ public class UIElementServiceTests
             .ThrowsAsync(new UiaReadRefusedException("UI Automation is not responding for the application (process 4242)."));
 
         // Act
-        var result = await new UIElementService(_tree, worker.Object).GetUIElementsAsync(Handle);
+        var result = await new UIElementService(_tree, worker.Object, Permissive.Windows, Permissive.TargetPolicy, Permissive.SecurityProbe).GetUIElementsAsync(Handle);
 
         // Assert
         result.Success.Should().BeFalse();
@@ -953,7 +956,7 @@ public class UIElementServiceTests
         var worker = new Mock<IUiaWorker>();
         worker.Setup(w => w.RunAsync(It.IsAny<int>(), It.IsAny<Func<CancellationToken, UIElementResult>>(), It.IsAny<CancellationToken>(), It.IsAny<TimeSpan>()))
             .ThrowsAsync(new TimeoutException("UI Automation did not answer in time."));
-        var sut = new UIElementService(_tree, worker.Object);
+        var sut = new UIElementService(_tree, worker.Object, Permissive.Windows, Permissive.TargetPolicy, Permissive.SecurityProbe);
 
         // Act
         var result = await sut.GetUIElementsAsync(Handle);
@@ -977,7 +980,7 @@ public class UIElementServiceTests
             Node("Pane", "C").With(Node("Button", "C1")));
 
         // Act
-        var result = await new UIElementService(_tree, worker).GetUIElementsAsync(Handle);
+        var result = await new UIElementService(_tree, worker, Permissive.Windows, Permissive.TargetPolicy, Permissive.SecurityProbe).GetUIElementsAsync(Handle);
 
         // Assert - the elements read so far, as after a cooperative timeout: the window's level; the fetch of B's
         // children never returned, so B1 is not known
@@ -1002,7 +1005,7 @@ public class UIElementServiceTests
                 new FakeUiaNode("Button", "B2") { OnRead = worker.Hang },
                 Node("Button", "B3")),
             Node("Pane", "C").With(Node("Button", "C1")));
-        var result = await new UIElementService(_tree, worker).GetUIElementsAsync(Handle);
+        var result = await new UIElementService(_tree, worker, Permissive.Windows, Permissive.TargetPolicy, Permissive.SecurityProbe).GetUIElementsAsync(Handle);
 
         // Act - the provider answers again, and the abandoned walk reads the rest
         worker.ReleaseAndWait();
@@ -1026,7 +1029,7 @@ public class UIElementServiceTests
                 Node("Pane", "Q").With(new FakeUiaNode("Button", "Q1") { OnRead = worker.Hang })));
 
         // Act
-        var result = await new UIElementService(_tree, worker).GetUIElementsAsync(
+        var result = await new UIElementService(_tree, worker, Permissive.Windows, Permissive.TargetPolicy, Permissive.SecurityProbe).GetUIElementsAsync(
             Handle, filter: new UIElementFilter(ControlTypes: ["Button"]));
 
         // Assert
@@ -1043,7 +1046,7 @@ public class UIElementServiceTests
         Window(new FakeUiaNode("Button", "A") { OnRead = worker.Hang });
 
         // Act
-        var result = await new UIElementService(_tree, worker).GetUIElementsAsync(Handle);
+        var result = await new UIElementService(_tree, worker, Permissive.Windows, Permissive.TargetPolicy, Permissive.SecurityProbe).GetUIElementsAsync(Handle);
 
         // Assert
         result.Success.Should().BeFalse();
@@ -1204,13 +1207,15 @@ public class UIElementServiceTests
         // Act
         var result = await CreateSut().GetUIElementsAsync(Handle, filter: new UIElementFilter(MaxElements: 10));
 
-        // Assert - listed in one cheap call, then read one at a time until maxElements
+        // Assert - listed in one cheap call, then read one at a time until maxElements: the first whole, to tell whether it is
+        // a window the window owns (roadmap M3.F9), and the other nine
         result.Success.Should().BeTrue();
         result.TotalElementCount.Should().Be(10);
         result.Truncated.Should().BeTrue();
         result.TruncationReason.Should().Be(UIElementTruncationReason.MaxElements);
         _tree.CachedFetches.Should().BeEmpty();
-        _tree.ReadNodes.Where(n => n != "Main window").Should().HaveCount(10);
+        _tree.Reads.Where(r => r.StartsWith("Element:")).Should().Equal("Element:I1");
+        _tree.ReadNodes.Where(n => n != "Main window").Should().HaveCount(9);
     }
 
     [Fact]
@@ -1362,7 +1367,7 @@ public class UIElementServiceTests
         windows.Setup(w => w.IsHungAppWindow(Handle)).Returns(true);
 
         // Act
-        var result = await new UIElementService(_tree, _worker, windows.Object).GetUIElementsAsync(Handle);
+        var result = await new UIElementService(_tree, _worker, windows.Object, Permissive.TargetPolicy, Permissive.SecurityProbe).GetUIElementsAsync(Handle);
 
         // Assert - every UI Automation call would block until the application recovers
         result.Success.Should().BeFalse();
@@ -1389,7 +1394,7 @@ public class UIElementServiceTests
         windows.Setup(w => w.IsHungAppWindow(coreWindow)).Returns(true);
 
         // Act
-        var result = await new UIElementService(_tree, _worker, windows.Object).GetUIElementsAsync(Handle);
+        var result = await new UIElementService(_tree, _worker, windows.Object, Permissive.TargetPolicy, Permissive.SecurityProbe).GetUIElementsAsync(Handle);
 
         // Assert
         result.ErrorCode.Should().Be(UIElementErrorCode.NotResponding);
@@ -1406,7 +1411,7 @@ public class UIElementServiceTests
         windows.Setup(w => w.RespondsWithin(Handle, It.IsAny<uint>())).Returns(false);
 
         // Act
-        var result = await new UIElementService(_tree, _worker, windows.Object).GetUIElementsAsync(Handle);
+        var result = await new UIElementService(_tree, _worker, windows.Object, Permissive.TargetPolicy, Permissive.SecurityProbe).GetUIElementsAsync(Handle);
 
         // Assert
         result.ErrorCode.Should().Be(UIElementErrorCode.NotResponding);
@@ -1426,7 +1431,7 @@ public class UIElementServiceTests
         windows.Setup(w => w.RespondsWithin(Handle, It.IsAny<uint>())).Returns((bool?)null);
 
         // Act
-        var result = await new UIElementService(_tree, _worker, windows.Object).GetUIElementsAsync(Handle);
+        var result = await new UIElementService(_tree, _worker, windows.Object, Permissive.TargetPolicy, Permissive.SecurityProbe).GetUIElementsAsync(Handle);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -1441,7 +1446,7 @@ public class UIElementServiceTests
         windows.SetupSequence(w => w.IsWindow(Handle)).Returns(true).Returns(false);
 
         // Act
-        var result = await new UIElementService(_tree, _worker, windows.Object).GetUIElementsAsync(Handle);
+        var result = await new UIElementService(_tree, _worker, windows.Object, Permissive.TargetPolicy, Permissive.SecurityProbe).GetUIElementsAsync(Handle);
 
         // Assert
         result.ErrorCode.Should().Be(UIElementErrorCode.WindowNotFound);
@@ -1454,7 +1459,7 @@ public class UIElementServiceTests
         var windows = new Mock<INativeWindowWrapper>();
 
         // Act
-        var result = await new UIElementService(_tree, _worker, windows.Object).GetUIElementsAsync(Handle);
+        var result = await new UIElementService(_tree, _worker, windows.Object, Permissive.TargetPolicy, Permissive.SecurityProbe).GetUIElementsAsync(Handle);
 
         // Assert
         result.ErrorCode.Should().Be(UIElementErrorCode.WindowNotFound);
@@ -1468,7 +1473,7 @@ public class UIElementServiceTests
         BuildToolbarWindow();
 
         // Act
-        var result = await new UIElementService(_tree, _worker, RespondingWindow().Object).GetUIElementsAsync(Handle);
+        var result = await new UIElementService(_tree, _worker, RespondingWindow().Object, Permissive.TargetPolicy, Permissive.SecurityProbe).GetUIElementsAsync(Handle);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -1484,7 +1489,7 @@ public class UIElementServiceTests
         windows.Setup(w => w.IsHungAppWindow(Handle)).Throws(new InvalidOperationException("boom"));
 
         // Act
-        var result = await new UIElementService(_tree, _worker, windows.Object).GetUIElementsAsync(Handle);
+        var result = await new UIElementService(_tree, _worker, windows.Object, Permissive.TargetPolicy, Permissive.SecurityProbe).GetUIElementsAsync(Handle);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -1627,8 +1632,8 @@ public class UIElementServiceTests
         windows.Setup(w => w.GetWindowThreadProcessId(Handle)).Returns(3001u);
         windows.Setup(w => w.GetProcessName(3001u)).Returns("KeePass");
         var warmup = new Mock<IAccessibilityWarmup>();
-        var sut = new UIElementService(_tree, _worker, windows.Object, warmup.Object,
-            policy: new TargetPolicy(TargetPolicySettings.Default));
+        var sut = new UIElementService(_tree, _worker, windows.Object, new TargetPolicy(TargetPolicySettings.Default),
+            Permissive.SecurityProbe, warmup.Object);
 
         // Act
         var result = await sut.GetUIElementsAsync(Handle);
@@ -1654,7 +1659,7 @@ public class UIElementServiceTests
         windows.Setup(w => w.GetProcessName(2001u)).Returns("notepad");
 
         // Act
-        var result = await new UIElementService(_tree, _worker, windows.Object, policy: new TargetPolicy(TargetPolicySettings.Default))
+        var result = await new UIElementService(_tree, _worker, windows.Object, new TargetPolicy(TargetPolicySettings.Default), Permissive.SecurityProbe)
             .GetUIElementsAsync(Handle);
 
         // Assert
@@ -1679,7 +1684,7 @@ public class UIElementServiceTests
         warmup.Setup(w => w.WarmUp(Handle, It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
             .Callback(() => order.Add($"warm-up after {_tree.ChildListings.Count} listings"))
             .Returns(NotReady);
-        var sut = new UIElementService(_tree, _worker, warmup: warmup.Object);
+        var sut = new UIElementService(_tree, _worker, Permissive.Windows, Permissive.TargetPolicy, Permissive.SecurityProbe, warmup.Object);
 
         // Act
         var result = await sut.GetUIElementsAsync(Handle, filter: new UIElementFilter(AccessibilityWarmupBudget: TimeSpan.FromMilliseconds(700)));
@@ -1697,7 +1702,7 @@ public class UIElementServiceTests
         // Arrange
         BuildToolbarWindow();
         var warmup = new Mock<IAccessibilityWarmup>();
-        var sut = new UIElementService(_tree, _worker, warmup: warmup.Object);
+        var sut = new UIElementService(_tree, _worker, Permissive.Windows, Permissive.TargetPolicy, Permissive.SecurityProbe, warmup.Object);
 
         // Act
         var result = await sut.GetUIElementsAsync(Handle);
@@ -1712,7 +1717,7 @@ public class UIElementServiceTests
     {
         // Arrange
         var warmup = new Mock<IAccessibilityWarmup>();
-        var sut = new UIElementService(_tree, _worker, warmup: warmup.Object);
+        var sut = new UIElementService(_tree, _worker, Permissive.Windows, Permissive.TargetPolicy, Permissive.SecurityProbe, warmup.Object);
 
         // Act
         var result = await sut.GetUIElementsAsync(Handle);
@@ -1732,7 +1737,7 @@ public class UIElementServiceTests
         warmup.Setup(w => w.WarmUp(Handle, It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
             .Callback(deadline.Cancel)
             .Returns(NotReady);
-        var sut = new UIElementService(_tree, _worker, warmup: warmup.Object);
+        var sut = new UIElementService(_tree, _worker, Permissive.Windows, Permissive.TargetPolicy, Permissive.SecurityProbe, warmup.Object);
 
         // Act
         var result = await sut.GetUIElementsAsync(Handle, cancellationToken: deadline.Token);
@@ -1856,9 +1861,9 @@ public class UIElementServiceTests
     private (UIElementService Sut, ElementRegistry Registry) WebSut()
     {
         var windows = Win32Windows();
-        var warmup = new AccessibilityWarmup(_tree, windows.Object, new Mock<INativeProcessWrapper>().Object, wait: (_, _) => { });
+        var warmup = new AccessibilityWarmup(_tree, windows.Object, new Mock<INativeProcessWrapper>().Object, Permissive.TargetPolicy, wait: (_, _) => { });
         var registry = new ElementRegistry(_tree, _worker, windows.Object, ElementRegistry.DefaultCapacity, 1, TimeProvider.System);
-        return (new UIElementService(_tree, _worker, windows.Object, warmup, registry), registry);
+        return (new UIElementService(_tree, _worker, windows.Object, Permissive.TargetPolicy, Permissive.SecurityProbe, warmup, registry), registry);
     }
 
     /// <summary>
@@ -1959,7 +1964,7 @@ public class UIElementServiceTests
     {
         // Arrange
         BuildToolbarWindow();
-        var plain = await new UIElementService(_tree, _worker, Win32Windows().Object).GetUIElementsAsync(Handle);
+        var plain = await new UIElementService(_tree, _worker, Win32Windows().Object, Permissive.TargetPolicy, Permissive.SecurityProbe).GetUIElementsAsync(Handle);
         var (reads, fetches, listings) = (_tree.Reads.Count, _tree.CachedFetches.Count, _tree.ChildListings.Count);
         var (sut, _) = WebSut();
 
@@ -2066,11 +2071,12 @@ public class UIElementServiceTests
     /// The walk with the real warm-up and the element registry over a WinUI 3 window with a WebView2 hosted as a visual
     /// (<see cref="FakeWinUi3WebView2"/>), whose process started an msedgewebview2.exe.
     /// </summary>
-    /// <param name="policy">The target policy the walk checks the page's process with; none by default.</param>
+    /// <param name="policy">The target policy the walk checks the page's process with; one that denies nothing by default.</param>
     /// <param name="warmupChecksPolicy">Whether the warm-up is given <paramref name="policy"/> too, as the server wires it.</param>
     private (UIElementService Sut, FakeWinUi3WebView2 App) WinUi3Sut(
         bool withDocument = true, ITargetPolicy? policy = null, bool warmupChecksPolicy = false)
     {
+        policy ??= Permissive.TargetPolicy;
         _win32[Handle] = new Win32Window("WinUIDesktopWin32WindowClass", 0, AppProcess);
         _win32[0x2010] = new Win32Window("Microsoft.UI.Content.DesktopChildSiteBridge", Handle, AppProcess);
         _win32[0x2011] = new Win32Window("Chrome_WidgetWin_0", 0x2010, AppProcess);
@@ -2085,9 +2091,9 @@ public class UIElementServiceTests
             [(int)WebViewProcess] = ((int)AppProcess, "msedgewebview2.exe")
         });
         var warmup = new AccessibilityWarmup(_tree, windows.Object, processes.Object, wait: (_, _) => { },
-            policy: warmupChecksPolicy ? policy : null);
+            policy: warmupChecksPolicy ? policy : Permissive.TargetPolicy);
         var registry = new ElementRegistry(_tree, _worker, windows.Object, ElementRegistry.DefaultCapacity, 1, TimeProvider.System);
-        return (new UIElementService(_tree, _worker, windows.Object, warmup, registry, policy), app);
+        return (new UIElementService(_tree, _worker, windows.Object, policy, Permissive.SecurityProbe, warmup, registry), app);
     }
 
     private const string WinUi3Shape =
@@ -2214,8 +2220,8 @@ public class UIElementServiceTests
         windows.Setup(w => w.GetProcessName(AppProcess)).Returns("WamFixture");
         setup?.Invoke(windows);
         var warmup = new AccessibilityWarmup(_tree, windows.Object, new Mock<INativeProcessWrapper>().Object, wait: (_, _) => { },
-            policy: warmupChecksPolicy ? policy : null);
-        return new UIElementService(_tree, _worker, windows.Object, warmup, policy: policy);
+            policy: warmupChecksPolicy ? policy : Permissive.TargetPolicy);
+        return new UIElementService(_tree, _worker, windows.Object, policy, Permissive.SecurityProbe, warmup);
     }
 
     [Fact]
@@ -2438,7 +2444,7 @@ public class UIElementServiceTests
             Node("Button", "Save"));
 
         // Act
-        var result = await new UIElementService(_tree, _worker, windows.Object).GetUIElementsAsync(Handle);
+        var result = await new UIElementService(_tree, _worker, windows.Object, Permissive.TargetPolicy, Permissive.SecurityProbe).GetUIElementsAsync(Handle);
 
         // Assert - the dialog is a window of its own: read by its handle, not as part of its owner
         result.Success.Should().BeTrue();
@@ -2456,7 +2462,7 @@ public class UIElementServiceTests
         Window(new FakeUiaNode("Edit", "Text") { NativeWindowHandle = 0x9ABC }, Node("Button", "Save"));
 
         // Act
-        var result = await new UIElementService(_tree, _worker, windows.Object).GetUIElementsAsync(Handle);
+        var result = await new UIElementService(_tree, _worker, windows.Object, Permissive.TargetPolicy, Permissive.SecurityProbe).GetUIElementsAsync(Handle);
 
         // Assert
         Shape(result.Elements).Should().Be("Text,Save");
@@ -2472,7 +2478,7 @@ public class UIElementServiceTests
         Window(Node("Pane", "Host").With(new FakeUiaNode("Pane", "Embedded") { NativeWindowHandle = Dialog }));
 
         // Act
-        var result = await new UIElementService(_tree, _worker, windows.Object).GetUIElementsAsync(Handle);
+        var result = await new UIElementService(_tree, _worker, windows.Object, Permissive.TargetPolicy, Permissive.SecurityProbe).GetUIElementsAsync(Handle);
 
         // Assert
         Shape(result.Elements).Should().Be("Host(Embedded)");
@@ -2489,7 +2495,7 @@ public class UIElementServiceTests
             .ToArray());
 
         // Act
-        var result = await new UIElementService(_tree, _worker, windows.Object).GetUIElementsAsync(Handle);
+        var result = await new UIElementService(_tree, _worker, windows.Object, Permissive.TargetPolicy, Permissive.SecurityProbe).GetUIElementsAsync(Handle);
 
         // Assert - the first field, read to tell it is no owned window, is not read again
         result.TotalElementCount.Should().Be(UIElementService.CachedLevelLimit + 1);
@@ -2508,7 +2514,7 @@ public class UIElementServiceTests
         window.CachedChildrenException = new System.Runtime.InteropServices.COMException("cache request failed");
 
         // Act
-        var result = await new UIElementService(_tree, _worker, windows.Object).GetUIElementsAsync(Handle);
+        var result = await new UIElementService(_tree, _worker, windows.Object, Permissive.TargetPolicy, Permissive.SecurityProbe).GetUIElementsAsync(Handle);
 
         // Assert
         Shape(result.Elements).Should().Be("Save");
@@ -2527,7 +2533,7 @@ public class UIElementServiceTests
         _tree.WithWindow(Dialog, dialog);
 
         // Act
-        var result = await new UIElementService(_tree, _worker, windows.Object).GetUIElementsAsync(Dialog);
+        var result = await new UIElementService(_tree, _worker, windows.Object, Permissive.TargetPolicy, Permissive.SecurityProbe).GetUIElementsAsync(Dialog);
 
         // Assert
         Shape(result.Elements).Should().Be("Yes,No");
@@ -2587,7 +2593,7 @@ public class UIElementServiceTests
         windows.Setup(w => w.IsIconic(Handle)).Returns(true);
 
         // Act
-        var result = await new UIElementService(_tree, _worker, windows.Object)
+        var result = await new UIElementService(_tree, _worker, windows.Object, Permissive.TargetPolicy, Permissive.SecurityProbe)
             .GetUIElementsAsync(Handle, filter: new UIElementFilter(VisibleOnly: true));
 
         // Assert - one warning with a stable code, naming the window to restore and how
@@ -2608,7 +2614,7 @@ public class UIElementServiceTests
         windows.Setup(w => w.IsIconic(Handle)).Returns(true);
 
         // Act
-        var result = await new UIElementService(_tree, _worker, windows.Object)
+        var result = await new UIElementService(_tree, _worker, windows.Object, Permissive.TargetPolicy, Permissive.SecurityProbe)
             .GetUIElementsAsync(Handle, filter: new UIElementFilter(VisibleOnly: false));
 
         // Assert - the elements are returned, but their bounds are not where they will be once the window is restored
@@ -2628,7 +2634,7 @@ public class UIElementServiceTests
         windows.Setup(w => w.IsIconic(root)).Returns(true);
 
         // Act
-        var result = await new UIElementService(_tree, _worker, windows.Object).GetUIElementsAsync(Handle);
+        var result = await new UIElementService(_tree, _worker, windows.Object, Permissive.TargetPolicy, Permissive.SecurityProbe).GetUIElementsAsync(Handle);
 
         // Assert - set_window_state restores a top-level window
         result.WindowState.Should().Be(WindowState.Minimized);
@@ -2643,7 +2649,7 @@ public class UIElementServiceTests
         var security = Security(4242, IntegrityLevel.Medium, ProcessIntegrity.MediumRid);
 
         // Act
-        var result = await new UIElementService(_tree, _worker, WindowOfProcess().Object, security: security.Object)
+        var result = await new UIElementService(_tree, _worker, WindowOfProcess().Object, Permissive.TargetPolicy, security.Object)
             .GetUIElementsAsync(Handle);
 
         // Assert - left out of the result, so an ordinary walk costs no tokens for it
@@ -2662,7 +2668,7 @@ public class UIElementServiceTests
         var security = Security(4242, level, rid);
 
         // Act
-        var result = await new UIElementService(_tree, _worker, WindowOfProcess().Object, security: security.Object)
+        var result = await new UIElementService(_tree, _worker, WindowOfProcess().Object, Permissive.TargetPolicy, security.Object)
             .GetUIElementsAsync(Handle);
 
         // Assert - still a success, with the cause and what to do
@@ -2682,7 +2688,7 @@ public class UIElementServiceTests
         var security = Security(4242, level, level == IntegrityLevel.Low ? ProcessIntegrity.LowRid : null);
 
         // Act
-        var result = await new UIElementService(_tree, _worker, WindowOfProcess().Object, security: security.Object)
+        var result = await new UIElementService(_tree, _worker, WindowOfProcess().Object, Permissive.TargetPolicy, security.Object)
             .GetUIElementsAsync(Handle);
 
         // Assert
@@ -2697,7 +2703,7 @@ public class UIElementServiceTests
         var security = Security(4242, IntegrityLevel.High, ProcessIntegrity.HighRid);
 
         // Act
-        var result = await new UIElementService(_tree, _worker, WindowOfProcess().Object, security: security.Object)
+        var result = await new UIElementService(_tree, _worker, WindowOfProcess().Object, Permissive.TargetPolicy, security.Object)
             .GetUIElementsAsync(Handle);
 
         // Assert
@@ -2716,7 +2722,7 @@ public class UIElementServiceTests
         var security = Security(4242, IntegrityLevel.High, ProcessIntegrity.HighRid);
 
         // Act
-        var result = await new UIElementService(_tree, _worker, windows.Object, security: security.Object).GetUIElementsAsync(Handle);
+        var result = await new UIElementService(_tree, _worker, windows.Object, Permissive.TargetPolicy, security.Object).GetUIElementsAsync(Handle);
 
         // Assert - the elevation first: restoring the window does not make its tree readable
         result.Warnings.Should().HaveCount(2);
@@ -2739,7 +2745,7 @@ public class UIElementServiceTests
         var security = Security(7000, IntegrityLevel.High, ProcessIntegrity.HighRid);
 
         // Act
-        var result = await new UIElementService(_tree, _worker, windows.Object, security: security.Object).GetUIElementsAsync(Handle);
+        var result = await new UIElementService(_tree, _worker, windows.Object, Permissive.TargetPolicy, security.Object).GetUIElementsAsync(Handle);
 
         // Assert
         result.Warnings.Should().ContainSingle().Which.Should().StartWith("TargetElevated: ");
@@ -2754,7 +2760,7 @@ public class UIElementServiceTests
         var security = Security(4242, IntegrityLevel.High, ProcessIntegrity.HighRid);
 
         // Act
-        var result = await new UIElementService(_tree, _worker, windows.Object, security: security.Object)
+        var result = await new UIElementService(_tree, _worker, windows.Object, Permissive.TargetPolicy, security.Object)
             .GetUIElementsAsync(new nint(999));
 
         // Assert
@@ -2772,7 +2778,7 @@ public class UIElementServiceTests
         var security = Security(4242, IntegrityLevel.High, ProcessIntegrity.HighRid);
 
         // Act
-        var result = await new UIElementService(_tree, _worker, windows.Object, security: security.Object).GetUIElementsAsync(Handle);
+        var result = await new UIElementService(_tree, _worker, windows.Object, Permissive.TargetPolicy, security.Object).GetUIElementsAsync(Handle);
 
         // Assert
         result.Success.Should().BeTrue();

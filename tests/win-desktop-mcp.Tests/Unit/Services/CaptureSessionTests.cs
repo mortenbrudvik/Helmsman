@@ -28,10 +28,4 @@ public class CaptureSessionTests
 
         CaptureSession.WarningCode(security.Object).Should().Be(expected);
     }
-
-    [Fact]
-    public void WarningCode_WithoutAProbe_IsNull()
-    {
-        CaptureSession.WarningCode(null).Should().BeNull();
-    }
 }

@@ -29,7 +29,7 @@ public class PasswordFlagUnreadTests
         _tree.WithWindow(Handle, _window);
     }
 
-    private ElementSearchService Search() => new(_tree, _worker, _registry, _windows.Object);
+    private ElementSearchService Search() => new(_tree, _worker, _registry, _windows.Object, Permissive.TargetPolicy);
 
     /// <summary>A field whose provider fails the identity read: its password flag cannot be read.</summary>
     private static FakeUiaNode UnknownField(string name = "Password") =>
@@ -63,8 +63,8 @@ public class PasswordFlagUnreadTests
     }
 
     private ElementWaitService Waits(IWindowWaitService? windowWait = null) =>
-        new(Search(), _registry, windowWait ?? new Mock<IWindowWaitService>().Object, _tree, _worker, _windows.Object,
-            delay: (_, _) => Task.CompletedTask);
+        new(Search(), _registry, windowWait ?? new Mock<IWindowWaitService>().Object, _tree, _worker,
+            _windows.Object, Permissive.TargetPolicy, delay: (_, _) => Task.CompletedTask);
 
     [Fact]
     public async Task Wait_ValueEquals_ByRef_DoesNotReadTheValue_OfAFieldWhosePasswordFlagCannotBeRead()
@@ -114,7 +114,7 @@ public class PasswordFlagUnreadTests
             {
                 ActionPatterns = ["Value"], Value = Secret, IdentityException = new InvalidOperationException("provider failed")
             }));
-        var reads = new ElementReadService(_tree, _worker, _registry, Search(), _windows.Object);
+        var reads = new ElementReadService(_tree, _worker, _registry, Search(), _windows.Object, Permissive.TargetPolicy);
 
         // Act
         var result = await reads.ReadTableAsync(new ElementTableRequest(listRef, 0, 50, 20, Timeout));

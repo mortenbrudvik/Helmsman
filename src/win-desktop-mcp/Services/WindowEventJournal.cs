@@ -55,7 +55,7 @@ public sealed class WindowEventJournal : IWindowEventJournal, IDisposable
 
     private readonly IWindowEventSource _source;
     private readonly INativeWindowWrapper _windows;
-    private readonly IHostGuard? _hostGuard;
+    private readonly IHostGuard _hostGuard;
     private readonly TimeProvider _time;
     private readonly ILogger<WindowEventJournal>? _logger;
     private readonly object _lock = new();
@@ -74,19 +74,19 @@ public sealed class WindowEventJournal : IWindowEventJournal, IDisposable
 
     /// <param name="source">The server's window events.</param>
     /// <param name="windows">The window reads.</param>
-    /// <param name="hostGuard">The agent's host, whose title changes are left out; null: none are.</param>
+    /// <param name="hostGuard">The agent's host, whose title changes are left out.</param>
     /// <param name="time">The clock of the events and of the idle stop.</param>
     /// <param name="logger">The logger.</param>
     public WindowEventJournal(
         IWindowEventSource source,
         INativeWindowWrapper windows,
-        IHostGuard? hostGuard = null,
+        IHostGuard hostGuard,
         TimeProvider? time = null,
         ILogger<WindowEventJournal>? logger = null)
     {
         _source = source ?? throw new ArgumentNullException(nameof(source));
         _windows = windows ?? throw new ArgumentNullException(nameof(windows));
-        _hostGuard = hostGuard;
+        _hostGuard = hostGuard ?? throw new ArgumentNullException(nameof(hostGuard));
         _time = time ?? TimeProvider.System;
         _logger = logger;
     }
@@ -301,7 +301,7 @@ public sealed class WindowEventJournal : IWindowEventJournal, IDisposable
     /// read for, and this is no refusal, so they are kept.
     /// </summary>
     private bool IsKnownHostWindow(nint window) =>
-        _hostGuard != null && _hostGuard.IsHostWindow(window) && !_hostGuard.IsHostWindowOnlyWhileAncestorsUnknown(window);
+        _hostGuard.IsHostWindow(window) && !_hostGuard.IsHostWindowOnlyWhileAncestorsUnknown(window);
 
     /// <summary>On the worker: turns a raw event into an entry, when it is about a top-level window worth recording.</summary>
     private void Record(RawEvent raw, Recording recording)

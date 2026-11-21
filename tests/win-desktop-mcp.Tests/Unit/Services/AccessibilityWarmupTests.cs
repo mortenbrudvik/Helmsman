@@ -88,7 +88,8 @@ public class AccessibilityWarmupTests
         }
     }
 
-    private AccessibilityWarmup CreateSut() => new(_tree, _windows.Object, _processes.Object, _clock, (delay, token) =>
+    private AccessibilityWarmup CreateSut() => new(_tree, _windows.Object, _processes.Object, Permissive.TargetPolicy, _clock,
+    (delay, token) =>
     {
         _waits.Add(delay);
         _clock.Advance(delay);
@@ -1435,12 +1436,13 @@ public class AccessibilityWarmupTests
     private static readonly TargetPolicy DeniesWebView2 =
         new(new TargetPolicySettings([.. TargetPolicySettings.DefaultDeniedProcesses, "msedgewebview2"], null, "test"));
 
-    private AccessibilityWarmup CreateSut(ITargetPolicy policy) => new(_tree, _windows.Object, _processes.Object, _clock, (delay, token) =>
+    private AccessibilityWarmup CreateSut(ITargetPolicy policy) => new(_tree, _windows.Object, _processes.Object, policy, _clock,
+    (delay, token) =>
     {
         _waits.Add(delay);
         _clock.Advance(delay);
         _afterWait?.Invoke();
-    }, policy);
+    });
 
     /// <summary>The windows UI Automation is asked for by their handle (FromHandle), in order.</summary>
     private List<nint> WindowsAskedFor()

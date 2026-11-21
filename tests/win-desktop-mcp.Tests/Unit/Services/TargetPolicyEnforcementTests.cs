@@ -50,7 +50,7 @@ public class TargetPolicyEnforcementTests
         return handle;
     }
 
-    private WindowService CreateWindowService(ITargetPolicy? policy)
+    private WindowService CreateWindowService(ITargetPolicy policy)
     {
         var monitors = TestDataFactory.CreateMockMonitorService();
         monitors.Setup(m => m.CalculateSnapBounds(It.IsAny<int>(), It.IsAny<SnapPosition>())).Returns(new MonitorRect(0, 0, 960, 1040));
@@ -206,11 +206,11 @@ public class TargetPolicyEnforcementTests
     }
 
     [Fact]
-    public void CloseWindow_WithoutAPolicy_RefusesNothingByPolicy()
+    public void CloseWindow_WithAPolicyThatDeniesNothing_RefusesNothingByPolicy()
     {
         var keePass = AddWindow(0x300, "KeePassWindow", 3001, "KeePass");
 
-        CreateWindowService(policy: null).CloseWindow(keePass, force: false).Success.Should().BeTrue();
+        CreateWindowService(Permissive.TargetPolicy).CloseWindow(keePass, force: false).Success.Should().BeTrue();
     }
 
     [Theory]
@@ -518,8 +518,14 @@ public class TargetPolicyEnforcementTests
             new Mock<IInputValidationService>().Object,
             TestDataFactory.CreateMockBrowserDetectionService().Object,
             new Mock<IExecutableResolver>().Object,
-            wrapper.Object,
-            policy);
+            policy,
+            Permissive.HostGuard,
+            new ChromiumPrograms(),
+            new InterpreterGuard(),
+            new DebugBrowserLocator(),
+            Permissive.SecurityProbe,
+            new ChromiumSwitchGuard(),
+            wrapper.Object);
         return (service, process);
     }
 
@@ -618,7 +624,7 @@ public class TargetPolicyEnforcementTests
         _windows.Setup(w => w.IsValidWindow(handle)).Returns(true);
         _windows.Setup(w => w.GetWindowInfo(handle))
             .Returns(TestDataFactory.CreateWindowInfo((int)handle, processName + " window", processName, 3001));
-        return new ScreenshotTools(_screenshots.Object, _elements.Object, _windows.Object, policy ?? Policy());
+        return new ScreenshotTools(_screenshots.Object, _elements.Object, _windows.Object, new CaptureTargetPolicy(_windows.Object, policy ?? Policy()));
     }
 
     private static JsonElement Payload(CallToolResult result) =>

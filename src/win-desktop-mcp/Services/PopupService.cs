@@ -56,28 +56,26 @@ public sealed class PopupService : IPopupService
 
     private readonly INativeWindowWrapper _windows;
     private readonly INativeProcessWrapper? _processes;
-    private readonly IHostGuard? _hostGuard;
-    private readonly ITargetPolicy? _policy;
+    private readonly IHostGuard _hostGuard;
+    private readonly ITargetPolicy _policy;
     private readonly IUiaTree? _tree;
     private readonly IUiaWorker? _worker;
     private readonly IElementRegistry? _registry;
     private readonly TimeProvider _clock;
 
     /// <param name="windows">The Win32 window reads.</param>
+    /// <param name="hostGuard">The agent's host windows, which the reads of popups and of the desktop leave out.</param>
+    /// <param name="policy">The target policy, which the reads of popups and of the desktop respect.</param>
     /// <param name="processes">The process snapshot of the child-process rule; without it no child process counts.</param>
-    /// <param name="hostGuard">The agent's host windows, which the reads of popups and of the desktop leave out; without it none
-    /// is left out.</param>
-    /// <param name="policy">The target policy, which the reads of popups and of the desktop respect; without it no window is
-    /// left out.</param>
     /// <param name="tree">get_active_popups' UI Automation reads.</param>
     /// <param name="worker">Runs them under a deadline.</param>
     /// <param name="registry">Gives each popup's element its ref.</param>
     /// <param name="clock">The clock of <see cref="WaitForNewPopupAsync"/>; the system clock by default.</param>
     public PopupService(
         INativeWindowWrapper windows,
+        IHostGuard hostGuard,
+        ITargetPolicy policy,
         INativeProcessWrapper? processes = null,
-        IHostGuard? hostGuard = null,
-        ITargetPolicy? policy = null,
         IUiaTree? tree = null,
         IUiaWorker? worker = null,
         IElementRegistry? registry = null,
@@ -85,8 +83,8 @@ public sealed class PopupService : IPopupService
     {
         _windows = windows;
         _processes = processes;
-        _hostGuard = hostGuard;
-        _policy = policy;
+        _hostGuard = hostGuard ?? throw new ArgumentNullException(nameof(hostGuard));
+        _policy = policy ?? throw new ArgumentNullException(nameof(policy));
         _tree = tree;
         _worker = worker;
         _registry = registry;
@@ -389,7 +387,7 @@ public sealed class PopupService : IPopupService
     {
         try
         {
-            return _hostGuard?.IsHostWindow(window) == true;
+            return _hostGuard.IsHostWindow(window);
         }
         catch (Exception)
         {
@@ -404,11 +402,6 @@ public sealed class PopupService : IPopupService
     /// </summary>
     private bool PolicyAllows(nint window, Dictionary<uint, string?> names)
     {
-        if (_policy == null)
-        {
-            return true;
-        }
-
         string? NameOf(uint id)
         {
             if (!names.TryGetValue(id, out var name))

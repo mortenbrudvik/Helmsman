@@ -26,7 +26,7 @@ public class ElementReadServiceTextTests
     }
 
     private ElementReadService CreateSut() =>
-        new(_tree, _worker, _registry, new ElementSearchService(_tree, _worker, _registry, _windows.Object), _windows.Object, _warmup.Object);
+        new(_tree, _worker, _registry, new ElementSearchService(_tree, _worker, _registry, _windows.Object, Permissive.TargetPolicy), _windows.Object, Permissive.TargetPolicy, _warmup.Object);
 
     /// <summary>Puts <paramref name="element"/> in the window and gives it a ref, as an earlier read would.</summary>
     private string Add(FakeUiaNode element)
@@ -567,7 +567,7 @@ public class ElementReadServiceTextTests
         var worker = new Mock<IUiaWorker>();
         worker.Setup(w => w.RunAsync(It.IsAny<int>(), It.IsAny<Func<CancellationToken, ElementTextResult>>(), It.IsAny<CancellationToken>(), It.IsAny<TimeSpan>()))
             .ThrowsAsync(new TimeoutException("stuck"));
-        var sut = new ElementReadService(_tree, worker.Object, _registry, new ElementSearchService(_tree, _worker, _registry), _windows.Object);
+        var sut = new ElementReadService(_tree, worker.Object, _registry, new ElementSearchService(_tree, _worker, _registry, Permissive.Windows, Permissive.TargetPolicy), _windows.Object, Permissive.TargetPolicy);
 
         // Act
         var result = await sut.ReadTextAsync(new ElementTextRequest(elementRef, null, 0, 100, Timeout));
@@ -583,7 +583,7 @@ public class ElementReadServiceTextTests
         // Arrange - the deadline passed before the read was asked for: the worker starts none, so nothing waited on the app
         var elementRef = Add(Document("text"));
         var worker = new ExpiringUiaWorker { Expired = true };
-        var sut = new ElementReadService(_tree, worker, _registry, new ElementSearchService(_tree, _worker, _registry), _windows.Object);
+        var sut = new ElementReadService(_tree, worker, _registry, new ElementSearchService(_tree, _worker, _registry, Permissive.Windows, Permissive.TargetPolicy), _windows.Object, Permissive.TargetPolicy);
 
         // Act
         var result = await sut.ReadTextAsync(new ElementTextRequest(elementRef, null, 0, 100, Timeout));
@@ -653,7 +653,7 @@ public class ElementReadServiceTextTests
     {
         var search = new Mock<IElementSearchService>();
         search.Setup(s => s.FindAsync(It.IsAny<ElementQuery>(), It.IsAny<CancellationToken>())).ReturnsAsync(found);
-        return new ElementReadService(_tree, _worker, _registry, search.Object, _windows.Object);
+        return new ElementReadService(_tree, _worker, _registry, search.Object, _windows.Object, Permissive.TargetPolicy);
     }
 
     private static FoundElement Found(string elementRef, string name) =>
@@ -758,8 +758,8 @@ public class ElementReadServiceTextTests
         _windows.Setup(w => w.GetProcessName(300u)).Returns("KeePass");
         var policy = new TargetPolicy(TargetPolicySettings.Default);
         return new ElementReadService(_tree, _worker, _registry,
-            new ElementSearchService(_tree, _worker, _registry, _windows.Object, _warmup.Object, policy: policy), _windows.Object,
-            _warmup.Object, policy);
+            new ElementSearchService(_tree, _worker, _registry, _windows.Object, policy, _warmup.Object),
+            _windows.Object, policy, _warmup.Object);
     }
 
     [Fact]

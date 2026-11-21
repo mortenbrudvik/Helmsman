@@ -20,7 +20,7 @@ public class ScreenshotServiceTests
     }
 
     private ScreenshotService CreateSut() =>
-        new ScreenshotService(_mockCaptureWrapper.Object, _mockMonitorService.Object, _windows.Object);
+        new ScreenshotService(_mockCaptureWrapper.Object, _mockMonitorService.Object, _windows.Object, Permissive.CapturePolicy, Permissive.TargetPolicy, Permissive.SecurityProbe);
 
     #region T9.2.1-T9.2.2: ListScreens Tests
 
@@ -654,15 +654,16 @@ public class ScreenshotServiceTests
     /// A service as the server builds it: the runner runs window calls inline, the target policy allows every window,
     /// and captures are registered.
     /// </summary>
-    private ScreenshotService CreatePixelSut(bool withPolicy = true, bool withRegistry = true)
+    private ScreenshotService CreatePixelSut(bool withRegistry = true)
     {
         _calls.Setup(c => c.Run(It.IsAny<nint>(), It.IsAny<Func<CaptureResult>>()))
             .Returns((nint _, Func<CaptureResult> call) => call());
         _windows.Setup(w => w.IsWindow(It.IsAny<nint>())).Returns(true);
         _windows.Setup(w => w.GetWindowRect(PixelWindow)).Returns((100, 50, 200, 130));
         _windows.Setup(w => w.GetWindowThreadProcessId(PixelWindow)).Returns(4242u);
-        return new ScreenshotService(_mockCaptureWrapper.Object, _mockMonitorService.Object, _windows.Object, _calls.Object,
-            captureRegistry: withRegistry ? _registry : null, capturePolicy: withPolicy ? _policy.Object : null);
+        return new ScreenshotService(_mockCaptureWrapper.Object, _mockMonitorService.Object, _windows.Object,
+            _policy.Object, Permissive.TargetPolicy, Permissive.SecurityProbe, _calls.Object,
+            captureRegistry: withRegistry ? _registry : null);
     }
 
     private void UseWindowPixels(bool includeFrame, byte[] pixels, int width, int height, int originX, int originY) =>
@@ -834,8 +835,8 @@ public class ScreenshotServiceTests
         _windows.Setup(w => w.IsCloaked(PixelWindow)).Returns(true);
         var desktops = new Mock<INativeVirtualDesktopWrapper>();
         desktops.Setup(d => d.GetPlacements(It.IsAny<IReadOnlyList<nint>>())).Returns([placement]);
-        var sut = new ScreenshotService(_mockCaptureWrapper.Object, _mockMonitorService.Object, _windows.Object, _calls.Object,
-            virtualDesktops: desktops.Object);
+        var sut = new ScreenshotService(_mockCaptureWrapper.Object, _mockMonitorService.Object, _windows.Object, Permissive.CapturePolicy,
+            Permissive.TargetPolicy, Permissive.SecurityProbe, _calls.Object, virtualDesktops: desktops.Object);
 
         // Act
         var result = sut.CaptureWindow(PixelWindow, includeFrame: true, FullResolution).Metadata;
@@ -949,8 +950,8 @@ public class ScreenshotServiceTests
         var registry = new Mock<ICaptureRegistry>();
         _calls.Setup(c => c.Run(It.IsAny<nint>(), It.IsAny<Func<CaptureResult>>()))
             .Returns((nint _, Func<CaptureResult> call) => call());
-        var sut = new ScreenshotService(_mockCaptureWrapper.Object, _mockMonitorService.Object, _windows.Object, _calls.Object,
-            captureRegistry: registry.Object, capturePolicy: _policy.Object);
+        var sut = new ScreenshotService(_mockCaptureWrapper.Object, _mockMonitorService.Object, _windows.Object, _policy.Object,
+            Permissive.TargetPolicy, Permissive.SecurityProbe, _calls.Object, captureRegistry: registry.Object);
 
         // Act
         var tool = sut.CaptureWindow(PixelWindow, includeFrame: false, new CaptureOptions { MaxDimension = 0, Format = CaptureFormat.Jpeg }).Metadata;
@@ -1013,21 +1014,6 @@ public class ScreenshotServiceTests
         _policy.Verify(p => p.Check(It.IsAny<nint>()), Times.Once);
     }
 
-    [Fact]
-    public void CapturePixels_WithoutATargetPolicy_RefusesEveryWindow_ButStillCapturesTheScreen()
-    {
-        // Arrange - a service built without the policy check cannot tell a denied window from an allowed one
-        var sut = CreatePixelSut(withPolicy: false);
-
-        // Act
-        var refusal = RefusalOf(() => sut.CapturePixels(new CaptureTarget.Window(PixelWindow, IncludeFrame: true)));
-        var monitor = sut.CapturePixels(new CaptureTarget.Monitor(0));
-
-        // Assert
-        refusal.Code.Should().Be(ScreenshotErrorCode.TargetDeniedByPolicy);
-        _mockCaptureWrapper.Verify(c => c.CaptureWindow(It.IsAny<nint>(), It.IsAny<bool>()), Times.Never);
-        monitor.Pixels.Width.Should().Be(1920);
-    }
 
     [Fact]
     public void CaptureWindow_DoesNotAskTheCapturePolicy_TheToolDoesBeforeItRestoresAnything()

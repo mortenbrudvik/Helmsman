@@ -14,7 +14,7 @@ public class CaptureAidsTests
     private readonly Mock<IMonitorService> _monitors = TestDataFactory.CreateMockMonitorService();
 
     private ScreenshotService CreateSut() =>
-        new(_capture.Object, _monitors.Object, Mock.Of<INativeWindowWrapper>(w => w.IsWindowVisible(It.IsAny<nint>()) == true));
+        new(_capture.Object, _monitors.Object, Mock.Of<INativeWindowWrapper>(w => w.IsWindowVisible(It.IsAny<nint>()) == true), Permissive.CapturePolicy, Permissive.TargetPolicy, Permissive.SecurityProbe);
 
     private static CaptureOptions Png(Func<CaptureOptions, CaptureOptions>? with = null)
     {
@@ -82,7 +82,8 @@ public class CaptureAidsTests
         var monitors = TestDataFactory.CreateMockMonitorService(
             [new MonitorInfo(0, "DISPLAY1", true, new MonitorRect(0, 0, 3840, 2160), new MonitorRect(0, 0, 3840, 2120), 1.0)]);
         var sut = new ScreenshotService(_capture.Object, monitors.Object,
-            Mock.Of<INativeWindowWrapper>(w => w.IsWindowVisible(It.IsAny<nint>()) == true));
+            Mock.Of<INativeWindowWrapper>(w => w.IsWindowVisible(It.IsAny<nint>()) == true),
+            Permissive.CapturePolicy, Permissive.TargetPolicy, Permissive.SecurityProbe);
 
         // Act
         var result = sut.CaptureMonitor(0, Png(o => o with { Zoom = 4, MaxDimension = 0 }));

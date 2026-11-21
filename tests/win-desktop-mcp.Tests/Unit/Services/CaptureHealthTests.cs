@@ -35,9 +35,9 @@ public class CaptureHealthTests
     }
 
     private ScreenshotService CreateSut(TimeSpan? settle = null) =>
-        new(_capture.Object, _monitors.Object, _windows.Object, _calls.Object,
-            restoreSettleTimeout: settle ?? TimeSpan.FromMilliseconds(200),
-            restoreStateTimeout: TimeSpan.FromMilliseconds(100));
+        new(_capture.Object, _monitors.Object, _windows.Object, Permissive.CapturePolicy, Permissive.TargetPolicy,
+            Permissive.SecurityProbe, _calls.Object, settle ?? TimeSpan.FromMilliseconds(200),
+            TimeSpan.FromMilliseconds(100));
 
     #region Window pre-checks
 
@@ -717,8 +717,9 @@ public class CaptureHealthTests
         _windows.Setup(w => w.GetWindowRect(Window)).Returns((0, 0, 100, 80));
         _windows.Setup(w => w.GetWindowThreadProcessId(Window)).Returns(4242u);
         var registry = new CaptureRegistry(keepSignatures: true);
-        var sut = new ScreenshotService(_capture.Object, _monitors.Object, _windows.Object, _calls.Object,
-            restoreSettleTimeout: TimeSpan.FromMilliseconds(200), restoreStateTimeout: TimeSpan.FromMilliseconds(100), captureRegistry: registry);
+        var sut = new ScreenshotService(_capture.Object, _monitors.Object, _windows.Object, Permissive.CapturePolicy, Permissive.TargetPolicy,
+            Permissive.SecurityProbe, _calls.Object, TimeSpan.FromMilliseconds(200),
+            TimeSpan.FromMilliseconds(100), registry);
 
         // Act
         string? restored;

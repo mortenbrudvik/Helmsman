@@ -35,7 +35,7 @@ public class WindowService : IWindowService
     private readonly IMonitorService _monitorService;
     private readonly INativeWindowWrapper _nativeWrapper;
     private readonly IHostGuard _hostGuard;
-    private readonly ITargetPolicy? _targetPolicy;
+    private readonly ITargetPolicy _targetPolicy;
     private readonly IWindowCallRunner _windowCalls;
     private readonly TimeSpan _stateChangeTimeout;
     private readonly INativeVirtualDesktopWrapper? _virtualDesktops;
@@ -47,8 +47,7 @@ public class WindowService : IWindowService
     /// <param name="targetPolicy">
     /// The server's target policy (roadmap M1.12). Closing a window and every window change (move, resize,
     /// bounds, state, snap, move to a monitor, and their batches) refuse a window it denies, so these tools never
-    /// restore, raise or move it (input and the app itself still can). The server always passes it; without it no
-    /// window is refused by policy.
+    /// restore, raise or move it (input and the app itself still can).
     /// </param>
     /// <param name="windowCalls">
     /// Runs the calls that can block on another thread's window (SetWindowPos, ShowWindow) with a deadline;
@@ -70,7 +69,7 @@ public class WindowService : IWindowService
         IMonitorService monitorService,
         INativeWindowWrapper nativeWrapper,
         IHostGuard hostGuard,
-        ITargetPolicy? targetPolicy = null,
+        ITargetPolicy targetPolicy,
         IWindowCallRunner? windowCalls = null,
         TimeSpan? stateChangeTimeout = null,
         INativeVirtualDesktopWrapper? virtualDesktops = null,
@@ -79,7 +78,7 @@ public class WindowService : IWindowService
         _monitorService = monitorService;
         _nativeWrapper = nativeWrapper;
         _hostGuard = hostGuard ?? throw new ArgumentNullException(nameof(hostGuard));
-        _targetPolicy = targetPolicy;
+        _targetPolicy = targetPolicy ?? throw new ArgumentNullException(nameof(targetPolicy));
         _windowCalls = windowCalls ?? new WindowCallRunner(nativeWrapper);
         _stateChangeTimeout = stateChangeTimeout ?? StateChangeTimeout;
         _virtualDesktops = virtualDesktops;
@@ -1598,9 +1597,6 @@ public class WindowService : IWindowService
 
     public TargetPolicyVerdict EvaluateTargetPolicy(nint handle)
     {
-        if (_targetPolicy == null)
-            return TargetPolicyVerdict.Allow;
-
         var session = new ReadSession(_nativeWrapper, topLevelWindows: null);
         var className = _nativeWrapper.GetClassName(handle) ?? string.Empty;
         var title = _nativeWrapper.GetWindowText(handle) ?? string.Empty;

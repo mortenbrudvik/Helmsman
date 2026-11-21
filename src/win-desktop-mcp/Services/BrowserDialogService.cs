@@ -38,7 +38,7 @@ public sealed class BrowserDialogService : IBrowserDialogService
     private readonly IElementRegistry _registry;
     private readonly IElementActionService _actions;
     private readonly INativeWindowWrapper _windows;
-    private readonly ITargetPolicy? _policy;
+    private readonly ITargetPolicy _policy;
     private readonly object _gate = new();
     private readonly Dictionary<nint, string> _shown = [];
 
@@ -47,17 +47,17 @@ public sealed class BrowserDialogService : IBrowserDialogService
     /// <param name="registry">Gives the dialog's buttons and field refs, for element_action's service.</param>
     /// <param name="actions">Sets the prompt's text and presses the button, with every guard of element_action.</param>
     /// <param name="windows">The window reads: its top-level window, its process, whether it answers.</param>
-    /// <param name="policy">The user's target policy; the server always passes it.</param>
+    /// <param name="policy">The user's target policy.</param>
     public BrowserDialogService(
         IUiaTree tree, IUiaWorker worker, IElementRegistry registry, IElementActionService actions, INativeWindowWrapper windows,
-        ITargetPolicy? policy = null)
+        ITargetPolicy policy)
     {
         _tree = tree;
         _worker = worker;
         _registry = registry;
         _actions = actions;
         _windows = windows;
-        _policy = policy;
+        _policy = policy ?? throw new ArgumentNullException(nameof(policy));
     }
 
     /// <summary>How long the dialog may take to close after the last press before it counts as still open.</summary>

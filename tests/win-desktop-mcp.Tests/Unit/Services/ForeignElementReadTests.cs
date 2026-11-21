@@ -41,7 +41,7 @@ public class ForeignElementReadTests
         _tree.WithWindow(Handle, _window);
     }
 
-    private ElementSearchService Search(ITargetPolicy? policy) =>
+    private ElementSearchService Search(ITargetPolicy policy) =>
         new(_tree, _worker, _registry, _windows.Object, policy: policy);
 
     private ElementReadService Reads(ITargetPolicy? policy = null) =>
@@ -299,11 +299,11 @@ public class ForeignElementReadTests
     }
 
     [Fact]
-    public async Task Find_WithoutAPolicy_LeavesNothingOut()
+    public async Task Find_WithAPolicyThatDeniesNothing_LeavesNothingOut()
     {
         _window.With(new FakeUiaNode("Edit", "Master password hint") { ProcessId = DeniedPid, ActionPatterns = ["Value"], Value = "dog's name" });
 
-        var result = await Search(null).FindAsync(new ElementQuery(Handle, ControlTypes: ["Edit"], Detail: ElementDetail.Standard,
+        var result = await Search(Permissive.TargetPolicy).FindAsync(new ElementQuery(Handle, ControlTypes: ["Edit"], Detail: ElementDetail.Standard,
             Timeout: Timeout));
 
         result.Elements!.Single().Value.Should().Be("dog's name");
@@ -927,9 +927,8 @@ public class ForeignElementReadTests
 
     /// <summary>The search with the warm-up as the server wires it: one warm-up, given the target policy too.</summary>
     private ElementSearchService SearchAsTheServerWires(ITargetPolicy policy) =>
-        new(_tree, _worker, _registry, _windows.Object,
-            new AccessibilityWarmup(_tree, _windows.Object, new Mock<INativeProcessWrapper>().Object, wait: (_, _) => { }, policy: policy),
-            policy: policy);
+        new(_tree, _worker, _registry, _windows.Object, policy,
+            new AccessibilityWarmup(_tree, _windows.Object, new Mock<INativeProcessWrapper>().Object, wait: (_, _) => { }, policy: policy));
 
     [Fact]
     public async Task ElementAction_ByCriteria_MatchingAnAllowedElement_AndOneOfADeniedWebView2sPageNotBuiltYet_IsAmbiguous()

@@ -91,10 +91,11 @@ public class CaptureCoordinateContractTests
             _windowService.Object, _foreground.Object, _security.Object, _hostGuard.Object,
             new TargetPolicy(TargetPolicySettings.Default), InputGuardOptions.Default);
         var input = new InputSimulationService(monitors.Object, _input.Object, guard, new InputSession(_input.Object), hitTest: _hitTest.Object);
-        var screenshots = new ScreenshotService(_capture.Object, monitors.Object, _windows.Object, captureRegistry: _registry);
+        var screenshots = new ScreenshotService(_capture.Object, monitors.Object, _windows.Object, Permissive.CapturePolicy, Permissive.TargetPolicy, Permissive.SecurityProbe, captureRegistry: _registry);
         var resolver = new CoordinateSpaceResolver(_registry, _windows.Object, _hitTest.Object, _capture.Object);
         var screenshotTools = new ScreenshotTools(screenshots, _uiElements.Object, _windowService.Object,
-            new TargetPolicy(TargetPolicySettings.Default), elementRegistry: _elementRegistry.Object);
+            new CaptureTargetPolicy(_windowService.Object, new TargetPolicy(TargetPolicySettings.Default)),
+            elementRegistry: _elementRegistry.Object);
         return InProcessMcpServer.StartAsync(
             [],
             builder => builder.AddToolErrorReporting()

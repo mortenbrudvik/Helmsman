@@ -55,8 +55,10 @@ public class ForceAccessibilityLaunchTests
         _ => []);
 
     private ProcessService CreateSut() => new(
-        _windows.Object, _validation.Object, TestDataFactory.CreateMockBrowserDetectionService().Object, _resolver.Object,
-        _processes.Object, windowWait: _windowWait.Object, chromiumPrograms: FileSystem());
+        _windows.Object, _validation.Object, TestDataFactory.CreateMockBrowserDetectionService().Object,
+        _resolver.Object, Permissive.TargetPolicy, Permissive.HostGuard, FileSystem(), new InterpreterGuard(),
+        new DebugBrowserLocator(), Permissive.SecurityProbe, new ChromiumSwitchGuard(), _processes.Object,
+        _windowWait.Object);
 
     private Task<LaunchResult> LaunchAsync(string executable, string[]? arguments = null, bool forceAccessibility = true, bool reuseExisting = false) =>
         CreateSut().LaunchApplicationAsync(

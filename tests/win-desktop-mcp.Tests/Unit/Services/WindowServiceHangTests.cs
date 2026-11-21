@@ -41,7 +41,8 @@ public class WindowServiceHangTests
 
     private WindowService CreateSut(TimeSpan? deadline = null) =>
         new(TestDataFactory.CreateMockMonitorService().Object, _native.Object, Mock.Of<IHostGuard>(),
-            windowCalls: new WindowCallRunner(_native.Object, deadline ?? Deadline, maxStuckCallsPerProcess: 1, maxStuckCalls: 8));
+            Permissive.TargetPolicy,
+            new WindowCallRunner(_native.Object, deadline ?? Deadline, maxStuckCallsPerProcess: 1, maxStuckCalls: 8));
 
     [Fact]
     public void MoveWindow_OfAWindowWindowsReportsHung_IsRefused_WithoutCallingSetWindowPos()

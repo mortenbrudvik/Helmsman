@@ -22,20 +22,21 @@ namespace WinDesktopMcp.Services;
 public sealed class DisplayAffinityScan
 {
     private readonly INativeWindowWrapper _windows;
-    private readonly ICaptureTargetPolicy? _capturePolicy;
+    private readonly ICaptureTargetPolicy _capturePolicy;
     private readonly bool _deniesAnything;
     private readonly Dictionary<(nint Handle, uint ProcessId), (string? ProcessName, string? Title)> _named = [];
 
     /// <param name="windows">Lists the top-level windows in z-order and reads their affinity, frame, title and process.</param>
     /// <param name="capturePolicy">The policy's check of a window capture, which decides whether a window's process and title
-    /// are listed. Null: none are.</param>
+    /// are listed.</param>
     /// <param name="policy">The policy itself: one that denies nothing lists every window's process and title without asking
-    /// <paramref name="capturePolicy"/>. Null: every window is checked.</param>
-    public DisplayAffinityScan(INativeWindowWrapper windows, ICaptureTargetPolicy? capturePolicy, ITargetPolicy? policy)
+    /// <paramref name="capturePolicy"/>.</param>
+    public DisplayAffinityScan(INativeWindowWrapper windows, ICaptureTargetPolicy capturePolicy, ITargetPolicy policy)
     {
         _windows = windows ?? throw new ArgumentNullException(nameof(windows));
-        _capturePolicy = capturePolicy;
-        _deniesAnything = policy?.DeniesAnything() ?? true;
+        _capturePolicy = capturePolicy ?? throw new ArgumentNullException(nameof(capturePolicy));
+        ArgumentNullException.ThrowIfNull(policy);
+        _deniesAnything = policy.DeniesAnything();
     }
 
     /// <summary>
@@ -134,7 +135,7 @@ public sealed class DisplayAffinityScan
 
         try
         {
-            return _capturePolicy != null && _capturePolicy.Check(handle) == null;
+            return _capturePolicy.Check(handle) == null;
         }
         catch (Exception)
         {

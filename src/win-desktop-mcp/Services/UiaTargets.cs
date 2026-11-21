@@ -22,18 +22,20 @@ public static class UiaTargets
     /// ApplicationFrameHost), on the app whose CoreWindow it hosts (see <see cref="UwpFrames"/>), as the window listings
     /// name them, and then on the window itself, which is refused when it is a security prompt that a shared process shows
     /// (<see cref="ITargetPolicy.EvaluateWindow"/>). Fails closed: a window whose process name cannot be read, or that
-    /// cannot be checked, is refused while the policy denies anything. Allowed without a policy or a window wrapper, and for
-    /// a handle that is no window (the read then reports that).
+    /// cannot be checked, is refused while the policy denies anything. Allowed for a handle that is no window (the read then
+    /// reports that).
     /// </summary>
-    /// <param name="windows">The window wrapper, or null to check nothing.</param>
-    /// <param name="policy">The target policy, or null to check nothing.</param>
+    /// <param name="windows">The window wrapper.</param>
+    /// <param name="policy">The target policy.</param>
     /// <param name="windowHandle">The window to read.</param>
     /// <param name="processName">Looks up a process name (a caller that checks many windows passes a cached lookup); null
     /// for <see cref="INativeWindowWrapper.GetProcessName"/>.</param>
     public static TargetPolicyVerdict ReadVerdict(
-        INativeWindowWrapper? windows, ITargetPolicy? policy, nint windowHandle, Func<uint, string?>? processName = null)
+        INativeWindowWrapper windows, ITargetPolicy policy, nint windowHandle, Func<uint, string?>? processName = null)
     {
-        if (windows == null || policy == null || windowHandle == nint.Zero || !policy.DeniesAnything())
+        ArgumentNullException.ThrowIfNull(windows);
+        ArgumentNullException.ThrowIfNull(policy);
+        if (windowHandle == nint.Zero || !policy.DeniesAnything())
         {
             return TargetPolicyVerdict.Allow;
         }
@@ -91,7 +93,7 @@ public static class UiaTargets
     /// The TargetDeniedByPolicy message of a UI Automation read that <see cref="ReadVerdict"/> refuses, or null when the
     /// policy allows it.
     /// </summary>
-    public static string? PolicyRefusal(INativeWindowWrapper? windows, ITargetPolicy? policy, nint windowHandle) =>
+    public static string? PolicyRefusal(INativeWindowWrapper windows, ITargetPolicy policy, nint windowHandle) =>
         ReadVerdict(windows, policy, windowHandle) is { Allowed: false } verdict ? PolicyRefusalMessage(windowHandle, verdict) : null;
 
     /// <summary>The TargetDeniedByPolicy message of a UI Automation read of <paramref name="windowHandle"/>.</summary>
@@ -104,10 +106,10 @@ public static class UiaTargets
     /// The check of the elements of other processes inside <paramref name="windowHandle"/>, for one read of a window that
     /// passed <see cref="ReadVerdict"/> (see <see cref="ForeignElements"/>).
     /// </summary>
-    /// <param name="windows">The window wrapper, or null to check nothing.</param>
-    /// <param name="policy">The target policy, or null to check nothing.</param>
+    /// <param name="windows">The window wrapper.</param>
+    /// <param name="policy">The target policy.</param>
     /// <param name="windowHandle">The window read.</param>
-    public static ForeignElements ForeignElementsOf(INativeWindowWrapper? windows, ITargetPolicy? policy, nint windowHandle) =>
+    public static ForeignElements ForeignElementsOf(INativeWindowWrapper windows, ITargetPolicy policy, nint windowHandle) =>
         new(windows, policy, windowHandle);
 
     /// <summary>
@@ -219,8 +221,8 @@ public static class UiaTargets
 /// </summary>
 public sealed class ForeignElements
 {
-    private readonly INativeWindowWrapper? _windows;
-    private readonly ITargetPolicy? _policy;
+    private readonly INativeWindowWrapper _windows;
+    private readonly ITargetPolicy _policy;
     private readonly nint _window;
     private readonly object _gate = new();
     private readonly Dictionary<int, (string? Name, TargetPolicyVerdict Verdict)> _verdicts = [];
@@ -229,15 +231,15 @@ public sealed class ForeignElements
     private readonly HashSet<IUiaNode> _countedNodes = new(ReferenceEqualityComparer.Instance);
     private HashSet<int>? _windowProcesses;
 
-    internal ForeignElements(INativeWindowWrapper? windows, ITargetPolicy? policy, nint window)
+    internal ForeignElements(INativeWindowWrapper windows, ITargetPolicy policy, nint window)
     {
-        _windows = windows;
-        _policy = policy;
+        _windows = windows ?? throw new ArgumentNullException(nameof(windows));
+        _policy = policy ?? throw new ArgumentNullException(nameof(policy));
         _window = window;
-        Active = windows != null && policy != null && window != nint.Zero && policy.DeniesAnything();
+        Active = window != nint.Zero && policy.DeniesAnything();
     }
 
-    /// <summary>Whether anything can be refused: there is a policy that denies anything, and the Win32 reads to check it.</summary>
+    /// <summary>Whether anything can be refused: a window was read, and the policy denies anything.</summary>
     public bool Active { get; }
 
     /// <summary>
@@ -268,8 +270,8 @@ public sealed class ForeignElements
                 string? name = null;
                 try
                 {
-                    name = _windows!.GetProcessName((uint)processId);
-                    known = (name, _policy!.EvaluateFailClosed([name]));
+                    name = _windows.GetProcessName((uint)processId);
+                    known = (name, _policy.EvaluateFailClosed([name]));
                 }
                 catch (Exception)
                 {
@@ -410,7 +412,7 @@ public sealed class ForeignElements
     {
         try
         {
-            return (int)_windows!.GetWindowThreadProcessId(window);
+            return (int)_windows.GetWindowThreadProcessId(window);
         }
         catch (Exception)
         {
@@ -497,7 +499,7 @@ public sealed class ForeignElements
         var processes = new HashSet<int>();
         try
         {
-            processes.Add((int)_windows!.GetWindowThreadProcessId(_window));
+            processes.Add((int)_windows.GetWindowThreadProcessId(_window));
         }
         catch (Exception)
         {

@@ -59,39 +59,38 @@ public sealed class VisualChangeService : IVisualChangeService
     private readonly IWindowCallRunner _windowCalls;
     private readonly ICaptureRegistry? _registry;
     private readonly INativeThreadInputWrapper? _threads;
-    private readonly ITargetPolicy? _policy;
+    private readonly ITargetPolicy _policy;
     private readonly TimeProvider _time;
     private readonly Func<TimeSpan, CancellationToken, Task> _delay;
-    private readonly IProcessSecurityProbe? _security;
+    private readonly IProcessSecurityProbe _security;
 
     /// <param name="capture">Lends the pixels.</param>
     /// <param name="screenshots">The capture health checks of a window (CheckWindow).</param>
     /// <param name="windows">Window rectangles, frames, processes and threads, and the window list of the policy's mask.</param>
     /// <param name="monitors">Monitor targets, the DPI warning and the monitors a screen frame registers.</param>
     /// <param name="capturePolicy">The target policy's check of a window capture.</param>
+    /// <param name="policy">The target policy: one that denies nothing masks nothing without listing windows.</param>
+    /// <param name="security">Whether the session is locked, or the input desktop out of reach, at the start or the end of the
+    /// wait (issue #17): the result then warns that the frames may show the lock screen.</param>
     /// <param name="windowCalls">Runs PrintWindow with a deadline; default a <see cref="WindowCallRunner"/> over <paramref name="windows"/>.</param>
     /// <param name="registry">Where since is found and the last frame is registered; without it there is neither.</param>
     /// <param name="threads">Reads where the text caret is; without it the caret counts like any pixel.</param>
-    /// <param name="policy">The target policy: one that denies nothing masks nothing without listing windows. Null: every
-    /// window over a region or monitor is checked.</param>
     /// <param name="time">The clock; default the system clock.</param>
     /// <param name="delay">Waits between two frames; default Task.Delay on <paramref name="time"/>. Tests pass one that moves
     /// a manual clock.</param>
-    /// <param name="security">Whether the session is locked, or the input desktop out of reach, at the start or the end of the
-    /// wait (issue #17): the result then warns that the frames may show the lock screen. Without it no wait says so.</param>
     public VisualChangeService(
         IScreenCaptureWrapper capture,
         IScreenshotService screenshots,
         INativeWindowWrapper windows,
         IMonitorService monitors,
         ICaptureTargetPolicy capturePolicy,
+        ITargetPolicy policy,
+        IProcessSecurityProbe security,
         IWindowCallRunner? windowCalls = null,
         ICaptureRegistry? registry = null,
         INativeThreadInputWrapper? threads = null,
-        ITargetPolicy? policy = null,
         TimeProvider? time = null,
-        Func<TimeSpan, CancellationToken, Task>? delay = null,
-        IProcessSecurityProbe? security = null)
+        Func<TimeSpan, CancellationToken, Task>? delay = null)
     {
         _capture = capture ?? throw new ArgumentNullException(nameof(capture));
         _screenshots = screenshots ?? throw new ArgumentNullException(nameof(screenshots));
@@ -101,10 +100,10 @@ public sealed class VisualChangeService : IVisualChangeService
         _windowCalls = windowCalls ?? new WindowCallRunner(windows);
         _registry = registry;
         _threads = threads;
-        _policy = policy;
+        _policy = policy ?? throw new ArgumentNullException(nameof(policy));
         _time = time ?? TimeProvider.System;
         _delay = delay ?? ((wait, token) => Task.Delay(wait, _time, token));
-        _security = security;
+        _security = security ?? throw new ArgumentNullException(nameof(security));
     }
 
     /// <summary>The condition as wait_for_visual names it.</summary>

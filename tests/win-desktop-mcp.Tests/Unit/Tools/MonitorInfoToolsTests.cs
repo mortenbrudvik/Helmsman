@@ -161,7 +161,7 @@ public class MonitorInfoToolsTests
         var monitors = TestDataFactory.CreateDualMonitorSetup();
         _mockMonitorService.Setup(m => m.GetAllMonitors()).Returns(monitors);
         _screen.Setup(s => s.GetVirtualScreenBounds()).Returns((0, -300, 4480, 1740));
-        var screenshots = new ScreenshotService(_screen.Object, _mockMonitorService.Object, Mock.Of<INativeWindowWrapper>());
+        var screenshots = new ScreenshotService(_screen.Object, _mockMonitorService.Object, Mock.Of<INativeWindowWrapper>(), Permissive.CapturePolicy, Permissive.TargetPolicy, Permissive.SecurityProbe);
 
         // Act
         var monitorsResult = CreateSut().GetMonitors();

@@ -32,8 +32,9 @@ public class ElementReadFallbackTests
     }
 
     private ElementReadService CreateSut(IUiaWorker? worker = null, IElementSearchService? search = null) =>
-        new(_tree, worker ?? _worker, _registry, search ?? new ElementSearchService(_tree, _worker, _registry, _windows.Object),
-            _windows.Object);
+        new(_tree, worker ?? _worker, _registry,
+            search ?? new ElementSearchService(_tree, _worker, _registry, _windows.Object, Permissive.TargetPolicy), _windows.Object,
+            Permissive.TargetPolicy);
 
     private string Add(FakeUiaNode element)
     {

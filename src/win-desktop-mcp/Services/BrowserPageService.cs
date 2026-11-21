@@ -40,7 +40,7 @@ public sealed class BrowserPageService : IBrowserPageService
     /// <param name="pages">The CDP side of the DOM bridge.</param>
     /// <param name="portOwners">Tells which process listens on a port given without a window.</param>
     /// <param name="viewports">Finds where the window shows the page, for browser_element_rect.</param>
-    /// <param name="policy">The user's target policy; the server always passes it.</param>
+    /// <param name="policy">The user's target policy.</param>
     /// <param name="portLocator">Finds a window's own debug port; the server always passes it. Without it, cdpPort is needed.</param>
     /// <param name="session">The input session the gate checks for a pause; the server always passes it.</param>
     /// <param name="dialogs">Learns of the dialog an action opened and left open, so browser_handle_dialog may accept it; the
@@ -53,7 +53,7 @@ public sealed class BrowserPageService : IBrowserPageService
         ICdpPageService pages,
         ITcpPortOwnerResolver portOwners,
         IBrowserViewportLocator viewports,
-        ITargetPolicy? policy = null,
+        ITargetPolicy policy,
         IDebugPortLocator? portLocator = null,
         IInputSession? session = null,
         IBrowserDialogService? dialogs = null)

@@ -52,7 +52,7 @@ public class ElementSearchScopeTests
         _popups.Setup(p => p.GetPopupList(Main)).Returns(new PopupList(popups, truncated));
 
     private ElementSearchService CreateSut(IUiaWorker? worker = null, ITargetPolicy? policy = null) =>
-        new(_tree, worker ?? _worker, _registry, _windows.Object, popups: _popups.Object, policy: policy);
+        new(_tree, worker ?? _worker, _registry, _windows.Object, popups: _popups.Object, policy: policy ?? Permissive.TargetPolicy);
 
     private Task<FindElementsResult> Find(
         string? name = null, string[]? controlTypes = null, ElementSearchScope? scope = null, int maxResults = 20,

@@ -141,36 +141,35 @@ public sealed partial class ElementReadService : IElementReadService
     private readonly IUiaWorker _worker;
     private readonly IElementRegistry _registry;
     private readonly IElementSearchService _search;
-    private readonly INativeWindowWrapper? _windows;
+    private readonly INativeWindowWrapper _windows;
     private readonly IAccessibilityWarmup? _warmup;
-    private readonly ITargetPolicy? _policy;
+    private readonly ITargetPolicy _policy;
 
     /// <param name="tree">The UI Automation tree.</param>
     /// <param name="worker">Runs each read under its deadline.</param>
     /// <param name="registry">Resolves the refs.</param>
     /// <param name="search">find_ui_elements' search, for read_element_text's criteria.</param>
-    /// <param name="windows">The hung-window check and the application a stuck read is counted against; without it neither
-    /// is done.</param>
+    /// <param name="windows">The target policy's window reads, the hung-window check and the application a stuck read is
+    /// counted against.</param>
+    /// <param name="policy">The user's target policy, which refuses reads of a window of an app it denies.</param>
     /// <param name="warmup">Warms up the web content of Chromium, Electron and WebView2 windows (roadmap M3.3). The server always
     /// passes it.</param>
-    /// <param name="policy">The user's target policy, which refuses reads of a window of an app it denies. The server always
-    /// passes it; without it (or without <paramref name="windows"/>) no window is refused.</param>
     public ElementReadService(
         IUiaTree tree,
         IUiaWorker worker,
         IElementRegistry registry,
         IElementSearchService search,
-        INativeWindowWrapper? windows = null,
-        IAccessibilityWarmup? warmup = null,
-        ITargetPolicy? policy = null)
+        INativeWindowWrapper windows,
+        ITargetPolicy policy,
+        IAccessibilityWarmup? warmup = null)
     {
         _tree = tree;
         _worker = worker;
         _registry = registry;
         _search = search;
-        _windows = windows;
+        _windows = windows ?? throw new ArgumentNullException(nameof(windows));
         _warmup = warmup;
-        _policy = policy;
+        _policy = policy ?? throw new ArgumentNullException(nameof(policy));
     }
 
     #region Text

@@ -26,7 +26,7 @@ public class ElementSearchServiceTests
         _registry = new ElementRegistry(_tree, _worker, _windows.Object, ElementRegistry.DefaultCapacity, 1, TimeProvider.System);
     }
 
-    private ElementSearchService CreateSut() => new(_tree, _worker, _registry, _windows.Object, providerContains: _providerContains);
+    private ElementSearchService CreateSut() => new(_tree, _worker, _registry, _windows.Object, Permissive.TargetPolicy, providerContains: _providerContains);
 
     private Task<FindElementsResult> Find(ElementQuery query) => CreateSut().FindAsync(query);
 
@@ -144,7 +144,8 @@ public class ElementSearchServiceTests
         // Act
         var narrowed = await Find(query);
         var serverOnly = await new ElementSearchService(serverTree, _worker,
-                new ElementRegistry(serverTree, _worker, _windows.Object, ElementRegistry.DefaultCapacity, 1, TimeProvider.System), _windows.Object)
+                new ElementRegistry(serverTree, _worker, _windows.Object, ElementRegistry.DefaultCapacity, 1, TimeProvider.System),
+                _windows.Object, Permissive.TargetPolicy)
             .FindAsync(query);
 
         // Assert - the same elements under the same refs, the same count and the same truncation
@@ -317,7 +318,7 @@ public class ElementSearchServiceTests
     {
         // Arrange
         var (_, save, _) = BuildEditor();
-        var walk = new UIElementService(_tree, _worker, _windows.Object, registry: _registry);
+        var walk = new UIElementService(_tree, _worker, _windows.Object, Permissive.TargetPolicy, Permissive.SecurityProbe, registry: _registry);
 
         // Act
         var found = await Find(Query(name: "Save"));
@@ -826,7 +827,7 @@ public class ElementSearchServiceTests
             stuck.Set();
             release.Wait(TimeSpan.FromSeconds(10));
         };
-        var sut = new ElementSearchService(_tree, new AbandoningWorker(stuck), _registry, _windows.Object);
+        var sut = new ElementSearchService(_tree, new AbandoningWorker(stuck), _registry, _windows.Object, Permissive.TargetPolicy);
 
         try
         {
@@ -877,8 +878,8 @@ public class ElementSearchServiceTests
         BuildEditor();
         _windows.Setup(w => w.GetProcessName(300u)).Returns("Bitwarden");
         var warmup = new Mock<IAccessibilityWarmup>();
-        var sut = new ElementSearchService(_tree, _worker, _registry, _windows.Object, warmup.Object,
-            policy: new TargetPolicy(TargetPolicySettings.Default));
+        var sut = new ElementSearchService(_tree, _worker, _registry, _windows.Object, new TargetPolicy(TargetPolicySettings.Default),
+            warmup.Object);
 
         // Act
         var result = await sut.FindAsync(Query(name: "Search", detail: ElementDetail.Standard));
@@ -943,7 +944,7 @@ public class ElementSearchServiceTests
         warmup.Setup(w => w.WarmUpForSearch(Handle, It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
             .Callback(() => _tree.Finds.Should().BeEmpty("the warm-up comes before the search"))
             .Returns(Warmed);
-        var sut = new ElementSearchService(_tree, _worker, _registry, _windows.Object, warmup.Object);
+        var sut = new ElementSearchService(_tree, _worker, _registry, _windows.Object, Permissive.TargetPolicy, warmup.Object);
 
         // Act
         var result = await sut.FindAsync(Query(name: "Save"));
@@ -963,7 +964,7 @@ public class ElementSearchServiceTests
         var notReady = Warmed with { Status = AccessibilityWarmupStatus.NotReady, DocumentChildCount = 0, Warning = "Read again." };
         var warmup = new Mock<IAccessibilityWarmup>();
         warmup.Setup(w => w.WarmUpForSearch(Handle, It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>())).Returns(notReady);
-        var sut = new ElementSearchService(_tree, _worker, _registry, _windows.Object, warmup.Object);
+        var sut = new ElementSearchService(_tree, _worker, _registry, _windows.Object, Permissive.TargetPolicy, warmup.Object);
 
         // Act
         var result = await sut.FindAsync(Query(name: "Compose"));
@@ -978,7 +979,7 @@ public class ElementSearchServiceTests
     {
         // Arrange - no window registered in the tree
         var warmup = new Mock<IAccessibilityWarmup>();
-        var sut = new ElementSearchService(_tree, _worker, _registry, _windows.Object, warmup.Object);
+        var sut = new ElementSearchService(_tree, _worker, _registry, _windows.Object, Permissive.TargetPolicy, warmup.Object);
 
         // Act
         var result = await sut.FindAsync(Query(name: "Save"));
@@ -995,7 +996,7 @@ public class ElementSearchServiceTests
         // Arrange - wait_for_element's checks after its first one (roadmap M3.8)
         BuildEditor();
         var warmup = new Mock<IAccessibilityWarmup>();
-        var sut = new ElementSearchService(_tree, _worker, _registry, _windows.Object, warmup.Object);
+        var sut = new ElementSearchService(_tree, _worker, _registry, _windows.Object, Permissive.TargetPolicy, warmup.Object);
 
         // Act
         var result = await sut.FindAsync(Query(name: "Save") with { WarmUp = false });

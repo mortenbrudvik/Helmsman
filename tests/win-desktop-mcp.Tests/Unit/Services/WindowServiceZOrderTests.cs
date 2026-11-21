@@ -32,7 +32,7 @@ public class WindowServiceZOrderTests
             .Returns(new MonitorRect(0, 0, 960, 1040));
     }
 
-    private WindowService CreateSut() => new(_monitors.Object, _native.Object, Mock.Of<IHostGuard>());
+    private WindowService CreateSut() => new(_monitors.Object, _native.Object, Mock.Of<IHostGuard>(), Permissive.TargetPolicy);
 
     public static TheoryData<string> Operations => new()
     {

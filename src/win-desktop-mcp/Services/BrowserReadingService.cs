@@ -56,7 +56,7 @@ public class BrowserReadingService : IBrowserReadingService
     private readonly IUiaWorker _worker;
     private readonly BrowserUiaReader _reader;
     private readonly IAccessibilityWarmup? _warmup;
-    private readonly ITargetPolicy? _policy;
+    private readonly ITargetPolicy _policy;
     private readonly IDebugPortLocator? _portLocator;
 
     // Map process names to browser types
@@ -93,10 +93,9 @@ public class BrowserReadingService : IBrowserReadingService
     /// <param name="cdpService">The CDP reads.</param>
     /// <param name="tree">The UI Automation tree the UI Automation reads go through (roadmap M3.F24).</param>
     /// <param name="worker">Runs the UI Automation reads under their deadline.</param>
+    /// <param name="policy">The user's target policy, which refuses the UI Automation reads of a window of an app it denies.</param>
     /// <param name="warmup">Warms up the page before get_browser_content reads it (roadmap M3.3). The server always passes
     /// it; without it no page is warmed up.</param>
-    /// <param name="policy">The user's target policy, which refuses the UI Automation reads of a window of an app it denies.
-    /// The server always passes it; without it no window is refused.</param>
     /// <param name="portLocator">Finds the debug port of the window's own process when no cdpPort is given (roadmap M5.3).
     /// The server always passes it; without it a window is read through CDP only with cdpPort.</param>
     public BrowserReadingService(
@@ -105,8 +104,8 @@ public class BrowserReadingService : IBrowserReadingService
         ICdpService cdpService,
         IUiaTree tree,
         IUiaWorker worker,
+        ITargetPolicy policy,
         IAccessibilityWarmup? warmup = null,
-        ITargetPolicy? policy = null,
         IDebugPortLocator? portLocator = null)
     {
         _nativeWrapper = nativeWrapper;
@@ -116,7 +115,7 @@ public class BrowserReadingService : IBrowserReadingService
         _worker = worker;
         _reader = new BrowserUiaReader(tree);
         _warmup = warmup;
-        _policy = policy;
+        _policy = policy ?? throw new ArgumentNullException(nameof(policy));
         _portLocator = portLocator;
     }
 

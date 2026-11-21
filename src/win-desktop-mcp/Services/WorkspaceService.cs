@@ -64,7 +64,7 @@ public sealed class WorkspaceService : IWorkspaceService
     private readonly ICdpTabService? _tabs;
     private readonly INativeShellWindowsWrapper _shell;
     private readonly IProcessService _processes;
-    private readonly ITargetPolicy? _policy;
+    private readonly ITargetPolicy _policy;
     private readonly ILogger<WorkspaceService>? _logger;
 
     public WorkspaceService(
@@ -74,8 +74,8 @@ public sealed class WorkspaceService : IWorkspaceService
         IBrowserReadingService browsers,
         INativeShellWindowsWrapper shell,
         IProcessService processes,
+        ITargetPolicy policy,
         ICdpTabService? tabs = null,
-        ITargetPolicy? policy = null,
         ILogger<WorkspaceService>? logger = null)
     {
         _layouts = layouts;
@@ -85,7 +85,7 @@ public sealed class WorkspaceService : IWorkspaceService
         _shell = shell;
         _processes = processes;
         _tabs = tabs;
-        _policy = policy;
+        _policy = policy ?? throw new ArgumentNullException(nameof(policy));
         _logger = logger;
     }
 
@@ -134,7 +134,7 @@ public sealed class WorkspaceService : IWorkspaceService
         {
             var window = WindowOf(placement, windows, assigned);
             WorkspaceContent? content = null;
-            if (window != null && (_policy == null || _policy.Evaluate(window).Allowed))
+            if (window != null && _policy.Evaluate(window).Allowed)
             {
                 if (folders?.FirstOrDefault(f => f.Window == window.Handle) is { Path: { } folder })
                 {

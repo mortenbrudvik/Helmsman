@@ -30,7 +30,7 @@ public class ScreenshotMarksTests
     }
 
     private ScreenshotService CreateSut() =>
-        new(_capture.Object, _monitors.Object, _windows.Object, captureRegistry: _registry);
+        new(_capture.Object, _monitors.Object, _windows.Object, Permissive.CapturePolicy, Permissive.TargetPolicy, Permissive.SecurityProbe, captureRegistry: _registry);
 
     /// <summary>A black window capture of <paramref name="width"/> x <paramref name="height"/> at (x, y).</summary>
     private void BlackWindow(int width, int height, int x = 0, int y = 0) =>

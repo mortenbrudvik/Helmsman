@@ -29,9 +29,14 @@ public class ProcessKillTests
         new Mock<IInputValidationService>().Object,
         TestDataFactory.CreateMockBrowserDetectionService().Object,
         new Mock<IExecutableResolver>().Object,
-        _mockWrapper.Object,
-        targetPolicy: null,
-        hostGuard: withHostGuard ? _hostGuard.Object : null);
+        Permissive.TargetPolicy,
+        withHostGuard ? _hostGuard.Object : Permissive.HostGuard,
+        new ChromiumPrograms(),
+        new InterpreterGuard(),
+        new DebugBrowserLocator(),
+        Permissive.SecurityProbe,
+        new ChromiumSwitchGuard(),
+        _mockWrapper.Object);
 
     private void VerifyNeverForceKilled() =>
         _mockProcess.Verify(p => p.Kill(It.IsAny<bool>()), Times.Never);
@@ -657,7 +662,7 @@ public class ProcessKillTests
     }
 
     [Fact]
-    public async Task KillProcess_ForceKill_TheServerInTheTree_IsRefusedEvenWithoutAHostGuard()
+    public async Task KillProcess_ForceKill_TheServerInTheTree_IsRefusedEvenWhenTheHostGuardDoesNotNameIt()
     {
         // Arrange - the runtime would also refuse, but only with an exception after other checks
         _mockWrapper.Setup(w => w.GetDescendantsOf(Pid)).Returns([(Environment.ProcessId, "win-desktop-mcp.exe")]);

@@ -12,8 +12,8 @@ namespace WinDesktopMcp.Services;
 /// (<see cref="ProcessService.LaunchBrowserWithDebugAsync"/>).
 /// </summary>
 /// <param name="native">Reads the process tree, command lines and start times; opens and ends processes.</param>
-/// <param name="hostGuard">The agent's host, whose processes are never ended; the server always passes it.</param>
-internal sealed class DebugBrowserProcesses(INativeProcessWrapper native, IHostGuard? hostGuard)
+/// <param name="hostGuard">The agent's host, whose processes are never ended.</param>
+internal sealed class DebugBrowserProcesses(INativeProcessWrapper native, IHostGuard hostGuard)
 {
     /// <summary>The switch that names a Chromium process's profile folder.</summary>
     public const string ProfileSwitch = "user-data-dir";
@@ -30,7 +30,7 @@ internal sealed class DebugBrowserProcesses(INativeProcessWrapper native, IHostG
     /// </summary>
     public List<(int ProcessId, DateTime? StartTime)> HelpersOf(int processId, string imageName, string profile) =>
         (native.GetDescendantsOf(processId) ?? [])
-            .Where(d => string.Equals(d.ImageName, imageName, StringComparison.OrdinalIgnoreCase) && hostGuard?.IsHostProcess(d.ProcessId) != true &&
+            .Where(d => string.Equals(d.ImageName, imageName, StringComparison.OrdinalIgnoreCase) && !hostGuard.IsHostProcess(d.ProcessId) &&
                         IsChildOf(d.ProcessId, profile))
             .Select(d => (d.ProcessId, native.GetProcessStartTime(d.ProcessId)))
             .ToList();

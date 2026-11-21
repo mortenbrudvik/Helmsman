@@ -24,7 +24,7 @@ public class ScreenshotCaptureIdTests
     }
 
     private ScreenshotService CreateSut(ICaptureRegistry? registry = null) =>
-        new(_capture.Object, _monitors.Object, _windows.Object, captureRegistry: registry ?? _registry);
+        new(_capture.Object, _monitors.Object, _windows.Object, Permissive.CapturePolicy, Permissive.TargetPolicy, Permissive.SecurityProbe, captureRegistry: registry ?? _registry);
 
     [Fact]
     public void CaptureMonitor_RegistersTheCapture_WithItsTransformAndTheVirtualScreen()
@@ -213,7 +213,7 @@ public class ScreenshotCaptureIdTests
     [Fact]
     public void WithoutARegistry_CapturesHaveNoCaptureId()
     {
-        var sut = new ScreenshotService(_capture.Object, _monitors.Object, _windows.Object);
+        var sut = new ScreenshotService(_capture.Object, _monitors.Object, _windows.Object, Permissive.CapturePolicy, Permissive.TargetPolicy, Permissive.SecurityProbe);
 
         sut.CaptureMonitor(0, Defaults).Metadata.CaptureId.Should().BeNull();
     }
@@ -340,8 +340,8 @@ public class ScreenshotCaptureIdTests
         var policy = new Mock<ICaptureTargetPolicy>();
         policy.Setup(p => p.Check(denied)).Returns(new CaptureRefusal(ScreenshotErrorCode.TargetDeniedByPolicy, "denied"));
         var registry = new CaptureRegistry(keepSignatures: true);
-        var sut = new ScreenshotService(_capture.Object, _monitors.Object, _windows.Object, captureRegistry: registry,
-            capturePolicy: policy.Object, targetPolicy: new TargetPolicy(TargetPolicySettings.Default));
+        var sut = new ScreenshotService(_capture.Object, _monitors.Object, _windows.Object, policy.Object,
+            new TargetPolicy(TargetPolicySettings.Default), Permissive.SecurityProbe, captureRegistry: registry);
 
         // Act
         var metadata = sut.CaptureRegion(10, 20, 300, 200, Defaults).Metadata;

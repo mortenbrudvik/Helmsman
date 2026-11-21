@@ -44,7 +44,7 @@ public sealed class BrowserTabService : IBrowserTabService
     /// <param name="cdp">Finds the tab a window shows, or a tab by id.</param>
     /// <param name="tabs">The CDP side of the tab tools.</param>
     /// <param name="portOwners">Tells which process listens on a port given without a window.</param>
-    /// <param name="policy">The user's target policy; the server always passes it.</param>
+    /// <param name="policy">The user's target policy.</param>
     /// <param name="portLocator">Finds a window's own debug port; the server always passes it. Without it, cdpPort is needed.</param>
     /// <param name="session">The input session the gate checks for a pause; the server always passes it.</param>
     public BrowserTabService(
@@ -54,7 +54,7 @@ public sealed class BrowserTabService : IBrowserTabService
         ICdpService cdp,
         ICdpTabService tabs,
         ITcpPortOwnerResolver portOwners,
-        ITargetPolicy? policy = null,
+        ITargetPolicy policy,
         IDebugPortLocator? portLocator = null,
         IInputSession? session = null)
     {

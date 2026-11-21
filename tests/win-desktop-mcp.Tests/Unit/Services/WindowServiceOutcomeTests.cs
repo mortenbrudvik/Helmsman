@@ -34,7 +34,7 @@ public class WindowServiceOutcomeTests
     private int _onMonitor;
 
     private WindowService CreateSut() =>
-        new(_monitors.Object, _native.Object, Mock.Of<IHostGuard>(), stateChangeTimeout: TimeSpan.Zero);
+        new(_monitors.Object, _native.Object, Mock.Of<IHostGuard>(), Permissive.TargetPolicy, stateChangeTimeout: TimeSpan.Zero);
 
     public static TheoryData<string, WindowErrorCode> Placements => new()
     {
@@ -196,7 +196,7 @@ public class WindowServiceOutcomeTests
         var reads = 0;
         _native.Setup(n => n.ShowWindow(Window, It.IsAny<int>())).Returns(true);
         _native.Setup(n => n.IsIconic(Window)).Returns(() => ++reads > 3);
-        var sut = new WindowService(_monitors.Object, _native.Object, Mock.Of<IHostGuard>(), stateChangeTimeout: TimeSpan.FromSeconds(5));
+        var sut = new WindowService(_monitors.Object, _native.Object, Mock.Of<IHostGuard>(), Permissive.TargetPolicy, stateChangeTimeout: TimeSpan.FromSeconds(5));
 
         // Act & Assert
         sut.SetWindowState(Window, WindowStateRequest.Minimize).Success.Should().BeTrue();
@@ -306,7 +306,7 @@ public class WindowServiceOutcomeTests
         runner.Setup(r => r.Run(Hung, It.IsAny<Func<Win32CallResult>>())).Throws(new WindowNotRespondingException(Hung, "Window did not answer."));
         runner.Setup(r => r.Run(Broken, It.IsAny<Func<Win32CallResult>>())).Throws(new InvalidOperationException("Something broke."));
         _native.Setup(n => n.GetWindowRect(It.IsAny<nint>())).Returns((0, 0, 100, 100));
-        var sut = new WindowService(_monitors.Object, _native.Object, Mock.Of<IHostGuard>(), windowCalls: runner.Object);
+        var sut = new WindowService(_monitors.Object, _native.Object, Mock.Of<IHostGuard>(), Permissive.TargetPolicy, runner.Object);
 
         // Act
         var results = await sut.SetWindowBoundsBatchAsync(

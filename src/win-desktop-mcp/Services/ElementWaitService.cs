@@ -91,8 +91,8 @@ public sealed class ElementWaitService : IElementWaitService
     private readonly IWindowWaitService _windowWait;
     private readonly IUiaTree _tree;
     private readonly IUiaWorker _worker;
-    private readonly INativeWindowWrapper? _windows;
-    private readonly ITargetPolicy? _policy;
+    private readonly INativeWindowWrapper _windows;
+    private readonly ITargetPolicy _policy;
     private readonly IElementEventSource? _events;
     private readonly TimeProvider _time;
     private readonly Func<TimeSpan, CancellationToken, Task> _delay;
@@ -102,13 +102,12 @@ public sealed class ElementWaitService : IElementWaitService
     /// <param name="windowWait">Waits for the window of a selector (wait_for_window's machinery).</param>
     /// <param name="tree">Reads a ref's element (focus, toggle state, value).</param>
     /// <param name="worker">Runs those reads under a deadline.</param>
-    /// <param name="windows">The hung-window check before a ref's reads, and the application a stuck read is counted
-    /// against; without it neither is done.</param>
+    /// <param name="windows">The target policy's window reads, the hung-window check before a ref's reads, and the
+    /// application a stuck read is counted against.</param>
+    /// <param name="policy">The user's target policy, which refuses a wait on a window of an app it denies.</param>
     /// <param name="time">The clock; default the system clock.</param>
     /// <param name="delay">Waits between two checks; default Task.Delay on <paramref name="time"/>. Tests pass one that moves
     /// a manual clock.</param>
-    /// <param name="policy">The user's target policy, which refuses a wait on a window of an app it denies. The server always
-    /// passes it; without it (or without <paramref name="windows"/>) no window is refused.</param>
     /// <param name="events">The UI Automation events that wake a wait's sleep between two checks early (roadmap M3.F22);
     /// without it the waits only check on their back-off.</param>
     public ElementWaitService(
@@ -117,10 +116,10 @@ public sealed class ElementWaitService : IElementWaitService
         IWindowWaitService windowWait,
         IUiaTree tree,
         IUiaWorker worker,
-        INativeWindowWrapper? windows = null,
+        INativeWindowWrapper windows,
+        ITargetPolicy policy,
         TimeProvider? time = null,
         Func<TimeSpan, CancellationToken, Task>? delay = null,
-        ITargetPolicy? policy = null,
         IElementEventSource? events = null)
     {
         _search = search;
@@ -128,8 +127,8 @@ public sealed class ElementWaitService : IElementWaitService
         _windowWait = windowWait;
         _tree = tree;
         _worker = worker;
-        _windows = windows;
-        _policy = policy;
+        _windows = windows ?? throw new ArgumentNullException(nameof(windows));
+        _policy = policy ?? throw new ArgumentNullException(nameof(policy));
         _events = events;
         _time = time ?? TimeProvider.System;
         _delay = delay ?? ((wait, token) => Task.Delay(wait, _time, token));
@@ -447,7 +446,7 @@ public sealed class ElementWaitService : IElementWaitService
             // A window.handle that is no window (the window wait's InvalidHandle, confirmed with IsWindow) had closed before
             // the wait started: none of its elements is there
             if (gone && selector.Handle is { } handle && outcome.ErrorCode == nameof(WindowErrorCode.InvalidHandle) &&
-                service._windows?.IsWindow((nint)handle) != true)
+                !service._windows.IsWindow((nint)handle))
             {
                 _lastState = $"window {handle} is closed";
                 return Result(true) with
@@ -656,12 +655,12 @@ public sealed class ElementWaitService : IElementWaitService
             }
         }
 
-        /// <summary>The window's process and class when the wait picked it, or null without the window wrapper.</summary>
+        /// <summary>The window's process and class when the wait picked it, or null when they cannot be read.</summary>
         private (uint ProcessId, string? ClassName)? ReadWindowIdentity()
         {
             try
             {
-                return service._windows is { } windows ? (windows.GetWindowThreadProcessId(_window), windows.GetClassName(_window)) : null;
+                return (service._windows.GetWindowThreadProcessId(_window), service._windows.GetClassName(_window));
             }
             catch (Exception)
             {
@@ -671,16 +670,11 @@ public sealed class ElementWaitService : IElementWaitService
 
         /// <summary>
         /// Whether Win32 says the window closed: IsWindow is false, or the handle now names a window of another process or
-        /// class than the one the wait picked (a read that fails, PID 0 or an empty class, tells nothing). Without the window
-        /// wrapper, true: a failed lookup is taken as a closed window.
+        /// class than the one the wait picked (a read that fails, PID 0 or an empty class, tells nothing).
         /// </summary>
         private bool WindowClosed()
         {
-            if (service._windows is not { } windows)
-            {
-                return true;
-            }
-
+            var windows = service._windows;
             try
             {
                 if (!windows.IsWindow(_window))
