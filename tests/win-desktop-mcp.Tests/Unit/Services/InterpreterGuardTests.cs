@@ -273,16 +273,23 @@ public class InterpreterGuardTests
 
         // Services, drivers, network, accounts, policy and settings
         "sc", "net", "net1", "netsh", "route", "ipconfig", "pnputil", "bcdedit", "bcdboot", "reagentc", "dism", "wusa", "setx",
-        "auditpol", "secedit", "powercfg", "cmdkey", "mpcmdrun",
+        "auditpol", "secedit", "powercfg", "cmdkey", "mpcmdrun", "fltmc", "tscon", "dsregcmd",
 
         // Disks, files and permissions
         "cipher", "format", "diskpart", "mountvol", "fsutil", "vssadmin", "wbadmin", "wevtutil", "manage-bde", "takeown",
-        "icacls", "cacls", "robocopy", "xcopy", "sdelete", "tar",
+        "icacls", "cacls", "robocopy", "xcopy", "sdelete", "tar", "chkdsk", "convert", "mbr2gpt",
 
         // Programs that run, load or open what their arguments name
         "runas", "psexec", "psexec64", "paexec", "at", "winrs", "msdt", "infdefaultinstall", "odbcconf", "mavinject",
         "presentationhost", "syncappvpublishingserver", "appvlp", "atbroker", "pcwrun", "tttracer", "register-cimprovider",
-        "wuauclt", "mmc", "control", "hh",
+        "wuauclt", "wlrmdr", "mmc", "control", "hh",
+
+        // The programs that open a refused file type when named with it (mstsc x.rdp, AutoHotkey64 x.ahk, javaws x.jnlp)
+        "mstsc", "autohotkey", "autohotkeyu", "autohotkeya", "autohotkeyux", "autoit3", "autoit3_x64", "javaws", "vstoinstaller",
+        "appinstaller", "provtool", "keyhh", "msrdc",
+
+        // 64-bit builds, matched by their own names (system tools are matched exactly, without a version)
+        "nc64", "pskill64", "pssuspend64", "psshutdown64", "sdelete64",
 
         // Download, upload and remote access
         "curl", "wget", "certutil", "certreq", "bitsadmin", "ftp", "tftp", "finger", "esentutl", "expand", "extrac32",
@@ -323,6 +330,7 @@ public class InterpreterGuardTests
     [InlineData("manage-bde", "-off")]
     [InlineData("ssh", "host")]
     [InlineData("curl", "-T")]
+    [InlineData("format", "C:")]
     public void Check_ASystemToolsName_IsReadRobustly(string tool, string argument)
     {
         string[] forms =
@@ -330,6 +338,8 @@ public class InterpreterGuardTests
             tool,
             tool.ToUpperInvariant(),
             $"{tool}.exe",
+            $"{tool}.com",
+            $@"C:\Windows\System32\{tool.ToUpperInvariant()}.COM",
             $"{tool.ToUpperInvariant()}.EXE",
             $@"C:\Windows\System32\{tool}.exe",
             $@"C:\WINDOWS\SYSTEM32\{tool.ToUpperInvariant()}.EXE",
@@ -394,6 +404,76 @@ public class InterpreterGuardTests
 
         // Assert - the entry that matched is the one the message names
         refusal!.Message.Should().Contain($"({shown})");
+    }
+
+    [Theory]
+    [InlineData(@"C:\Program Files (x86)\StarCraft II\Support64\SC2.exe")]
+    [InlineData(@"C:\Games\at2.exe")]
+    [InlineData(@"C:\Tools\net5.exe")]
+    [InlineData(@"C:\Tools\nc7.exe")]
+    [InlineData(@"C:\Tools\reg2.exe")]
+    [InlineData(@"C:\Tools\taskkill2.exe")]
+    [InlineData(@"C:\Tools\control3.exe")]
+    public void Check_ASystemToolsNameWithDigitsAfterIt_IsAnotherProgram_AndAllowed(string program)
+    {
+        // Act - a version is read off only the names that ship versioned (shells, script hosts, runtimes, package managers)
+        var refusal = CreateSut().Check(program, program, ["x"]);
+
+        // Assert
+        refusal.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("python3.12", "python")]
+    [InlineData("lua54", "lua")]
+    [InlineData("go1.22", "go")]
+    [InlineData("pip3", "pip")]
+    [InlineData("ubuntu2204", "ubuntu")]
+    [InlineData("busybox64", "busybox")]
+    [InlineData("AutoHotkey64", "autohotkey")]
+    [InlineData("AutoHotkeyU64", "autohotkeyu")]
+    [InlineData("AutoHotkeyA32", "autohotkeya")]
+    public void Check_AVersionedRuntimeOrScriptHost_IsStillRefused(string program, string shown)
+    {
+        // Act
+        var refusal = CreateSut().Check(program, $@"C:\Tools\{program}.exe", ["x"]);
+
+        // Assert
+        refusal!.ErrorCode.Should().Be(nameof(LaunchErrorCode.InterpreterWithArguments));
+        refusal.Message.Should().Contain($"({shown})");
+    }
+
+    [Theory]
+    [InlineData("mstsc", @"C:\Users\me\Downloads\work.rdp")]
+    [InlineData("mstsc", "/v:attacker.example.com")]
+    [InlineData("AutoHotkey64", @"C:\Users\me\Downloads\x.ahk")]
+    [InlineData("AutoIt3", @"C:\Users\me\Downloads\x.au3")]
+    [InlineData("AutoIt3_x64", @"C:\Users\me\Downloads\x.au3")]
+    [InlineData("javaws", @"C:\Users\me\Downloads\app.jnlp")]
+    [InlineData("VSTOInstaller", @"C:\Users\me\Downloads\addin.vsto")]
+    [InlineData("AppInstaller", @"C:\Users\me\Downloads\app.msix")]
+    [InlineData("provtool", @"C:\Users\me\Downloads\setup.ppkg")]
+    [InlineData("keyhh", @"C:\Users\me\Downloads\help.chm")]
+    [InlineData("msrdc", @"C:\Users\me\Downloads\work.rdp")]
+    [InlineData("wusa", @"C:\Users\me\Downloads\kb.msu")]
+    [InlineData("msdt", @"/cab C:\Users\me\Downloads\fix.diagcab")]
+    public void Check_TheProgramARefusedFileTypeOpensWith_GivenTheFile_IsRefused(string handler, string argument)
+    {
+        // Act - naming the handler with the file must not get around refusing the file
+        var refusal = CreateSut().Check(handler, $@"C:\Program Files\Handler\{handler}.exe", [argument]);
+
+        // Assert
+        refusal!.ErrorCode.Should().Be(nameof(LaunchErrorCode.InterpreterWithArguments));
+    }
+
+    [Fact]
+    public void Check_ControlWithArguments_PointsToSettingsPages()
+    {
+        // Act
+        var refusal = CreateSut().Check("control", @"C:\Windows\System32\control.exe", ["printers"]);
+
+        // Assert - the next step: a Settings page opens by its ms-settings: URI
+        refusal!.Message.Should().Contain("ms-settings:");
     }
 
     [Theory]

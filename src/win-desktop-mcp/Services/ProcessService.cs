@@ -1036,8 +1036,8 @@ public class ProcessService : IProcessService
     /// <item>Bare names are resolved to an absolute path by <see cref="IExecutableResolver"/>, never from
     /// the working directory, and the resolved path is what gets started.</item>
     /// <item>Arguments are quoted with the Windows command-line rules (<see cref="CommandLineBuilder"/>).</item>
-    /// <item>The server does not run commands or scripts for the agent (roadmap M3.F8): a command interpreter or script
-    /// host with arguments, and a script file (a batch file included), are refused by <see cref="InterpreterGuard"/>.</item>
+    /// <item>The server does not run commands or scripts for the agent (roadmap M3.F8): an interpreter or system tool with
+    /// arguments, and a script, installer or shortcut file, are refused by <see cref="InterpreterGuard"/>.</item>
     /// <item>When the target cannot be verified to be a native executable (a URI, document or unresolved name, which
     /// may be handed to cmd.exe), arguments containing cmd.exe metacharacters are rejected, because cmd.exe
     /// ignores \" escaping and expands %VAR% even inside quotes.</item>

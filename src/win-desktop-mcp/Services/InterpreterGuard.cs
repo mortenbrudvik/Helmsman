@@ -17,14 +17,17 @@ namespace WinDesktopMcp.Services;
 /// Both the name the agent asked for and the file the resolver found are checked, so an App Paths entry that maps
 /// another name to an interpreter counts. A name is read the way Windows reads it: quotes, a file: URI, forward slashes,
 /// letter case, a missing .exe, trailing dots and spaces, an alternate data stream (cmd.exe::$DATA) and an 8.3 short name
-/// (POWERS~1.EXE, expanded from the file system) all lead to the same program. A version after the name counts as the
-/// name (python3.12, ubuntu2204, pip3.12); a name that ends in digits itself (net1, psexec64, regedt32) is listed as it is.
+/// (POWERS~1.EXE, expanded from the file system) all lead to the same program. For a shell, script host, runtime or
+/// package manager a version after the name counts as the name (python3.12, ubuntu2204, pip3.12); every other program is
+/// matched by its exact name, so SC2.exe is not sc, and a name that ends in digits itself (net1, psexec64, regedt32, nc64)
+/// is listed as it is.
 /// <para>
 /// A shortcut (.lnk, .url, .pif) the agent names, or an App Paths entry points to, is refused as a file, since its target
 /// is not read here. An installed app launched by its name or its shell:AppsFolder entry is not affected: the server
 /// starts or checks the program its Start menu shortcut points to (PKEY_Link_TargetParsingPath), never the .lnk, so that
 /// program gets these checks. One whose shortcut opens a refused file type (Windows Tools' consoles open .msc files) is
-/// refused like the file. A bare name never resolves to a shortcut (ExecutableResolver tries .com, .exe, .bat and .cmd).
+/// refused like the file. The file-system search for a bare name never finds a shortcut (ExecutableResolver tries .com,
+/// .exe, .bat and .cmd); only an App Paths entry can resolve a bare name to one.
 /// </para>
 /// <para>
 /// This is a list of names, not a sandbox. It does not catch: a renamed copy of a listed program; a program missing from the
@@ -38,61 +41,81 @@ namespace WinDesktopMcp.Services;
 /// </remarks>
 public sealed partial class InterpreterGuard
 {
-    /// <summary>
-    /// The programs refused with arguments, by file name without .exe, in lower case: command shells and terminals, script
-    /// hosts, language runtimes and package managers, programs that load, run or open the code or file their command line
-    /// names, and native tools whose arguments destroy data, change the system, kill or control processes and services, or
-    /// move data off the machine (shutdown, taskkill, reg, sc, net, cipher, curl, robocopy, ssh, git, ...). The name
-    /// predates the tools: the rule is "its arguments can run code or do damage", whatever the program is called.
-    /// </summary>
-    public static readonly IReadOnlySet<string> Interpreters = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-    {
+    // The programs that ship with a version after their name (python3.12, lua54, go1.22, ubuntu2204, pip3.12,
+    // AutoHotkeyU64): matched by themselves or with digits and dots after them
+    private static readonly string[] VersionedPrograms =
+    [
         // Command shells, consoles and terminals (WSL distributions start a shell too; wslconfig /unregister deletes one)
         "cmd", "powershell", "powershell_ise", "pwsh", "bash", "sh", "wsl", "wslg", "conhost", "wt", "windowsterminal",
         "ubuntu", "debian", "kali", "zsh", "fish", "nu", "ksh", "dash", "tcsh", "csh", "busybox", "mintty", "git-bash",
         "git-cmd", "wslconfig",
 
-        // Script hosts
-        "wscript", "cscript", "mshta", "scriptrunner",
+        // Script hosts (AutoHotkey's and AutoIt's builds are named apart: AutoHotkeyU64 is autohotkeyu, AutoIt3_x64 itself)
+        "wscript", "cscript", "mshta", "scriptrunner", "autohotkey", "autohotkeyu", "autohotkeya", "autohotkeyux", "autoit3",
+        "autoit3_x64",
 
         // Language runtimes and interactive compilers
         "python", "pythonw", "py", "pyw", "node", "deno", "java", "javaw", "ruby", "rubyw", "perl", "php", "dotnet", "bun",
         "go", "cargo", "julia", "lua", "rscript", "jshell", "csi", "fsi",
 
-        // Package managers and containers, which install and run what their arguments name
-        "winget", "choco", "pip", "pipx", "uv", "uvx", "conda", "pnpm", "docker", "podman", "kubectl",
+        // Package managers, which install and run what their arguments name
+        "winget", "choco", "pip", "pipx", "uv", "uvx", "conda", "pnpm"
+    ];
+
+    // The other programs, matched by their exact name only, so that SC2.exe or nc7.exe is not taken for sc or nc; a
+    // 64-bit build is listed by its own name (psexec64, nc64)
+    private static readonly string[] ExactPrograms =
+    [
+        // Containers
+        "docker", "podman", "kubectl",
 
         // System programs that load or run the code their arguments name
         "rundll32", "regsvr32", "msiexec", "cmstp", "msbuild", "installutil", "regasm", "regsvcs", "forfiles", "wmic",
         "schtasks", "pcalua", "runas", "psexec", "psexec64", "paexec", "at", "winrs", "msdt", "infdefaultinstall", "odbcconf",
         "mavinject", "presentationhost", "syncappvpublishingserver", "appvlp", "atbroker", "pcwrun", "tttracer",
-        "register-cimprovider", "wuauclt",
+        "register-cimprovider", "wuauclt", "wlrmdr",
 
-        // Programs that open the file their arguments name (a .cpl, .msc, .chm or .reg) with the code inside it
-        "mmc", "control", "hh",
+        // Programs that open the file their arguments name with the code inside it, so that naming them with a refused file
+        // type (control x.cpl, mmc x.msc, hh or keyhh x.chm, mstsc or msrdc x.rdp, javaws x.jnlp, VSTOInstaller x.vsto,
+        // AppInstaller x.msix, provtool x.ppkg) does not get around refusing the file; mstsc /v:host also hands the drives
+        // to another computer
+        "mmc", "control", "hh", "keyhh", "mstsc", "msrdc", "javaws", "vstoinstaller", "appinstaller", "provtool",
 
         // Power and sessions
-        "shutdown", "logoff", "tsdiscon", "rwinsta", "psshutdown",
+        "shutdown", "logoff", "tsdiscon", "tscon", "rwinsta", "psshutdown", "psshutdown64",
 
         // Processes (kill_process has the protected-process list, the host guard, the target policy and confirmation)
-        "taskkill", "tskill", "pskill", "pssuspend",
+        "taskkill", "tskill", "pskill", "pskill64", "pssuspend", "pssuspend64",
 
         // The registry
         "reg", "regedit", "regedt32", "regini",
 
-        // Services, drivers, boot, network, accounts, policy and settings
-        "sc", "net", "net1", "netsh", "route", "ipconfig", "pnputil", "bcdedit", "bcdboot", "reagentc", "dism", "wusa", "setx",
-        "auditpol", "secedit", "powercfg", "cmdkey", "mpcmdrun",
+        // Services, drivers, filters, boot, network, accounts, device join, policy and settings
+        "sc", "net", "net1", "netsh", "route", "ipconfig", "pnputil", "fltmc", "bcdedit", "bcdboot", "reagentc", "dism", "wusa",
+        "setx", "auditpol", "secedit", "powercfg", "cmdkey", "mpcmdrun", "dsregcmd",
 
-        // Disks, files and permissions: wipe, format, encrypt, delete, overwrite or take over
-        "cipher", "format", "diskpart", "mountvol", "fsutil", "vssadmin", "wbadmin", "wevtutil", "manage-bde", "takeown",
-        "icacls", "cacls", "robocopy", "xcopy", "sdelete", "tar",
+        // Disks, files and permissions: wipe, format, convert, encrypt, delete, overwrite or take over
+        "cipher", "format", "diskpart", "mountvol", "fsutil", "chkdsk", "convert", "mbr2gpt", "vssadmin", "wbadmin", "wevtutil",
+        "manage-bde", "takeown", "icacls", "cacls", "robocopy", "xcopy", "sdelete", "sdelete64", "tar",
 
         // Download, upload and remote access (git runs commands from its arguments too: git -c alias.x=!cmd x)
         "curl", "wget", "certutil", "certreq", "bitsadmin", "ftp", "tftp", "finger", "esentutl", "expand", "extrac32", "replace",
-        "cmdl32", "desktopimgdownldr", "ssh", "scp", "sftp", "sshd", "rsync", "plink", "pscp", "psftp", "nc", "ncat", "netcat",
-        "rclone", "azcopy", "aws", "gh", "git"
-    };
+        "cmdl32", "desktopimgdownldr", "ssh", "scp", "sftp", "sshd", "rsync", "plink", "pscp", "psftp", "nc", "nc64", "ncat",
+        "netcat", "rclone", "azcopy", "aws", "gh", "git"
+    ];
+
+    /// <summary>
+    /// The programs refused with arguments, by file name without .exe, in lower case: command shells and terminals, script
+    /// hosts, language runtimes and package managers, programs that load, run or open the code or file their command line
+    /// names, and native tools whose arguments destroy data, change the system, kill or control processes and services, or
+    /// move data off the machine (shutdown, taskkill, reg, sc, net, cipher, curl, robocopy, ssh, git, ...). The name
+    /// predates the tools: the rule is "its arguments can run code or do damage", whatever the program is called. Shells,
+    /// script hosts, runtimes and package managers also match with a version after the name; the rest only exactly.
+    /// </summary>
+    public static readonly IReadOnlySet<string> Interpreters =
+        new HashSet<string>(VersionedPrograms.Concat(ExactPrograms), StringComparer.OrdinalIgnoreCase);
+
+    private static readonly HashSet<string> Versioned = new(VersionedPrograms, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// The file types refused as a launch target, because Windows hands them to a program that runs, installs or opens what
@@ -175,8 +198,10 @@ public sealed partial class InterpreterGuard
             return new InterpreterRefusal(nameof(LaunchErrorCode.InterpreterWithArguments),
                 $"{shown} is a command interpreter, script host or system tool whose arguments run code, change the system or " +
                 $"send data ({interpreter}), and launch_application does not start one with arguments: {NoCommands} Ask the " +
-                "user to run the command; do not type it into a console or terminal " +
-                "either. Started without arguments it opens as usual. Nothing was started.");
+                "user to run the command; do not type it into a console or terminal either. Started without arguments it opens " +
+                "as usual." +
+                (interpreter == "control" ? " For a Settings page, launch its ms-settings: URI instead (ms-settings:printers)." : "") +
+                " Nothing was started.");
         }
 
         if (programs.Any(program => ScriptOpeners.Contains(program)))
@@ -324,8 +349,9 @@ public sealed partial class InterpreterGuard
     }
 
     /// <summary>
-    /// The entry of <see cref="Interpreters"/> a program name stands for, by itself (rundll32) or without a version after
-    /// it (python3.12, ubuntu2204); null for any other program.
+    /// The entry of <see cref="Interpreters"/> a program name stands for, by itself (rundll32) or, for a shell, script host,
+    /// runtime or package manager, without a version after it (python3.12, ubuntu2204); null for any other program (SC2 is
+    /// not sc).
     /// </summary>
     private static string? InterpreterOf(string programName)
     {
@@ -333,7 +359,7 @@ public sealed partial class InterpreterGuard
             return programName;
 
         var unversioned = programName.TrimEnd('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.');
-        return unversioned.Length > 0 && Interpreters.Contains(unversioned) ? unversioned : null;
+        return unversioned.Length > 0 && Versioned.Contains(unversioned) ? unversioned : null;
     }
 
     private static bool IsFullyQualified(string path)
