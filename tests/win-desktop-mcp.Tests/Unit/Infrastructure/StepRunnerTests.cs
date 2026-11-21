@@ -752,6 +752,63 @@ public class StepRunnerTests
     }
 
     [Fact]
+    public async Task AWaitStepsTimeoutMsAsAStringOfDigits_IsTheWaitItAsks_AndItsTimeoutLetsAnOptionalStepFail()
+    {
+        // Arrange - the tool binds "5000" as 5000 (BoundInteger), so the run has not cut it; the wait runs its 5 s and gives up
+        var clock = new ManualTimerClock();
+        _dispatcher.OnCall = call => clock.Advance(TimeSpan.FromMilliseconds(BoundInteger.Read(call.Args["timeoutMs"]) ?? 0));
+        _dispatcher.Failures["wait_for_element"] = "WaitTimedOut";
+
+        // Act
+        var run = await RunAsync(clock,
+            Step(StepTool.WaitForElement, """{ "automationId": "tip", "timeoutMs": "5000" }""", optional: true), Step(StepTool.FocusWindow));
+
+        // Assert
+        BoundInteger.Read(_dispatcher.Calls.First().Args["timeoutMs"]).Should().Be(5_000);
+        run.Result.Success.Should().BeTrue();
+        run.Result.StoppedBy.Should().BeNull("the wait the step asked for ran out, not the run's time");
+        run.Result.Steps.Select(s => s.Status).Should().Equal(StepStatus.Failed, StepStatus.Ok);
+    }
+
+    [Theory]
+    [InlineData("\"abc\"")]
+    [InlineData("1.5")]
+    [InlineData("true")]
+    public async Task AWaitStepsTimeoutMsThatItsToolDoesNotBind_ReachesTheTool_AndFailsTheStepAsADirectCallWould(string timeoutMs)
+    {
+        // Arrange - the fake refuses what the tool's binder would not read as an integer, as the real call does
+        _dispatcher.OnCall = call =>
+        {
+            if (call.Tool == "wait_for_element" && BoundInteger.Read(call.Args["timeoutMs"]) is null)
+            {
+                _dispatcher.Failures["wait_for_element"] = "InvalidArguments";
+            }
+        };
+
+        // Act
+        var run = await RunAsync(new ManualTimerClock(), Step(StepTool.WaitForElement, $$"""{ "automationId": "tip", "timeoutMs": {{timeoutMs}} }"""),
+            Step(StepTool.FocusWindow));
+
+        // Assert - passed on as given, not replaced by the time left; an ordinary step failure, not the run's timeout
+        _dispatcher.Calls.First().Args["timeoutMs"]!.ToJsonString().Should().Be(timeoutMs);
+        run.Result.StoppedBy.Should().Be(StepStopReason.StepFailed);
+        run.Result.ErrorCode.Should().Be("InvalidArguments");
+        run.Result.Steps.Select(s => s.Status).Should().Equal(StepStatus.Failed, StepStatus.Skipped);
+    }
+
+    [Fact]
+    public async Task AWaitStepsTimeoutMsOverItsToolsMaximum_ReachesTheTool_UnlessTheRunHasLessTimeLeft()
+    {
+        // A run with more than 70 s left passes it on, for the tool to refuse (InvalidArguments, max 60000); on the default
+        // budget the run has less left, and cuts it as any wait longer than that
+        await RunAsync(TimeSpan.FromSeconds(60) + TimeSpan.FromSeconds(30),
+            Step(StepTool.WaitForElement, """{ "automationId": "tip", "timeoutMs": 70000 }"""));
+        await RunAsync(new ManualTimerClock(), Step(StepTool.WaitForElement, """{ "automationId": "tip", "timeoutMs": 70000 }"""));
+
+        Timeouts().Should().Equal(70_000, StepRunner.DefaultMaxDurationMs - 250);
+    }
+
+    [Fact]
     public async Task AWaitTheRunCutToItsTimeLeft_ThatTimesOut_StopsTheRunAsTimedOut_EvenWhenOptional()
     {
         // Arrange - the first step takes 25 s of the 30, so the wait gets 5 s less the margin instead of its default 10 s

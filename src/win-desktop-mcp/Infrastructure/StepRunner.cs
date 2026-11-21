@@ -782,19 +782,15 @@ public sealed partial class StepRunner
             arguments["method"] = "unicode";
         }
 
-        // Missing (a null was left out above): the tool's own default, which the run cuts only when it has less time left,
-        // so only a wait the run really shortened is the run's timeout when it runs out. A value that is no whole number is
-        // replaced by the time left, as one longer than it.
+        // The wait the step asks for, read as its tool binds it (BoundInteger: a string of digits too); missing (a null was left
+        // out above), the tool's own default. The run cuts it only when it has less time left, so only a wait the run really
+        // shortened is the run's timeout when it runs out. A value the tool does not bind is passed on as given, uncut, for
+        // the tool to refuse as it refuses a direct call's (InvalidArguments)
         var waitCut = false;
         if (WaitTools.TryGetValue(step.Tool, out var defaultTimeoutMs))
         {
             var leftMs = Math.Max(0, (long)left.TotalMilliseconds - WaitMarginMs);
-            var asked = arguments["timeoutMs"] switch
-            {
-                null => defaultTimeoutMs,
-                JsonValue given when given.TryGetValue<long>(out var value) => value,
-                _ => long.MaxValue
-            };
+            var asked = arguments["timeoutMs"] is { } given ? BoundInteger.Read(given) : defaultTimeoutMs;
             if (asked > leftMs)
             {
                 arguments["timeoutMs"] = leftMs;
