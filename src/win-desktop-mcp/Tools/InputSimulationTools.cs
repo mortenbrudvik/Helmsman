@@ -90,22 +90,19 @@ public class InputSimulationTools
 
     private readonly IInputSimulationService _inputService;
     private readonly IWindowService? _windowService;
-    private readonly ICoordinateSpaceResolver? _coordinates;
+    private readonly ICoordinateSpaceResolver _coordinates;
     private readonly IDesktopStateService? _desktopState;
 
     /// <param name="inputService">The guarded input.</param>
+    /// <param name="coordinates">Converts window, client and image points to screen points (roadmap M3.11).</param>
     /// <param name="windowService">Resolves the window selector (roadmap M2.4); the server always passes it.</param>
-    /// <param name="coordinates">
-    /// Converts window, client and image points to screen points (roadmap M3.11); the server always passes it. Without it
-    /// only screen points can be sent.
-    /// </param>
     /// <param name="desktopState">get_desktop_state's observation, for observe (roadmap M3.F32); the server always passes it.</param>
-    public InputSimulationTools(IInputSimulationService inputService, IWindowService? windowService = null,
-        ICoordinateSpaceResolver? coordinates = null, IDesktopStateService? desktopState = null)
+    public InputSimulationTools(IInputSimulationService inputService, ICoordinateSpaceResolver coordinates,
+        IWindowService? windowService = null, IDesktopStateService? desktopState = null)
     {
         _inputService = inputService;
         _windowService = windowService;
-        _coordinates = coordinates;
+        _coordinates = coordinates ?? throw new ArgumentNullException(nameof(coordinates));
         _desktopState = desktopState;
     }
 
@@ -598,8 +595,7 @@ public class InputSimulationTools
 
         var spaceName = ToolEnum<CoordinateSpace>.Name(effective);
         var requested = new RequestedPoint(x, y, spaceName, effective == CoordinateSpace.Image ? captureId : null);
-        var coordinates = _coordinates
-            ?? throw new InvalidOperationException("Window, client and image points need the coordinate resolver; the server always registers it.");
+        var coordinates = _coordinates;
 
         PointResolution point;
         if (effective == CoordinateSpace.Image)

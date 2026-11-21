@@ -54,7 +54,7 @@ public class AppLauncherTools
 
     private readonly IProcessService _processService;
     private readonly IWindowService? _windowService;
-    private readonly IInputSession? _session;
+    private readonly IInputSession _session;
     private readonly TimeSpan _answerTimeout;
     private readonly TimeSpan? _gateWaitTimeout;
     private readonly ILaunchPlacementService? _placementService;
@@ -73,8 +73,8 @@ public class AppLauncherTools
     /// <param name="logger">Logs a placement that throws, with its exception (review F5); the server passes it.</param>
     public AppLauncherTools(
         IProcessService processService,
+        IInputSession session,
         IWindowService? windowService = null,
-        IInputSession? session = null,
         TimeSpan? answerTimeout = null,
         TimeSpan? gateWaitTimeout = null,
         ILaunchPlacementService? placementService = null,
@@ -84,7 +84,7 @@ public class AppLauncherTools
     {
         _processService = processService;
         _windowService = windowService;
-        _session = session;
+        _session = session ?? throw new ArgumentNullException(nameof(session));
         _answerTimeout = answerTimeout ?? UserConfirmation.DefaultAnswerTimeout;
         _gateWaitTimeout = gateWaitTimeout;
         _placementService = placementService;

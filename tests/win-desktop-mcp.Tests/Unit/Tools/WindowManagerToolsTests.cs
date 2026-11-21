@@ -17,7 +17,7 @@ public class WindowManagerToolsTests
         _mockForegroundService = new Mock<IForegroundService>(MockBehavior.Strict);
     }
 
-    private WindowManagerTools CreateSut() => new WindowManagerTools(_mockWindowService.Object, _mockForegroundService.Object);
+    private WindowManagerTools CreateSut() => new WindowManagerTools(_mockWindowService.Object, _mockForegroundService.Object, Permissive.Session);
 
     #region SetWindowBounds Tests
 

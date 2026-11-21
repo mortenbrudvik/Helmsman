@@ -38,7 +38,7 @@ public class InputSimulationServiceTests
     }
 
     private InputSimulationService CreateSut() =>
-        new InputSimulationService(_mockMonitorService.Object, _mockInputWrapper.Object, _guard.Object, new InputSession(_mockInputWrapper.Object));
+        new InputSimulationService(_mockMonitorService.Object, _mockInputWrapper.Object, _guard.Object, new InputSession(_mockInputWrapper.Object), Permissive.PasteGuard, Permissive.Takeover);
 
     private void SetupSingleMonitor()
     {
@@ -529,8 +529,9 @@ public class InputSimulationServiceTests
     private readonly Mock<INativeSystemInfoWrapper> _systemInfo = new();
 
     private InputSimulationService CreateSutWithSystemInfo(IClipboardPasteGuard? pasteGuard = null, IClipboardOrigin? clipboardOrigin = null) =>
-        new(_mockMonitorService.Object, _mockInputWrapper.Object, _guard.Object, new InputSession(_mockInputWrapper.Object),
-            systemInfo: _systemInfo.Object, pasteGuard: pasteGuard, clipboardOrigin: clipboardOrigin);
+        new(_mockMonitorService.Object, _mockInputWrapper.Object, _guard.Object,
+            new InputSession(_mockInputWrapper.Object), pasteGuard ?? Permissive.PasteGuard, Permissive.Takeover,
+            systemInfo: _systemInfo.Object, clipboardOrigin: clipboardOrigin);
 
     [Fact]
     public void Click_WithSwappedButtons_SendsTheRightButton_WhichWindowsSwapsBackToTheUsersPrimary()
@@ -662,7 +663,7 @@ public class InputSimulationServiceTests
         var input = new FakeInputWrapper();
         var monitors = TestDataFactory.CreateMockMonitorService();
         input.BeforeSend = _ => input.Clip = (0, 0, 400, 400);
-        var sut = new InputSimulationService(monitors.Object, input, _guard.Object, new InputSession(input));
+        var sut = new InputSimulationService(monitors.Object, input, _guard.Object, new InputSession(input), Permissive.PasteGuard, Permissive.Takeover);
 
         // Act
         var result = sut.Click(500, 300);
@@ -681,7 +682,7 @@ public class InputSimulationServiceTests
     {
         var input = new FakeInputWrapper();
         input.BeforeSend = _ => input.Clip = (0, 0, 400, 400);
-        var sut = new InputSimulationService(TestDataFactory.CreateMockMonitorService().Object, input, _guard.Object, new InputSession(input));
+        var sut = new InputSimulationService(TestDataFactory.CreateMockMonitorService().Object, input, _guard.Object, new InputSession(input), Permissive.PasteGuard, Permissive.Takeover);
 
         var result = sut.DoubleClick(500, 300);
 
@@ -712,7 +713,7 @@ public class InputSimulationServiceTests
     {
         // Arrange - SendInput stops after the first click's press: the button would stay down
         var input = new FakeInputWrapper { Insert = (_, call) => call == 0 ? 2u : uint.MaxValue };
-        var sut = new InputSimulationService(TestDataFactory.CreateMockMonitorService().Object, input, _guard.Object, new InputSession(input));
+        var sut = new InputSimulationService(TestDataFactory.CreateMockMonitorService().Object, input, _guard.Object, new InputSession(input), Permissive.PasteGuard, Permissive.Takeover);
 
         // Act
         var result = sut.DoubleClick(500, 300);
@@ -730,7 +731,7 @@ public class InputSimulationServiceTests
     public void DoubleClick_FirstClickInserted_SaysOneOfTwo()
     {
         var input = new FakeInputWrapper { Insert = (_, _) => 3u };
-        var sut = new InputSimulationService(TestDataFactory.CreateMockMonitorService().Object, input, _guard.Object, new InputSession(input));
+        var sut = new InputSimulationService(TestDataFactory.CreateMockMonitorService().Object, input, _guard.Object, new InputSession(input), Permissive.PasteGuard, Permissive.Takeover);
 
         var result = sut.DoubleClick(500, 300);
 
@@ -743,7 +744,7 @@ public class InputSimulationServiceTests
     {
         var input = new FakeInputWrapper();
         input.BeforeSend = _ => input.Clip = (0, 0, 400, 400);
-        var sut = new InputSimulationService(TestDataFactory.CreateMockMonitorService().Object, input, _guard.Object, new InputSession(input));
+        var sut = new InputSimulationService(TestDataFactory.CreateMockMonitorService().Object, input, _guard.Object, new InputSession(input), Permissive.PasteGuard, Permissive.Takeover);
 
         var result = sut.Scroll(500, 300, deltaY: 2, deltaX: 0, InputTarget.None, false, default);
 
@@ -756,7 +757,7 @@ public class InputSimulationServiceTests
     {
         var input = new FakeInputWrapper();
         input.MovePointer(5, 5);
-        var sut = new InputSimulationService(TestDataFactory.CreateMockMonitorService().Object, input, _guard.Object, new InputSession(input));
+        var sut = new InputSimulationService(TestDataFactory.CreateMockMonitorService().Object, input, _guard.Object, new InputSession(input), Permissive.PasteGuard, Permissive.Takeover);
 
         var result = sut.MoveMouse(1919, 1079);
 
@@ -1118,8 +1119,8 @@ public class InputSimulationServiceTests
     }
 
     private InputSimulationService CreateSut(IClipboardPasteGuard pasteGuard) =>
-        new(_mockMonitorService.Object, _mockInputWrapper.Object, _guard.Object, new InputSession(_mockInputWrapper.Object),
-            pasteGuard: pasteGuard);
+        new(_mockMonitorService.Object, _mockInputWrapper.Object, _guard.Object,
+            new InputSession(_mockInputWrapper.Object), pasteGuard, Permissive.Takeover);
 
     [Fact]
     public async Task SendKeys_ThatPaste_AreCheckedRightBeforeTheyAreSent_AndRefusedWithPasteNotAllowed()

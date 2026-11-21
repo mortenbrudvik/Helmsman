@@ -30,8 +30,8 @@ public class LayoutServiceTests : IDisposable
         _mockMonitorService.Object,
         _mockProcessService.Object,
         _mockForegroundService.Object,
-        _testLayoutPath,
-        TestDataFactory.CreateInstantLaunchPlacement(_mockWindowService.Object, _mockForegroundService.Object));
+        TestDataFactory.CreateInstantLaunchPlacement(_mockWindowService.Object, _mockForegroundService.Object),
+        _testLayoutPath);
 
     public void Dispose()
     {

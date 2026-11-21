@@ -16,7 +16,7 @@ public class AppLauncherToolsTests
         _mockProcessService = new Mock<IProcessService>();
     }
 
-    private AppLauncherTools CreateSut() => new AppLauncherTools(_mockProcessService.Object);
+    private AppLauncherTools CreateSut() => new AppLauncherTools(_mockProcessService.Object, Permissive.Session);
 
     #region LaunchApplication Tests
 
@@ -854,7 +854,7 @@ public class AppLauncherToolsTests
             [new InstalledApp("Calculator", "Microsoft.WindowsCalculator_8wekyb3d8bbwe!App", true, null)], 3, true, false));
 
         // Act
-        var result = new AppLauncherTools(_mockProcessService.Object, installedApps: _installedApps.Object).ListInstalledApps("calc", 5);
+        var result = new AppLauncherTools(_mockProcessService.Object, Permissive.Session, installedApps: _installedApps.Object).ListInstalledApps("calc", 5);
 
         // Assert
         result.Apps.Should().Equal(new InstalledAppDto("Calculator", "Microsoft.WindowsCalculator_8wekyb3d8bbwe!App", true));
@@ -868,7 +868,7 @@ public class AppLauncherToolsTests
     {
         _installedApps.Setup(i => i.List(null, 25)).Returns(new InstalledAppsListing([], 0, false, Unreadable: true));
 
-        var result = new AppLauncherTools(_mockProcessService.Object, installedApps: _installedApps.Object).ListInstalledApps();
+        var result = new AppLauncherTools(_mockProcessService.Object, Permissive.Session, installedApps: _installedApps.Object).ListInstalledApps();
 
         result.Apps.Should().BeEmpty();
         result.Warning.Should().Contain("could not be read");
@@ -879,7 +879,7 @@ public class AppLauncherToolsTests
     [InlineData(201)]
     public void ListInstalledApps_ALimitOutOfRange_IsInvalidArguments(int limit)
     {
-        var act = () => new AppLauncherTools(_mockProcessService.Object, installedApps: _installedApps.Object).ListInstalledApps(limit: limit);
+        var act = () => new AppLauncherTools(_mockProcessService.Object, Permissive.Session, installedApps: _installedApps.Object).ListInstalledApps(limit: limit);
 
         act.Should().Throw<ToolErrorException>().Which.ErrorCode.Should().Be(ToolErrorReporting.InvalidArgumentsErrorCode);
     }

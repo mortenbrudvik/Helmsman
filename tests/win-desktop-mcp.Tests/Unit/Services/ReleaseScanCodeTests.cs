@@ -92,7 +92,8 @@ public class ReleaseScanCodeTests
         _input.Insert = (events, call) => call == 0 ? 4u : (uint)events.Count;
         var session = new InputSession(_input);
         var sut = new InputSimulationService(TestDataFactory.CreateMockMonitorService().Object, _input,
-            TestDataFactory.CreateAllowingInputGuard().Object, session, keyboardLayout: new FakeKeyboardLayoutWrapper());
+            TestDataFactory.CreateAllowingInputGuard().Object, session, Permissive.PasteGuard, Permissive.Takeover,
+            keyboardLayout: new FakeKeyboardLayoutWrapper());
 
         // Act
         var result = await sut.SendKeysAsync("^(ab)c");

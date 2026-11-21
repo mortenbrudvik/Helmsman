@@ -79,7 +79,7 @@ public class WindowManagerTools
 
     private readonly IWindowService _windowService;
     private readonly IForegroundService _foregroundService;
-    private readonly IInputSession? _session;
+    private readonly IInputSession _session;
     private readonly TimeSpan _answerTimeout;
     private readonly TimeSpan? _gateWaitTimeout;
     private readonly IWindowCloseVerifier _closeVerifier;
@@ -103,7 +103,7 @@ public class WindowManagerTools
     public WindowManagerTools(
         IWindowService windowService,
         IForegroundService foregroundService,
-        IInputSession? session = null,
+        IInputSession session,
         TimeSpan? answerTimeout = null,
         TimeSpan? gateWaitTimeout = null,
         IWindowCloseVerifier? closeVerifier = null,
@@ -112,7 +112,7 @@ public class WindowManagerTools
     {
         _windowService = windowService;
         _foregroundService = foregroundService;
-        _session = session;
+        _session = session ?? throw new ArgumentNullException(nameof(session));
         _answerTimeout = answerTimeout ?? UserConfirmation.DefaultAnswerTimeout;
         _gateWaitTimeout = gateWaitTimeout;
         _closeVerifier = closeVerifier ?? new WindowCloseVerifier(windowService);

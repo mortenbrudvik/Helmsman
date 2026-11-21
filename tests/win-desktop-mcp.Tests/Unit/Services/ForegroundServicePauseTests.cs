@@ -41,10 +41,9 @@ public class ForegroundServicePauseTests
     }
 
     private ForegroundService CreateSut() =>
-        new(_windows.Object, _threads.Object, new Mock<INativeInputWrapper>(MockBehavior.Strict).Object, _security.Object,
-            _windowService.Object, new InlineForegroundThread(),
-            new ForegroundTiming(TimeSpan.Zero, TimeSpan.FromMilliseconds(1), TimeSpan.Zero, TimeSpan.FromSeconds(5)),
-            logger: null, session: _session);
+        new(_windows.Object, _threads.Object, _security.Object, _windowService.Object,
+            new InlineForegroundThread(), _session,
+            new ForegroundTiming(TimeSpan.Zero, TimeSpan.FromMilliseconds(1), TimeSpan.Zero, TimeSpan.FromSeconds(5)));
 
     private static ProcessIntegrity Medium(int pid) =>
         new(pid, ProcessIntegrity.LevelFromRid(ProcessIntegrity.MediumRid), ProcessIntegrity.MediumRid, false, null);

@@ -26,7 +26,7 @@ public class BrowserTabToolsTests
             .ReturnsAsync(new BrowserWaitResult(true, true));
     }
 
-    private BrowserTabTools CreateSut() => new(_tabs.Object, windowService: null, _session);
+    private BrowserTabTools CreateSut() => new(_tabs.Object, _session);
 
     private static async Task<ToolErrorException> RefusedAsync(Func<Task> act) =>
         (await act.Should().ThrowAsync<ToolErrorException>()).Which;

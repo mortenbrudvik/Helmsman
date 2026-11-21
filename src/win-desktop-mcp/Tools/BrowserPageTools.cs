@@ -59,19 +59,19 @@ public class BrowserPageTools
 
     private readonly IBrowserPageService _pages;
     private readonly IWindowService? _windowService;
-    private readonly IInputSession? _session;
+    private readonly IInputSession _session;
     private readonly IBrowserDialogService? _dialogs;
 
     /// <param name="pages">The DOM bridge service.</param>
     /// <param name="windowService">Resolves the window selector; the server always passes it.</param>
-    /// <param name="session">Refuses the tools that change the page while input is paused; the server always passes it.</param>
+    /// <param name="session">Refuses the tools that change the page while input is paused.</param>
     /// <param name="dialogs">Reads and answers a browser window's JavaScript dialog; the server always passes it.</param>
     public BrowserPageTools(
-        IBrowserPageService pages, IWindowService? windowService = null, IInputSession? session = null, IBrowserDialogService? dialogs = null)
+        IBrowserPageService pages, IInputSession session, IWindowService? windowService = null, IBrowserDialogService? dialogs = null)
     {
         _pages = pages;
         _windowService = windowService;
-        _session = session;
+        _session = session ?? throw new ArgumentNullException(nameof(session));
         _dialogs = dialogs;
     }
 

@@ -56,9 +56,12 @@ public class WorkspaceServiceSaveTests : IDisposable
             Directory.Delete(_layoutsPath, recursive: true);
     }
 
-    private LayoutService Storage() =>
-        new(_windows.Object, _monitors.Object, _processes.Object, TestDataFactory.CreateMockForegroundService().Object,
-            LayoutStorageOptions.ForPath(_layoutsPath));
+    private LayoutService Storage()
+    {
+        var foreground = TestDataFactory.CreateMockForegroundService().Object;
+        return new LayoutService(_windows.Object, _monitors.Object, _processes.Object, foreground, LayoutStorageOptions.ForPath(_layoutsPath),
+            new LaunchPlacementService(_windows.Object, foreground, Permissive.Session));
+    }
 
     private WorkspaceService CreateSut() =>
         new(_layouts.Object, _windows.Object, new Mock<INativeWindowWrapper>().Object, _browsers.Object, _shell.Object, _processes.Object,

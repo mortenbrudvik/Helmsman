@@ -26,27 +26,23 @@ public class InputControlTools
     private readonly IInputSession _session;
     private readonly IPauseHotkey _hotkey;
     private readonly TimeSpan _answerTimeout;
-    private readonly ITakeoverMonitor? _takeover;
-    private readonly IProcessSecurityProbe? _securityProbe;
+    private readonly ITakeoverMonitor _takeover;
+    private readonly IProcessSecurityProbe _securityProbe;
 
     /// <param name="session">The input session.</param>
     /// <param name="hotkey">The pause hotkey.</param>
+    /// <param name="takeover">Takeover detection (roadmap M7.4), whose mode and state get_control_status reports.</param>
+    /// <param name="securityProbe">Whether the session is locked, which get_control_status' message adds (issue #18).</param>
     /// <param name="answerTimeout">How long resume_input waits for the user; default <see cref="DefaultAnswerTimeout"/>.</param>
-    /// <param name="takeover">
-    /// Takeover detection (roadmap M7.4), whose mode and state get_control_status reports; the server always registers it.
-    /// </param>
-    /// <param name="securityProbe">
-    /// Whether the session is locked, which get_control_status' message adds (issue #18); the server always registers it.
-    /// </param>
     public InputControlTools(
         IInputSession session,
         IPauseHotkey hotkey,
-        TimeSpan? answerTimeout = null,
-        ITakeoverMonitor? takeover = null,
-        IProcessSecurityProbe? securityProbe = null)
+        ITakeoverMonitor takeover,
+        IProcessSecurityProbe securityProbe,
+        TimeSpan? answerTimeout = null)
     {
-        _takeover = takeover;
-        _securityProbe = securityProbe;
+        _takeover = takeover ?? throw new ArgumentNullException(nameof(takeover));
+        _securityProbe = securityProbe ?? throw new ArgumentNullException(nameof(securityProbe));
         _session = session ?? throw new ArgumentNullException(nameof(session));
         _hotkey = hotkey ?? throw new ArgumentNullException(nameof(hotkey));
         _answerTimeout = answerTimeout ?? DefaultAnswerTimeout;
@@ -119,7 +115,7 @@ public class InputControlTools
         }
 
         // 'Input is running' says nothing of a lock, and an agent took it for an unlocked desktop (issue #18)
-        if (_securityProbe?.GetSessionLock() == SessionLockState.Locked)
+        if (_securityProbe.GetSessionLock() == SessionLockState.Locked)
         {
             message += " The session is locked: input tools return SessionLocked until the user unlocks it.";
         }
@@ -134,7 +130,7 @@ public class InputControlTools
             shared,
             new HeldInputStatus(serverHeld, modifiersDown, _session.LastRelease),
             message,
-            _takeover?.Status);
+            _takeover.Status);
     }
 
     [McpServerTool(Name = "resume_input", Title = "Resume Input (Asks the User)", ReadOnly = false, Destructive = false, Idempotent = true, OpenWorld = false)]

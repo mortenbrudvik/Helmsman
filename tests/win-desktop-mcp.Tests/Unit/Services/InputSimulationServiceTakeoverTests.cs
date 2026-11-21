@@ -22,8 +22,8 @@ public class InputSimulationServiceTakeoverTests
         _session = new InputSession(_input);
     }
 
-    private InputSimulationService CreateSut(ITakeoverMonitor? takeover) =>
-        new(_monitors.Object, _input, _guard.Object, _session, takeover: takeover);
+    private InputSimulationService CreateSut(ITakeoverMonitor takeover) =>
+        new(_monitors.Object, _input, _guard.Object, _session, Permissive.PasteGuard, takeover);
 
     /// <summary>
     /// Fires the call's watch while batch number <paramref name="batches"/> goes in, as the user's input would: that batch is

@@ -33,7 +33,7 @@ public class InputSimulationServiceSessionTests
     }
 
     private InputSimulationService CreateSut(TimeSpan? gateTimeout = null, InputSession? session = null) =>
-        new(_monitors.Object, _input, _guard.Object, session ?? _session, gateTimeout);
+        new(_monitors.Object, _input, _guard.Object, session ?? _session, Permissive.PasteGuard, Permissive.Takeover, gateTimeout);
 
     /// <summary>Every input path, as the tools call it.</summary>
     public static TheoryData<string> InputPaths() =>

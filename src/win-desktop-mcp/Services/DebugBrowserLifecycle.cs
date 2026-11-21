@@ -53,7 +53,7 @@ public sealed class DebugBrowserLifecycle : IDebugBrowserLifecycle
     private readonly DebugBrowserProfiles _profiles;
     private readonly ITargetPolicy _targetPolicy;
     private readonly IHostGuard _hostGuard;
-    private readonly IInputSession? _session;
+    private readonly IInputSession _session;
     private readonly DebugBrowserProcesses _browserProcesses;
 
     /// <summary>The browsers this server started, by PID, with the start time and profile they were started with.</summary>
@@ -71,7 +71,7 @@ public sealed class DebugBrowserLifecycle : IDebugBrowserLifecycle
     /// <param name="targetPolicy">The user's target policy, which close_debug_browser respects.</param>
     /// <param name="hostGuard">The agent's host, which is never closed.</param>
     /// <param name="session">The input session, whose pause a refused gate reports by its cause (the server may have paused
-    /// itself); the server always passes it.</param>
+    /// itself).</param>
     public DebugBrowserLifecycle(
         IProcessService processes,
         INativeProcessWrapper native,
@@ -82,7 +82,7 @@ public sealed class DebugBrowserLifecycle : IDebugBrowserLifecycle
         DebugBrowserProfiles profiles,
         ITargetPolicy targetPolicy,
         IHostGuard hostGuard,
-        IInputSession? session = null)
+        IInputSession session)
     {
         _processes = processes;
         _native = native;
@@ -93,7 +93,7 @@ public sealed class DebugBrowserLifecycle : IDebugBrowserLifecycle
         _profiles = profiles;
         _targetPolicy = targetPolicy ?? throw new ArgumentNullException(nameof(targetPolicy));
         _hostGuard = hostGuard ?? throw new ArgumentNullException(nameof(hostGuard));
-        _session = session;
+        _session = session ?? throw new ArgumentNullException(nameof(session));
         _browserProcesses = new DebugBrowserProcesses(native, hostGuard);
     }
 
@@ -620,7 +620,7 @@ public sealed class DebugBrowserLifecycle : IDebugBrowserLifecycle
     /// by its cause (<see cref="InputControlSources.PauseCause"/>), since the server may have paused itself.
     /// </summary>
     private string GateRefusal(string errorCode) => errorCode == nameof(WindowErrorCode.PausedByUser)
-        ? $"input is paused: {InputControlSources.PauseCause(_session?.PauseState?.PausedBy, _session?.PauseChord)}. Stop and ask " +
+        ? $"input is paused: {InputControlSources.PauseCause(_session.PauseState?.PausedBy, _session.PauseChord)}. Stop and ask " +
           "the user how to continue."
         : "another input or window call held the input gate. Call close_debug_browser again when your other calls have finished.";
 

@@ -60,7 +60,8 @@ public class StepRunnerTests
         _ => null
     };
 
-    private StepRunner Runner(TimeProvider? time = null) => new(_session.Object, _windows.Object, _elements.Object, time: time);
+    private StepRunner Runner(TimeProvider? time = null) =>
+        new(_session.Object, _windows.Object, _elements.Object, InputGuardOptions.Default, Permissive.Takeover, time: time);
 
     private static RunStep Step(StepTool tool, string? args = null, string? id = null, bool optional = false, bool @return = false) =>
         new(tool, args == null ? null : JsonNode.Parse(args)!.AsObject(), id, optional, @return);
@@ -1060,7 +1061,7 @@ public class StepRunnerTests
 
     private Task<StepRunOutcome> RunWatchedAsync(StubTakeoverMonitor monitor, TimeSpan delayBetweenSteps, params RunStep[] steps)
     {
-        var runner = new StepRunner(_session.Object, _windows.Object, _elements.Object, takeover: monitor);
+        var runner = new StepRunner(_session.Object, _windows.Object, _elements.Object, InputGuardOptions.Default, monitor);
         return runner.RunAsync((nint)Window, runner.Check(steps, _dispatcher), _dispatcher, Long, delayBetweenSteps, null,
             CancellationToken.None);
     }

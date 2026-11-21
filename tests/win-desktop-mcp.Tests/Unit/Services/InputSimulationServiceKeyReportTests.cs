@@ -26,7 +26,7 @@ public class InputSimulationServiceKeyReportTests
     }
 
     private InputSimulationService CreateSut() =>
-        new(TestDataFactory.CreateMockMonitorService().Object, _input, _guard.Object, _session, keyboardLayout: _layouts);
+        new(TestDataFactory.CreateMockMonitorService().Object, _input, _guard.Object, _session, Permissive.PasteGuard, Permissive.Takeover, keyboardLayout: _layouts);
 
     private Task<SendKeysResult> PressAsync(string keys) => CreateSut().PressKeysAsync(KeyList.Of(keys), 1, 0, 0, Duetty);
 
@@ -431,8 +431,8 @@ public class InputSimulationServiceKeyReportTests
         pasteGuard.SetupSequence(g => g.Check(It.IsAny<IReadOnlyList<InputEvent>>(), It.IsAny<nint>()))
             .Returns((string?)null)
             .Returns("The clipboard holds what the user copied.");
-        var sut = new InputSimulationService(TestDataFactory.CreateMockMonitorService().Object, _input, _guard.Object, _session,
-            pasteGuard: pasteGuard.Object, keyboardLayout: _layouts);
+        var sut = new InputSimulationService(TestDataFactory.CreateMockMonitorService().Object, _input, _guard.Object, _session, pasteGuard.Object,
+            Permissive.Takeover, keyboardLayout: _layouts);
 
         var result = await sut.PressKeysAsync(KeyList.Of("ctrl+^ ctrl+v"), 1, 0, delayBetweenMs: 1, Duetty);
 

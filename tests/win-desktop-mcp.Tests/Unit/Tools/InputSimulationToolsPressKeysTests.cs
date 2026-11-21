@@ -20,7 +20,7 @@ public class InputSimulationToolsPressKeysTests
                 new SendKeysResult(true, keys.Text) { KeysSent = repeat });
     }
 
-    private InputSimulationTools CreateSut() => new(_input.Object);
+    private InputSimulationTools CreateSut() => new(_input.Object, Mock.Of<ICoordinateSpaceResolver>());
 
     [Fact]
     public async Task PressKeys_PassesItsArgumentsAndTarget()

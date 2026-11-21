@@ -31,8 +31,8 @@ public class InputSimulationServiceScrollTests
     }
 
     private InputSimulationService CreateSut(IClipboardOrigin? clipboardOrigin = null) =>
-        new(_monitors.Object, _input, _guard.Object, _session, hitTest: _hitTest.Object, systemInfo: _systemInfo.Object,
-            clipboardOrigin: clipboardOrigin);
+        new(_monitors.Object, _input, _guard.Object, _session, Permissive.PasteGuard, Permissive.Takeover,
+            hitTest: _hitTest.Object, systemInfo: _systemInfo.Object, clipboardOrigin: clipboardOrigin);
 
     private static InputEvent[] Wheel(int notches, int delta) => Enumerable.Repeat(InputEvent.Wheel(delta), notches).ToArray();
 
@@ -200,7 +200,7 @@ public class InputSimulationServiceScrollTests
     public void WithoutTheSystemInfo_TheRoutingIsUnknown_AndTheWheelGoesOnlyToTheWindowInFront()
     {
         _guard.Setup(g => g.DescribeForeground()).Returns(Terminal);
-        var sut = new InputSimulationService(_monitors.Object, _input, _guard.Object, _session);
+        var sut = new InputSimulationService(_monitors.Object, _input, _guard.Object, _session, Permissive.PasteGuard, Permissive.Takeover);
 
         var result = sut.Scroll(500, 300, 2, 0, InputTarget.None, false, default);
 
@@ -267,8 +267,8 @@ public class InputSimulationServiceScrollTests
     public void Scroll_WithoutModifiers_ReportsNone_AndReadsNoLayout()
     {
         var layouts = new FakeKeyboardLayoutWrapper();
-        var sut = new InputSimulationService(_monitors.Object, _input, _guard.Object, _session, hitTest: _hitTest.Object,
-            systemInfo: _systemInfo.Object, keyboardLayout: layouts);
+        var sut = new InputSimulationService(_monitors.Object, _input, _guard.Object, _session, Permissive.PasteGuard, Permissive.Takeover,
+            hitTest: _hitTest.Object, systemInfo: _systemInfo.Object, keyboardLayout: layouts);
 
         var result = sut.Scroll(500, 300, 1, 0, [], NotepadTarget, false, default);
 
@@ -281,8 +281,8 @@ public class InputSimulationServiceScrollTests
     public void Scroll_TheModifiers_CarryTheTargetLayoutsScanCodes_AndAreSentOnce()
     {
         var layouts = new FakeKeyboardLayoutWrapper { Layout = FakeKeyboardLayoutWrapper.Us };
-        var sut = new InputSimulationService(_monitors.Object, _input, _guard.Object, _session, hitTest: _hitTest.Object,
-            systemInfo: _systemInfo.Object, keyboardLayout: layouts);
+        var sut = new InputSimulationService(_monitors.Object, _input, _guard.Object, _session, Permissive.PasteGuard, Permissive.Takeover,
+            hitTest: _hitTest.Object, systemInfo: _systemInfo.Object, keyboardLayout: layouts);
 
         var result = sut.Scroll(500, 300, 0, 3, [MouseModifier.Ctrl, MouseModifier.Ctrl], NotepadTarget, false, default);
 

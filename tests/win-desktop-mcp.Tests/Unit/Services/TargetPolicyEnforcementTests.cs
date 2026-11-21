@@ -381,7 +381,7 @@ public class TargetPolicyEnforcementTests
         // Arrange
         var keePass = AddWindow(0x300, "KeePassWindow", 3001, "KeePass");
         _native.Setup(n => n.GetWindowRect(keePass)).Returns((0, 0, 800, 600));
-        var tools = new WindowManagerTools(CreateWindowService(Policy()), Mock.Of<IForegroundService>());
+        var tools = new WindowManagerTools(CreateWindowService(Policy()), Mock.Of<IForegroundService>(), Permissive.Session);
 
         // Act
         var results = new[]
@@ -407,7 +407,7 @@ public class TargetPolicyEnforcementTests
         _native.Setup(n => n.GetWindowRect(It.IsAny<nint>())).Returns((0, 0, 800, 600));
         _native.Setup(n => n.SetWindowPos(notepad, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<uint>())).Returns(Win32CallResult.Ok);
         TestDataFactory.SimulateShowStates(_native, notepad);
-        var tools = new WindowManagerTools(CreateWindowService(Policy()), Mock.Of<IForegroundService>());
+        var tools = new WindowManagerTools(CreateWindowService(Policy()), Mock.Of<IForegroundService>(), Permissive.Session);
 
         // Act
         var bounds = await tools.SetWindowsBoundsBatch(
@@ -474,7 +474,7 @@ public class TargetPolicyEnforcementTests
         _native.Setup(n => n.GetWindowRect(It.IsAny<nint>())).Returns((0, 0, 800, 600));
         _native.Setup(n => n.SetWindowPos(notepad, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<uint>())).Returns(Win32CallResult.Ok);
         TestDataFactory.SimulateShowStates(_native, notepad);
-        var tools = new WindowManagerTools(CreateWindowService(Policy()), Mock.Of<IForegroundService>());
+        var tools = new WindowManagerTools(CreateWindowService(Policy()), Mock.Of<IForegroundService>(), Permissive.Session);
 
         // Act
         var results = new[]
@@ -624,7 +624,7 @@ public class TargetPolicyEnforcementTests
         _windows.Setup(w => w.IsValidWindow(handle)).Returns(true);
         _windows.Setup(w => w.GetWindowInfo(handle))
             .Returns(TestDataFactory.CreateWindowInfo((int)handle, processName + " window", processName, 3001));
-        return new ScreenshotTools(_screenshots.Object, _elements.Object, _windows.Object, new CaptureTargetPolicy(_windows.Object, policy ?? Policy()));
+        return new ScreenshotTools(_screenshots.Object, _elements.Object, _windows.Object, new CaptureTargetPolicy(_windows.Object, policy ?? Policy()), Permissive.Session);
     }
 
     private static JsonElement Payload(CallToolResult result) =>

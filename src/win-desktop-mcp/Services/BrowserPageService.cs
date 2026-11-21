@@ -29,7 +29,7 @@ public sealed class BrowserPageService : IBrowserPageService
 
     private readonly ICdpPageService _pages;
     private readonly IBrowserViewportLocator _viewports;
-    private readonly IInputSession? _session;
+    private readonly IInputSession _session;
     private readonly IBrowserDialogService? _dialogs;
     private readonly BrowserCdpTargets _targets;
 
@@ -42,7 +42,7 @@ public sealed class BrowserPageService : IBrowserPageService
     /// <param name="viewports">Finds where the window shows the page, for browser_element_rect.</param>
     /// <param name="policy">The user's target policy.</param>
     /// <param name="portLocator">Finds a window's own debug port; the server always passes it. Without it, cdpPort is needed.</param>
-    /// <param name="session">The input session the gate checks for a pause; the server always passes it.</param>
+    /// <param name="session">The input session the gate checks for a pause.</param>
     /// <param name="dialogs">Learns of the dialog an action opened and left open, so browser_handle_dialog may accept it; the
     /// server always passes it.</param>
     public BrowserPageService(
@@ -54,13 +54,13 @@ public sealed class BrowserPageService : IBrowserPageService
         ITcpPortOwnerResolver portOwners,
         IBrowserViewportLocator viewports,
         ITargetPolicy policy,
+        IInputSession session,
         IDebugPortLocator? portLocator = null,
-        IInputSession? session = null,
         IBrowserDialogService? dialogs = null)
     {
         _pages = pages;
         _viewports = viewports;
-        _session = session;
+        _session = session ?? throw new ArgumentNullException(nameof(session));
         _dialogs = dialogs;
         _targets = new BrowserCdpTargets(windows, detection, reading, cdp, portOwners, policy, portLocator);
     }
@@ -366,13 +366,13 @@ public sealed class BrowserPageService : IBrowserPageService
         CdpTarget? Target, int? Port, nint? WindowHandle, (string Code, string Error)? Refusal, ResolvedBrowser? Browser = null);
 
     /// <summary>The input gate held by a DOM bridge action, and the input session whose pause stops it.</summary>
-    private sealed class GateHold(IDisposable gate, IInputSession? session) : ICdpGateHold
+    private sealed class GateHold(IDisposable gate, IInputSession session) : ICdpGateHold
     {
-        public bool IsPaused => session?.IsPaused == true;
+        public bool IsPaused => session.IsPaused;
 
-        public string? PausedBy => session?.PauseState?.PausedBy;
+        public string? PausedBy => session.PauseState?.PausedBy;
 
-        public string? PauseChord => session?.PauseChord;
+        public string? PauseChord => session.PauseChord;
 
         public void Dispose() => gate.Dispose();
     }

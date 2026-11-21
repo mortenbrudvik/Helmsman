@@ -30,9 +30,12 @@ public class LayoutServiceCaptureTests : IDisposable
             Directory.Delete(_layoutsPath, recursive: true);
     }
 
-    private LayoutService CreateSut() =>
-        new(_windows.Object, _monitors.Object, _processes.Object, TestDataFactory.CreateMockForegroundService().Object,
-            LayoutStorageOptions.ForPath(_layoutsPath), apps: _apps.Object, installedApps: _installedApps.Object);
+    private LayoutService CreateSut()
+    {
+        var foreground = TestDataFactory.CreateMockForegroundService().Object;
+        return new LayoutService(_windows.Object, _monitors.Object, _processes.Object, foreground, LayoutStorageOptions.ForPath(_layoutsPath),
+            new LaunchPlacementService(_windows.Object, foreground, Permissive.Session), apps: _apps.Object, installedApps: _installedApps.Object);
+    }
 
     private static WindowInfo Window(int handle, string process, int pid, int x, int y, int width, int height,
         WindowState state = WindowState.Normal, int monitor = 0) =>
@@ -282,7 +285,7 @@ public class LayoutServiceCaptureTests : IDisposable
         moved.Width.Should().BeApproximately(800.0 / 1920, 1e-9);
 
         // Act - get_layout's JSON, as a client reads it, back into save_layout
-        var detail = new WinDesktopMcp.Tools.LayoutPresetTools(sut).GetLayout("captured");
+        var detail = new WinDesktopMcp.Tools.LayoutPresetTools(sut, Permissive.Session).GetLayout("captured");
         var json = System.Text.Json.JsonSerializer.Serialize(detail.Placements, WinDesktopMcp.Infrastructure.ToolJson.SerializerOptions);
         var specs = System.Text.Json.JsonSerializer.Deserialize<LayoutPlacementSpec[]>(json, WinDesktopMcp.Infrastructure.ToolJson.SerializerOptions)!;
         var saved = await sut.SaveAuthoredLayoutAsync("captured", captured.Description, specs);

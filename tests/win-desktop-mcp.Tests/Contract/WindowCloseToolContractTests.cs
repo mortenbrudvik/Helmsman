@@ -295,7 +295,7 @@ public class WindowCloseToolContractTests
             [],
             builder => builder
                 .AddToolErrorReporting()
-                .WithServerTools(new WindowManagerTools(windowService, Mock.Of<IForegroundService>(),
+                .WithServerTools(new WindowManagerTools(windowService, Mock.Of<IForegroundService>(), Permissive.Session,
                     closeVerifier: new WindowCloseVerifier(windowService, pollInterval: TimeSpan.FromMilliseconds(5),
                         promptCheckInterval: TimeSpan.FromMilliseconds(10)))));
     }

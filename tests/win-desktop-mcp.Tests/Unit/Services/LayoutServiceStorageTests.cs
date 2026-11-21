@@ -46,6 +46,7 @@ public class LayoutServiceStorageTests : IDisposable
         _mockProcessService.Object,
         TestDataFactory.CreateMockForegroundService().Object,
         options,
+        new LaunchPlacementService(_mockWindowService.Object, TestDataFactory.CreateMockForegroundService().Object, Permissive.Session),
         folderAccess);
 
     private LayoutService CreateSutWithPath(string path) => new(
@@ -53,6 +54,7 @@ public class LayoutServiceStorageTests : IDisposable
         _mockMonitorService.Object,
         _mockProcessService.Object,
         TestDataFactory.CreateMockForegroundService().Object,
+        new LaunchPlacementService(_mockWindowService.Object, TestDataFactory.CreateMockForegroundService().Object, Permissive.Session),
         path);
 
     private LayoutStorageOptions OptionsWith(

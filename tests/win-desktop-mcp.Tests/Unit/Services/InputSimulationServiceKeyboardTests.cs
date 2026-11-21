@@ -23,7 +23,7 @@ public class InputSimulationServiceKeyboardTests
     }
 
     private InputSimulationService CreateSut() =>
-        new(TestDataFactory.CreateMockMonitorService().Object, _input, _guard.Object, _session, keyboardLayout: _layouts);
+        new(TestDataFactory.CreateMockMonitorService().Object, _input, _guard.Object, _session, Permissive.PasteGuard, Permissive.Takeover, keyboardLayout: _layouts);
 
     private static InputEvent[] Tap(ushort vk, ushort scan, bool extended = false) =>
     [

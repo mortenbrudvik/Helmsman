@@ -1143,7 +1143,7 @@ public sealed class UserConfirmationContractTests : IDisposable
         {
             _services.Windows.Setup(w => w.GetAllWindows(It.IsAny<bool>())).Returns([]);
             var layouts = new LayoutService(_services.Windows.Object, _services.Monitors.Object, _services.Processes.Object,
-                _services.Foreground.Object, folder, _services.Placement.Object);
+                _services.Foreground.Object, _services.Placement.Object, folder);
             var version = AgentLayoutStarting(@"C:\Windows\System32\notepad.exe");
             (await layouts.SavePresetAsync(version)).Success.Should().BeTrue();
             _flow = InputGate.TagFlow();

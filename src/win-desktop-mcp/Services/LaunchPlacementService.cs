@@ -37,7 +37,7 @@ public sealed class LaunchPlacementService : ILaunchPlacementService
 
     private readonly IWindowService _windows;
     private readonly IForegroundService _foreground;
-    private readonly IInputSession? _session;
+    private readonly IInputSession _session;
     private readonly TimeProvider _time;
     private readonly Func<TimeSpan, CancellationToken, Task> _delay;
     private readonly IMonitorService? _monitors;
@@ -57,14 +57,14 @@ public sealed class LaunchPlacementService : ILaunchPlacementService
     public LaunchPlacementService(
         IWindowService windows,
         IForegroundService foreground,
-        IInputSession? session = null,
+        IInputSession session,
         TimeProvider? time = null,
         Func<TimeSpan, CancellationToken, Task>? delay = null,
         IMonitorService? monitors = null)
     {
         _windows = windows;
         _foreground = foreground;
-        _session = session;
+        _session = session ?? throw new ArgumentNullException(nameof(session));
         _time = time ?? TimeProvider.System;
         _delay = delay ?? ((wait, token) => Task.Delay(wait, _time, token));
         _monitors = monitors;
@@ -219,7 +219,7 @@ public sealed class LaunchPlacementService : ILaunchPlacementService
                 }
 
                 placed[i] = null;
-                if (_session?.IsPaused == true)
+                if (_session.IsPaused)
                 {
                     failures[i] = WindowChangeResult.Failed(handle, PausedByUser,
                         "The window was placed, but the app moved it again on its own (it restored its saved position or size), and it " +
@@ -262,7 +262,7 @@ public sealed class LaunchPlacementService : ILaunchPlacementService
     /// Why input is paused (<see cref="InputControlSources.PauseCause"/>): the server pauses itself when it cannot read the pause it
     /// shares with the other servers, which the user did not do.
     /// </summary>
-    private string PauseCause() => InputControlSources.PauseCause(_session?.PauseState?.PausedBy, _session?.PauseChord);
+    private string PauseCause() => InputControlSources.PauseCause(_session.PauseState?.PausedBy, _session.PauseChord);
 
     /// <summary>Why a window is not placed at all, before anything is sent to it; null when it can be.</summary>
     private WindowChangeResult? Refusal(nint handle)
@@ -273,7 +273,7 @@ public sealed class LaunchPlacementService : ILaunchPlacementService
                 "The launch's window closed before it could be placed. Look for the app's window with find_windows; do not launch it again.");
         }
 
-        if (_session?.IsPaused == true)
+        if (_session.IsPaused)
         {
             return WindowChangeResult.Failed(handle, PausedByUser,
                 $"The app was launched, but its window was not placed or focused. Input is paused: {PauseCause()}. Stop and ask the " +

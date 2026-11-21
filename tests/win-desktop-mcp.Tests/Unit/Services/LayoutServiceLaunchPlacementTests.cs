@@ -47,7 +47,7 @@ public class LayoutServiceLaunchPlacementTests : IDisposable
     }
 
     private LayoutService CreateSut(ILaunchPlacementService? placer = null) =>
-        new(_windows.Object, _monitors.Object, _processes.Object, _foreground.Object, _layoutsPath, placer ?? _placer.Object);
+        new(_windows.Object, _monitors.Object, _processes.Object, _foreground.Object, placer ?? _placer.Object, _layoutsPath);
 
     private static WindowInfo Window(int handle, string title, string process, int pid) =>
         TestDataFactory.CreateWindowInfo(handle, title, process, pid, 100, 100, 800, 600);

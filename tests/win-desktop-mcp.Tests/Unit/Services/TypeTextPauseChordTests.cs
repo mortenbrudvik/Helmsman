@@ -32,9 +32,8 @@ public class TypeTextPauseChordTests
     private InputSimulationService CreateSut(string pauseChord) =>
         new(TestDataFactory.CreateMockMonitorService().Object, _input, _guard.Object,
             new InputSession(_input, PauseHotkeyOptions.FromEnvironment(_ => pauseChord)),
-            clipboardOrigin: _origin,
-            pasteGuard: new ClipboardPasteGuard(_clipboard, _origin, ClipboardOptions.Default, _windows.Object),
-            keyboardLayout: _layouts,
+            new ClipboardPasteGuard(_clipboard, _origin, ClipboardOptions.Default, _windows.Object),
+            Permissive.Takeover, clipboardOrigin: _origin, keyboardLayout: _layouts,
             pasteClipboard: new PasteClipboard(_clipboard, _origin, _windows.Object),
             pasteSettleTime: TimeSpan.Zero);
 

@@ -45,7 +45,7 @@ public class InputSimulationServiceGuardTests
         _guard.Setup(g => g.DescribeForeground()).Returns(Terminal);
     }
 
-    private InputSimulationService CreateSut() => new(_monitors.Object, _input.Object, _guard.Object, new InputSession(_input.Object));
+    private InputSimulationService CreateSut() => new(_monitors.Object, _input.Object, _guard.Object, new InputSession(_input.Object), Permissive.PasteGuard, Permissive.Takeover);
 
     private static InputGuardResult Refused(InputErrorCode code, WindowSummary? receiving = null, WindowSummary? blocking = null) =>
         InputGuardResult.Refuse(code, $"refused: {code}", InputTarget.None, receiving, blocking);

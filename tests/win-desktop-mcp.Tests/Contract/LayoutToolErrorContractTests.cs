@@ -81,7 +81,7 @@ public class LayoutToolErrorContractTests
             [],
             builder => builder
                 .AddToolErrorReporting()
-                .WithServerTools(new LayoutPresetTools(_layoutService.Object)));
+                .WithServerTools(new LayoutPresetTools(_layoutService.Object, Permissive.Session)));
 
     private static JsonElement ParsePayload(CallToolResult result)
     {

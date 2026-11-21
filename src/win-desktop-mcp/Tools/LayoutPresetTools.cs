@@ -13,7 +13,7 @@ namespace WinDesktopMcp.Tools;
 public class LayoutPresetTools
 {
     private readonly ILayoutService _layoutService;
-    private readonly IInputSession? _session;
+    private readonly IInputSession _session;
     private readonly TimeSpan _answerTimeout;
     private readonly TimeSpan? _gateWaitTimeout;
 
@@ -23,12 +23,12 @@ public class LayoutPresetTools
     /// <param name="gateWaitTimeout">How long apply_layout waits for the input gate; default <see cref="InputGateToolFilter.GateWaitTimeout"/>.</param>
     public LayoutPresetTools(
         ILayoutService layoutService,
-        IInputSession? session = null,
+        IInputSession session,
         TimeSpan? answerTimeout = null,
         TimeSpan? gateWaitTimeout = null)
     {
         _layoutService = layoutService;
-        _session = session;
+        _session = session ?? throw new ArgumentNullException(nameof(session));
         _answerTimeout = answerTimeout ?? UserConfirmation.DefaultAnswerTimeout;
         _gateWaitTimeout = gateWaitTimeout;
     }

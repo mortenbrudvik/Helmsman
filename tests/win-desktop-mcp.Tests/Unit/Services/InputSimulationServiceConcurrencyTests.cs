@@ -24,7 +24,7 @@ public class InputSimulationServiceConcurrencyTests
     }
 
     private InputSimulationService CreateSut(INativeInputWrapper wrapper) =>
-        new(_mockMonitorService.Object, wrapper, TestDataFactory.CreateAllowingInputGuard().Object, new InputSession(wrapper));
+        new(_mockMonitorService.Object, wrapper, TestDataFactory.CreateAllowingInputGuard().Object, new InputSession(wrapper), Permissive.PasteGuard, Permissive.Takeover);
 
     /// <summary>
     /// Starts the first call, waits until it is inside the native layer, then starts the second call.
@@ -96,7 +96,7 @@ public class InputSimulationServiceConcurrencyTests
                 operationsWhenFocusRan = wrapper.Operations.Count;
                 return new FocusOutcome { Target = handle, IsForeground = true, ForegroundHandle = handle };
             });
-        var tools = new WinDesktopMcp.Tools.WindowManagerTools(Mock.Of<IWindowService>(), foreground.Object);
+        var tools = new WinDesktopMcp.Tools.WindowManagerTools(Mock.Of<IWindowService>(), foreground.Object, Permissive.Session);
 
         // Act - the agent races focus_window (its own terminal) against type_text
         await RunOverlapping(wrapper, () => sut.TypeTextAsync(As), () => tools.FocusWindow(handle: 4242));

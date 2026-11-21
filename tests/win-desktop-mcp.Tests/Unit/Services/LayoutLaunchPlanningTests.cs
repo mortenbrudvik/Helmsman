@@ -35,8 +35,8 @@ public class LayoutLaunchPlanningTests : IDisposable
             _processes.Object,
             new Mock<IWindowWaitService>(MockBehavior.Strict).Object);
         return new LayoutService(_windows.Object, TestDataFactory.CreateMockMonitorService().Object, processService,
-            TestDataFactory.CreateMockForegroundService().Object, Path.Combine(_root, "layouts"),
-            new Mock<ILaunchPlacementService>(MockBehavior.Strict).Object);
+            TestDataFactory.CreateMockForegroundService().Object,
+            new Mock<ILaunchPlacementService>(MockBehavior.Strict).Object, Path.Combine(_root, "layouts"));
     }
 
     /// <summary>A script on disk, which the resolver finds as one.</summary>

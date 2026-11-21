@@ -31,8 +31,8 @@ public class LayoutServicePlanningCharacterizationTests : IDisposable
     }
 
     private LayoutService CreateSut() =>
-        new(_windows.Object, _monitors.Object, _processes.Object, _foreground.Object, _layoutsPath,
-            TestDataFactory.CreateInstantLaunchPlacement(_windows.Object, _foreground.Object));
+        new(_windows.Object, _monitors.Object, _processes.Object, _foreground.Object,
+            TestDataFactory.CreateInstantLaunchPlacement(_windows.Object, _foreground.Object), _layoutsPath);
 
     private static WindowInfo Window(int handle, string title, string process, int pid, int x, int y, int width, int height,
         int monitorIndex = 0) =>

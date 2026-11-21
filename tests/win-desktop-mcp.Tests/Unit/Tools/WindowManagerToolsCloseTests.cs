@@ -36,7 +36,7 @@ public class WindowManagerToolsCloseTests
     private WindowManagerTools CreateSut()
     {
         _flow = InputGate.TagFlow();
-        return new(_windowService.Object, Mock.Of<IForegroundService>(), closeVerifier: _verifier.Object, gateWaitTimeout: TimeSpan.FromSeconds(5));
+        return new(_windowService.Object, Mock.Of<IForegroundService>(), Permissive.Session, closeVerifier: _verifier.Object, gateWaitTimeout: TimeSpan.FromSeconds(5));
     }
 
     private static WindowCloseRequest[] Requests(params long[] handles) => handles.Select(h => new WindowCloseRequest(h)).ToArray();

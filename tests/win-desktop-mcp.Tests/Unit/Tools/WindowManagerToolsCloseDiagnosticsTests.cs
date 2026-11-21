@@ -29,7 +29,7 @@ public class WindowManagerToolsCloseDiagnosticsTests
     {
         InputGate.TagFlow();
         var factory = LoggerFactory.Create(builder => builder.AddProvider(_logs));
-        return new(_windowService.Object, Mock.Of<IForegroundService>(), closeVerifier: _verifier.Object,
+        return new(_windowService.Object, Mock.Of<IForegroundService>(), Permissive.Session, closeVerifier: _verifier.Object,
             gateWaitTimeout: TimeSpan.FromSeconds(5), logger: factory.CreateLogger<WindowManagerTools>());
     }
 

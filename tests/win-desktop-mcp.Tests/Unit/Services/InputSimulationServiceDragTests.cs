@@ -34,7 +34,7 @@ public class InputSimulationServiceDragTests
     }
 
     private InputSimulationService CreateSut() =>
-        new(_monitors.Object, _input, _guard.Object, _session, systemInfo: _systemInfo.Object);
+        new(_monitors.Object, _input, _guard.Object, _session, Permissive.PasteGuard, Permissive.Takeover, systemInfo: _systemInfo.Object);
 
     private static DragRequest Request(MouseButton button = MouseButton.Primary, MouseModifier[]? modifiers = null, int steps = 4,
         int stepDelayMs = 0, int holdBeforeMoveMs = 0) =>
@@ -104,8 +104,8 @@ public class InputSimulationServiceDragTests
     public async Task Drag_TheModifiers_CarryTheLayoutsScanCodes_AtThePress_TheDrop_AndACancel()
     {
         var layouts = new FakeKeyboardLayoutWrapper { Layout = FakeKeyboardLayoutWrapper.Us };
-        var sut = new InputSimulationService(_monitors.Object, _input, _guard.Object, _session, systemInfo: _systemInfo.Object,
-            keyboardLayout: layouts);
+        var sut = new InputSimulationService(_monitors.Object, _input, _guard.Object, _session, Permissive.PasteGuard, Permissive.Takeover,
+            systemInfo: _systemInfo.Object, keyboardLayout: layouts);
 
         await sut.DragAsync(Request(modifiers: [MouseModifier.Ctrl]), Source, Source, false, CancellationToken.None);
         _guard.Setup(g => g.RecheckDrop(300, 100, It.IsAny<InputGuardResult>())).Returns(
@@ -151,8 +151,9 @@ public class InputSimulationServiceDragTests
         windows.Setup(w => w.GetClassName(0x5150)).Returns(receivingClass);
         windows.Setup(w => w.GetWindowThreadProcessId(0x5150)).Returns(77u);
         windows.Setup(w => w.GetProcessName(77u)).Returns(receivingClass == "Notepad" ? "notepad" : "WindowsTerminal");
-        return new InputSimulationService(_monitors.Object, _input, _guard.Object, _session, systemInfo: _systemInfo.Object,
-            clipboardOrigin: origin, pasteGuard: new ClipboardPasteGuard(clipboard, origin, ClipboardOptions.Default, windows.Object));
+        return new InputSimulationService(_monitors.Object, _input, _guard.Object, _session,
+            new ClipboardPasteGuard(clipboard, origin, ClipboardOptions.Default, windows.Object),
+            Permissive.Takeover, systemInfo: _systemInfo.Object, clipboardOrigin: origin);
     }
 
     [Theory]

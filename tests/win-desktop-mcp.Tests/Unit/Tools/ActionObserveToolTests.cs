@@ -55,7 +55,7 @@ public class ActionObserveToolTests
                 request.Include.Contains(DesktopStateSection.Screenshot) ? new EncodedImage([1, 2, 3], "image/png") : null));
     }
 
-    private InputSimulationTools CreateInputSut() => new(_input.Object, _windows.Object, desktopState: _desktopState.Object);
+    private InputSimulationTools CreateInputSut() => new(_input.Object, Mock.Of<ICoordinateSpaceResolver>(), _windows.Object, _desktopState.Object);
 
     private DialogTools CreateDialogSut() => new(_dialogs.Object, Mock.Of<IFileDialogService>(), _windows.Object, _desktopState.Object);
 

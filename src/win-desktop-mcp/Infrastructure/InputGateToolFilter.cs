@@ -203,9 +203,10 @@ public static class InputGateToolFilter
     /// before the tool asks the user anything.
     /// </summary>
     /// <exception cref="ToolErrorException">Input is paused.</exception>
-    public static void ThrowIfPaused(IInputSession? session)
+    public static void ThrowIfPaused(IInputSession session)
     {
-        if (session?.IsPaused == true)
+        ArgumentNullException.ThrowIfNull(session);
+        if (session.IsPaused)
         {
             throw new ToolErrorException(nameof(WindowErrorCode.PausedByUser), PausedMessage(session));
         }
@@ -218,7 +219,7 @@ public static class InputGateToolFilter
     /// <see cref="GateWaitTimeout"/>) is InputBusy. Either way nothing has been done.
     /// </summary>
     /// <exception cref="ToolErrorException">Input is paused, or the gate is busy.</exception>
-    public static Task<IDisposable> EnterAsync(IInputSession? session, CancellationToken cancellationToken, TimeSpan? timeout = null) =>
+    public static Task<IDisposable> EnterAsync(IInputSession session, CancellationToken cancellationToken, TimeSpan? timeout = null) =>
         WaitForGateAsync(session, cancellationToken, timeout, InputGate.TryEnterAsync);
 
     /// <summary>
@@ -227,18 +228,18 @@ public static class InputGateToolFilter
     /// (<see cref="InputGate.Lease.Bind"/>) so that the run's steps pass the gate it holds. Disposing the lease releases it.
     /// </summary>
     /// <exception cref="ToolErrorException">Input is paused, or the gate is busy.</exception>
-    public static Task<InputGate.Lease> HoldAsync(IInputSession? session, CancellationToken cancellationToken, TimeSpan? timeout = null) =>
+    public static Task<InputGate.Lease> HoldAsync(IInputSession session, CancellationToken cancellationToken, TimeSpan? timeout = null) =>
         WaitForGateAsync(session, cancellationToken, timeout, InputGate.TryHoldAsync);
 
     private static async Task<TGate> WaitForGateAsync<TGate>(
-        IInputSession? session, CancellationToken cancellationToken, TimeSpan? timeout, Func<TimeSpan, CancellationToken, Task<TGate?>> take)
+        IInputSession session, CancellationToken cancellationToken, TimeSpan? timeout, Func<TimeSpan, CancellationToken, Task<TGate?>> take)
         where TGate : class, IDisposable
     {
         ThrowIfPaused(session);
         var wait = timeout ?? GateWaitTimeout;
 
         TGate? gate;
-        using (var waiting = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, session?.PauseToken ?? CancellationToken.None))
+        using (var waiting = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, session.PauseToken))
         {
             try
             {
@@ -246,7 +247,7 @@ public static class InputGateToolFilter
             }
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
-                throw new ToolErrorException(nameof(WindowErrorCode.PausedByUser), PausedMessage(session!));
+                throw new ToolErrorException(nameof(WindowErrorCode.PausedByUser), PausedMessage(session));
             }
         }
 
@@ -255,7 +256,7 @@ public static class InputGateToolFilter
             throw new ToolErrorException(nameof(InputErrorCode.InputBusy), BusyMessage(wait));
         }
 
-        if (session?.IsPaused == true)
+        if (session.IsPaused)
         {
             gate.Dispose();
             throw new ToolErrorException(nameof(WindowErrorCode.PausedByUser), PausedMessage(session));

@@ -42,7 +42,7 @@ public class LayoutServiceApplySafetyTests : IDisposable
             Directory.Delete(_layoutsPath, recursive: true);
     }
 
-    private LayoutService CreateSut() => new(_windows.Object, _monitors.Object, _processes.Object, _foreground.Object, _layoutsPath, _placer.Object);
+    private LayoutService CreateSut() => new(_windows.Object, _monitors.Object, _processes.Object, _foreground.Object, _placer.Object, _layoutsPath);
 
     private async Task<LayoutApplyResult> ApplyAsync(WindowPlacement placement, bool launchMissing = false)
     {

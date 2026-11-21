@@ -31,12 +31,17 @@ public class FilePersistenceTests : IDisposable
         _mockProcessService = TestDataFactory.CreateMockProcessService();
     }
 
-    private LayoutService CreateSut(string? customPath = null) => new(
-        _mockWindowService.Object,
-        _mockMonitorService.Object,
-        _mockProcessService.Object,
-        TestDataFactory.CreateMockForegroundService().Object,
-        customPath ?? _testLayoutPath);
+    private LayoutService CreateSut(string? customPath = null)
+    {
+        var foreground = TestDataFactory.CreateMockForegroundService().Object;
+        return new LayoutService(
+            _mockWindowService.Object,
+            _mockMonitorService.Object,
+            _mockProcessService.Object,
+            foreground,
+            new LaunchPlacementService(_mockWindowService.Object, foreground, Permissive.Session),
+            customPath ?? _testLayoutPath);
+    }
 
     public void Dispose()
     {

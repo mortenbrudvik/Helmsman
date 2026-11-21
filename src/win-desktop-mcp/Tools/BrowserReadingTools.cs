@@ -17,7 +17,7 @@ public partial class BrowserReadingTools
     private readonly IDebugBrowserLifecycle? _debugBrowsers;
     private readonly ILaunchPlacementService? _placementService;
     private readonly IMonitorService? _monitorService;
-    private readonly IInputSession? _session;
+    private readonly IInputSession _session;
     private readonly TimeSpan _answerTimeout;
     private readonly TimeSpan? _gateWaitTimeout;
     private readonly ITcpPortOwnerResolver? _portOwners;
@@ -44,11 +44,11 @@ public partial class BrowserReadingTools
     public BrowserReadingTools(
         IBrowserReadingService browserReadingService,
         IProcessService processService,
+        IInputSession session,
         IWindowService? windowService = null,
         IDebugBrowserLifecycle? debugBrowsers = null,
         ILaunchPlacementService? placementService = null,
         IMonitorService? monitorService = null,
-        IInputSession? session = null,
         TimeSpan? answerTimeout = null,
         TimeSpan? gateWaitTimeout = null,
         ITcpPortOwnerResolver? portOwners = null,
@@ -61,7 +61,7 @@ public partial class BrowserReadingTools
         _debugBrowsers = debugBrowsers;
         _placementService = placementService;
         _monitorService = monitorService;
-        _session = session;
+        _session = session ?? throw new ArgumentNullException(nameof(session));
         _answerTimeout = answerTimeout ?? UserConfirmation.DefaultAnswerTimeout;
         _gateWaitTimeout = gateWaitTimeout;
         _portOwners = portOwners;

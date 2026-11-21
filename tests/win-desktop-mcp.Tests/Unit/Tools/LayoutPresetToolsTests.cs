@@ -21,7 +21,7 @@ public class LayoutPresetToolsTests
         _mockLayoutService.Setup(l => l.GetInvalidFiles()).Returns([]);
     }
 
-    private LayoutPresetTools CreateSut() => new LayoutPresetTools(_mockLayoutService.Object);
+    private LayoutPresetTools CreateSut() => new LayoutPresetTools(_mockLayoutService.Object, Permissive.Session);
 
     #region ListLayouts Tests
 

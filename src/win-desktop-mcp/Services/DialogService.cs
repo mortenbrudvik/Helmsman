@@ -48,7 +48,7 @@ public sealed class DialogService : IDialogService
     private readonly IElementSearchService _search;
     private readonly IElementActionService _actions;
     private readonly IInputTargetGuard _guard;
-    private readonly IInputSession? _session;
+    private readonly IInputSession _session;
     private readonly IWindowService? _windowService;
 
     /// <param name="windows">The Win32 window reads that locate the dialog and see it close.</param>
@@ -64,7 +64,7 @@ public sealed class DialogService : IDialogService
         IElementSearchService search,
         IElementActionService actions,
         IInputTargetGuard guard,
-        IInputSession? session = null,
+        IInputSession session,
         IWindowService? windowService = null)
     {
         _windows = windows ?? throw new ArgumentNullException(nameof(windows));
@@ -72,7 +72,7 @@ public sealed class DialogService : IDialogService
         _search = search ?? throw new ArgumentNullException(nameof(search));
         _actions = actions ?? throw new ArgumentNullException(nameof(actions));
         _guard = guard ?? throw new ArgumentNullException(nameof(guard));
-        _session = session;
+        _session = session ?? throw new ArgumentNullException(nameof(session));
         _windowService = windowService;
     }
 

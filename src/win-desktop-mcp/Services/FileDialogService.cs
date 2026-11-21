@@ -60,7 +60,7 @@ public sealed class FileDialogService : IFileDialogService
     private readonly IPopupService _popups;
     private readonly INativeWindowWrapper _windows;
     private readonly IInputTargetGuard _guard;
-    private readonly IInputSession? _session;
+    private readonly IInputSession _session;
     private readonly IWindowService? _windowService;
 
     /// <param name="dialogs">Finds the dialog, and reads and answers the replace prompt.</param>
@@ -78,7 +78,7 @@ public sealed class FileDialogService : IFileDialogService
         IPopupService popups,
         INativeWindowWrapper windows,
         IInputTargetGuard guard,
-        IInputSession? session = null,
+        IInputSession session,
         IWindowService? windowService = null)
     {
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
@@ -87,7 +87,7 @@ public sealed class FileDialogService : IFileDialogService
         _popups = popups ?? throw new ArgumentNullException(nameof(popups));
         _windows = windows ?? throw new ArgumentNullException(nameof(windows));
         _guard = guard ?? throw new ArgumentNullException(nameof(guard));
-        _session = session;
+        _session = session ?? throw new ArgumentNullException(nameof(session));
         _windowService = windowService;
     }
 

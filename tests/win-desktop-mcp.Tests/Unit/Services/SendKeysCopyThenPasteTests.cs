@@ -30,9 +30,8 @@ public class SendKeysCopyThenPasteTests
 
     private InputSimulationService CreateSut() =>
         new(TestDataFactory.CreateMockMonitorService().Object, _input, _guard.Object, new InputSession(_input),
-            clipboardOrigin: _origin,
-            pasteGuard: new ClipboardPasteGuard(_clipboard, _origin, new ClipboardOptions(false), new Mock<INativeWindowWrapper>().Object),
-            keyboardLayout: new FakeKeyboardLayoutWrapper());
+            new ClipboardPasteGuard(_clipboard, _origin, new ClipboardOptions(false), new Mock<INativeWindowWrapper>().Object),
+            Permissive.Takeover, clipboardOrigin: _origin, keyboardLayout: new FakeKeyboardLayoutWrapper());
 
     private void VerifyRefusedBeforeAnythingWasSent(SendKeysResult result)
     {

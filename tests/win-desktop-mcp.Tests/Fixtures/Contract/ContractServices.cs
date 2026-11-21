@@ -229,6 +229,9 @@ public sealed class ContractServices : IDisposable
         // get_window_info's detail 'full' reads the window's integrity (roadmap M6.6)
         services.AddSingleton(SecurityProbe.Object);
         services.AddSingleton<IInputSession>(Session);
+        // run_steps' destructive chords and takeover detection, as the server registers them with the variables unset
+        services.AddSingleton(InputGuardOptions.Default);
+        services.AddSingleton(Permissive.Takeover);
         services.AddSingleton(Screenshots);
         services.AddSingleton<IOcrEngineWrapper>(Ocr);
         var ocrPolicy = new TargetPolicy(TargetPolicySettings.Default);

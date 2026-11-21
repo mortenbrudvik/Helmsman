@@ -41,7 +41,7 @@ public class AppLauncherToolsPlacementTests
     }
 
     private AppLauncherTools CreateSut() =>
-        new(_processes.Object, placementService: _placer.Object, monitorService: _monitors.Object);
+        new(_processes.Object, Permissive.Session, placementService: _placer.Object, monitorService: _monitors.Object);
 
     private void LaunchReturns(LaunchResult result) =>
         _processes.Setup(p => p.LaunchApplicationAsync(It.IsAny<LaunchRequest>(), It.IsAny<bool>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
@@ -279,7 +279,7 @@ public class AppLauncherToolsPlacementTests
         _placer.Setup(p => p.PlaceAsync(It.IsAny<IReadOnlyList<(nint, LaunchPlacementPlan)>>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(bug);
         var logger = new ExceptionRecordingLogger();
-        var sut = new AppLauncherTools(_processes.Object, placementService: _placer.Object, monitorService: _monitors.Object, logger: logger);
+        var sut = new AppLauncherTools(_processes.Object, Permissive.Session, placementService: _placer.Object, monitorService: _monitors.Object, logger: logger);
 
         var result = await sut.LaunchApplicationsBatch(
         [

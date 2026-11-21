@@ -155,8 +155,9 @@ public class ExplicitCtrlAltPairTests
     private readonly FakeKeyboardLayoutWrapper _layouts = new() { Layout = FakeKeyboardLayoutWrapper.German };
 
     private InputSimulationService CreateSut() =>
-        new(TestDataFactory.CreateMockMonitorService().Object, _input, TestDataFactory.CreateAllowingInputGuard().Object,
-            new InputSession(_input), keyboardLayout: _layouts);
+        new(TestDataFactory.CreateMockMonitorService().Object, _input,
+            TestDataFactory.CreateAllowingInputGuard().Object, new InputSession(_input), Permissive.PasteGuard,
+            Permissive.Takeover, keyboardLayout: _layouts);
 
     [Fact]
     public async Task SendKeys_TheDefaultPauseChordWithTheLeftCtrlAndTheRightAlt_IsRefused_AndNothingIsSent()

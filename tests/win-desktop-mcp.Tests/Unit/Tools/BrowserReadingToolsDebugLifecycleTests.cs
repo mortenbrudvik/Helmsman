@@ -50,7 +50,7 @@ public class BrowserReadingToolsDebugLifecycleTests
 
     private BrowserReadingTools CreateSut(IInputSession? session = null) => new(
         _reads.Object, _processes.Object, debugBrowsers: _lifecycle.Object, placementService: _placer.Object,
-        monitorService: _monitors.Object, session: session);
+        monitorService: _monitors.Object, session: session ?? Permissive.Session);
 
     private void VerifyNothingLaunched() =>
         _lifecycle.Verify(l => l.LaunchAsync(It.IsAny<DebugBrowserLaunchRequest>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -125,7 +125,7 @@ public class BrowserReadingToolsDebugLifecycleTests
         _placer.Setup(p => p.PlaceAsync(It.IsAny<IReadOnlyList<(nint, LaunchPlacementPlan)>>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(bug);
         var logger = new ExceptionRecordingLogger();
-        var sut = new BrowserReadingTools(_reads.Object, _processes.Object, debugBrowsers: _lifecycle.Object,
+        var sut = new BrowserReadingTools(_reads.Object, _processes.Object, Permissive.Session, debugBrowsers: _lifecycle.Object,
             placementService: _placer.Object, monitorService: _monitors.Object, logger: logger);
 
         // Act
@@ -224,7 +224,7 @@ public class BrowserReadingToolsDebugLifecycleTests
         // Arrange
         _processes.Setup(p => p.LaunchBrowserWithDebugAsync(It.IsAny<DebugBrowserLaunchRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new DebugBrowserLaunchResult(true, 4321, null, 50123, @"C:\Temp\p", null, null));
-        var sut = new BrowserReadingTools(_reads.Object, _processes.Object);
+        var sut = new BrowserReadingTools(_reads.Object, _processes.Object, Permissive.Session);
 
         // Act
         var result = await sut.LaunchBrowserWithDebug();

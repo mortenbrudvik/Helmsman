@@ -68,7 +68,7 @@ public sealed class DebugBrowserLifecycleTests : IDisposable
 
     private DebugBrowserLifecycle CreateSut(IInputSession? session = null) => new(
         _processes.Object, _native.Object, _ports.Object, new FakePortOwnerResolver(_portOwner), _cdp.Object, _windows.Object,
-        _profiles, _policy.Object, _host.Object, session);
+        _profiles, _policy.Object, _host.Object, session ?? Permissive.Session);
 
     private string TemporaryProfile()
     {

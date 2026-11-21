@@ -44,19 +44,17 @@ public sealed class ForegroundService : IForegroundService
 
     private readonly INativeWindowWrapper _windows;
     private readonly INativeThreadInputWrapper _threads;
-    private readonly INativeInputWrapper _input;
     private readonly IProcessSecurityProbe _security;
     private readonly IWindowService _windowService;
     private readonly IForegroundThread _activationThread;
     private readonly ForegroundTiming _timing;
     private readonly ILogger<ForegroundService>? _logger;
-    private readonly IInputSession? _session;
+    private readonly IInputSession _session;
     private readonly INativeVirtualDesktopWrapper? _virtualDesktops;
 
     /// <param name="session">
-    /// The input session (roadmap M1.10). With it, activation is refused while the user has paused input
-    /// (PausedByUser), and the input unlock and the Esc go through it, so a pause also stops them. The server
-    /// always passes it; without it (tests of the activation steps) input goes straight to <paramref name="input"/>.
+    /// The input session (roadmap M1.10): activation is refused while the user has paused input (PausedByUser), and the
+    /// input unlock and the Esc go through it, so a pause also stops them.
     /// </param>
     /// <param name="virtualDesktops">
     /// The shell's virtual desktop manager (roadmap M7.3): a Cloaked refusal says whether the window is on another virtual
@@ -65,24 +63,22 @@ public sealed class ForegroundService : IForegroundService
     public ForegroundService(
         INativeWindowWrapper windows,
         INativeThreadInputWrapper threads,
-        INativeInputWrapper input,
         IProcessSecurityProbe security,
         IWindowService windowService,
         IForegroundThread activationThread,
+        IInputSession session,
         ForegroundTiming? timing = null,
         ILogger<ForegroundService>? logger = null,
-        IInputSession? session = null,
         INativeVirtualDesktopWrapper? virtualDesktops = null)
     {
         _windows = windows;
         _threads = threads;
-        _input = input;
         _security = security;
         _windowService = windowService;
         _activationThread = activationThread;
         _timing = timing ?? ForegroundTiming.Default;
         _logger = logger;
-        _session = session;
+        _session = session ?? throw new ArgumentNullException(nameof(session));
         _virtualDesktops = virtualDesktops;
     }
 
@@ -96,7 +92,7 @@ public sealed class ForegroundService : IForegroundService
         }
 
         // Activating takes the keyboard focus from the user and can send input: not while the user has paused input
-        if (_session?.IsPaused == true)
+        if (_session.IsPaused)
         {
             return Describe(handle, Paused(RootOf(handle), _windows.GetForegroundWindow()));
         }
@@ -295,7 +291,7 @@ public sealed class ForegroundService : IForegroundService
     private Activation Activated(nint root, string method, nint foreground, CancellationToken token)
     {
         // Paused while the step ran: report the pause, not a success the caller would act on
-        if (_session?.IsPaused == true)
+        if (_session.IsPaused)
         {
             return Paused(root, foreground);
         }
@@ -367,21 +363,15 @@ public sealed class ForegroundService : IForegroundService
     /// </summary>
     private uint? Inject(IReadOnlyList<InputEvent> events)
     {
-        if (_session == null)
-        {
-            return _input.SendInput(events);
-        }
-
         var outcome = _session.Send(events);
         return outcome.PausedByUser ? null : (uint)outcome.Inserted;
     }
 
     /// <summary>
     /// True when Windows reports a modifier key down (Shift, Ctrl, Alt, Windows): the user's, or stuck. Read
-    /// through the input session when there is one, as the input tools read it before each batch.
+    /// through the input session, as the input tools read it before each batch.
     /// </summary>
-    private bool ModifiersDown() =>
-        _session != null ? _session.ReadModifiersDown().Count > 0 : KeyNames.SidedModifiers.Any(_input.IsKeyDown);
+    private bool ModifiersDown() => _session.ReadModifiersDown().Count > 0;
 
     /// <summary>
     /// The refusal when the target policy denies a window that restoring or activating <paramref name="root"/> would
@@ -455,7 +445,7 @@ public sealed class ForegroundService : IForegroundService
     /// </summary>
     private Activation? Interrupted(nint root, nint foreground, CancellationToken token) =>
         token.IsCancellationRequested ? Activation.Stopped(root, foreground)
-        : _session?.IsPaused == true ? Paused(root, foreground)
+        : _session.IsPaused ? Paused(root, foreground)
         : null;
 
     /// <summary>
@@ -479,7 +469,7 @@ public sealed class ForegroundService : IForegroundService
     /// </summary>
     private Activation Paused(nint root, nint foreground) =>
         Activation.Failed(root, foreground, WindowErrorCode.PausedByUser,
-            $"Input is paused: {InputControlSources.PauseCause(_session?.PauseState?.PausedBy, _session?.PauseChord)}. So the window " +
+            $"Input is paused: {InputControlSources.PauseCause(_session.PauseState?.PausedBy, _session.PauseChord)}. So the window " +
             "was not activated, or activation stopped part-way (activating takes the keyboard focus from the user). Stop and ask the " +
             "user how to continue; only the user can resume.");
 

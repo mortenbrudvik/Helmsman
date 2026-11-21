@@ -24,17 +24,17 @@ public class StepSequenceTools
     /// <param name="session">The user's pause, and the held input released at the end of a run.</param>
     /// <param name="windows">Resolves the run's window and reads what is in front.</param>
     /// <param name="elements">The windows of the element refs a step names.</param>
-    /// <param name="keyGuard">The server's destructive chords, which a step's keys may not contain; null for the defaults.</param>
-    /// <param name="takeover">Takeover detection (roadmap M7.4), which watches the run; the server always registers it.</param>
+    /// <param name="keyGuard">The server's destructive chords, which a step's keys may not contain.</param>
+    /// <param name="takeover">Takeover detection (roadmap M7.4), which watches the run.</param>
     /// <param name="keyboardLayout">
     /// The keyboard layout queries, to read a step's keys on the layout of the window they go to, as its tool maps them; the
     /// server always registers them.
     /// </param>
-    public StepSequenceTools(IInputSession session, IWindowService windows, IElementRegistry elements, InputGuardOptions? keyGuard = null,
-        ITakeoverMonitor? takeover = null, INativeKeyboardLayoutWrapper? keyboardLayout = null)
+    public StepSequenceTools(IInputSession session, IWindowService windows, IElementRegistry elements, InputGuardOptions keyGuard,
+        ITakeoverMonitor takeover, INativeKeyboardLayoutWrapper? keyboardLayout = null)
     {
         _windows = windows;
-        _runner = new StepRunner(session, windows, elements, keyGuard, takeover: takeover, keyboardLayout: keyboardLayout);
+        _runner = new StepRunner(session, windows, elements, keyGuard, takeover, keyboardLayout: keyboardLayout);
     }
 
     [McpServerTool(Name = "run_steps", Title = "Run Steps", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false)]

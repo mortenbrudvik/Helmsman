@@ -53,7 +53,7 @@ public class StepRunnerKeyboardLayoutTests
         _ => throw new ArgumentOutOfRangeException(nameof(name), name, null)
     };
 
-    private StepRunner Runner() => new(_session.Object, _windows.Object, _elements.Object, keyboardLayout: _layouts);
+    private StepRunner Runner() => new(_session.Object, _windows.Object, _elements.Object, InputGuardOptions.Default, Permissive.Takeover, keyboardLayout: _layouts);
 
     private static RunStep Step(StepTool tool, string args) => new(tool, JsonNode.Parse(args)!.AsObject(), null, false, false);
 
@@ -244,7 +244,7 @@ public class StepRunnerKeyboardLayoutTests
     public async Task WithoutLayoutQueries_TheKeysAreReadOnTheInvariantLayout_AsTheirToolsMapThem()
     {
         // A server without the queries (tests) maps every key on the invariant layout, where ц has no key: nothing to refuse
-        var runner = new StepRunner(_session.Object, _windows.Object, _elements.Object);
+        var runner = new StepRunner(_session.Object, _windows.Object, _elements.Object, InputGuardOptions.Default, Permissive.Takeover);
 
         var run = await runner.RunAsync((nint)Window, runner.Check([Step(StepTool.PressKeys, """{ "keys": "ctrl+ц" }""")], _dispatcher),
             _dispatcher, TimeSpan.FromSeconds(10), TimeSpan.Zero, null, CancellationToken.None);

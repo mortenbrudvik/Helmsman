@@ -24,7 +24,7 @@ public class LayoutPresetToolsInvalidFileTests
         ]);
     }
 
-    private LayoutPresetTools CreateSut() => new(_layouts.Object);
+    private LayoutPresetTools CreateSut() => new(_layouts.Object, Permissive.Session);
 
     [Fact]
     public void ListLayouts_ListsTheInvalidFilesAfterThePresets_WithWhy()

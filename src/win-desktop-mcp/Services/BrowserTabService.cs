@@ -35,7 +35,7 @@ public sealed class BrowserTabService : IBrowserTabService
     private readonly IBrowserDetectionService _detection;
     private readonly ICdpTabService _tabs;
     private readonly ITcpPortOwnerResolver _portOwners;
-    private readonly IInputSession? _session;
+    private readonly IInputSession _session;
     private readonly BrowserCdpTargets _targets;
 
     /// <param name="windows">The window and process reads.</param>
@@ -46,7 +46,7 @@ public sealed class BrowserTabService : IBrowserTabService
     /// <param name="portOwners">Tells which process listens on a port given without a window.</param>
     /// <param name="policy">The user's target policy.</param>
     /// <param name="portLocator">Finds a window's own debug port; the server always passes it. Without it, cdpPort is needed.</param>
-    /// <param name="session">The input session the gate checks for a pause; the server always passes it.</param>
+    /// <param name="session">The input session the gate checks for a pause.</param>
     public BrowserTabService(
         INativeWindowWrapper windows,
         IBrowserDetectionService detection,
@@ -55,14 +55,14 @@ public sealed class BrowserTabService : IBrowserTabService
         ICdpTabService tabs,
         ITcpPortOwnerResolver portOwners,
         ITargetPolicy policy,
-        IDebugPortLocator? portLocator = null,
-        IInputSession? session = null)
+        IInputSession session,
+        IDebugPortLocator? portLocator = null)
     {
         _windows = windows;
         _detection = detection;
         _tabs = tabs;
         _portOwners = portOwners;
-        _session = session;
+        _session = session ?? throw new ArgumentNullException(nameof(session));
         _targets = new BrowserCdpTargets(windows, detection, reading, cdp, portOwners, policy, portLocator);
     }
 
@@ -161,7 +161,7 @@ public sealed class BrowserTabService : IBrowserTabService
             // The gate was let go once the tab was opened, and the pause or a busy gate came before Page.navigate took it
             // again: the tab is there, so the result names it instead of the gate's "nothing was done"
             var why = refused.ErrorCode == nameof(WindowErrorCode.PausedByUser)
-                ? $"input is paused ({InputControlSources.PauseCause(_session?.PauseState?.PausedBy, null)})"
+                ? $"input is paused ({InputControlSources.PauseCause(_session.PauseState?.PausedBy, null)})"
                 : "another input or window call held the input gate";
             return BrowserNavigateResult.Failed(refused.ErrorCode,
                 $"A new tab {targetId} was opened on about:blank, but it was not navigated: {why}. " +

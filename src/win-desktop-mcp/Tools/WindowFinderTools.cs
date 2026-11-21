@@ -15,18 +15,17 @@ public partial class WindowFinderTools
     private readonly IWindowService _windowService;
     private readonly INativeHitTestWrapper? _hitTest;
     private readonly IWindowWaitService? _windowWait;
-    private readonly IProcessSecurityProbe? _securityProbe;
+    private readonly IProcessSecurityProbe _securityProbe;
     private readonly INativeVirtualDesktopWrapper? _virtualDesktops;
     private readonly IWindowEventJournal? _journal;
 
     /// <param name="windowService">Window reads and the window selectors.</param>
-    /// <param name="hitTest">The client-area read of get_window_info's detail 'full'; without it clientBounds is left out.</param>
-    /// <param name="windowWait">wait_for_window's waits (roadmap M3.7); the server always registers it.</param>
     /// <param name="securityProbe">
     /// The integrity read of get_window_info's detail 'full' (roadmap M6.6) and get_foreground_window's sessionLock (issue
-    /// #18); the server always registers it. Without it integrityLevel, elevated and aboveServer are left out, and sessionLock
-    /// is unknown.
+    /// #18).
     /// </param>
+    /// <param name="hitTest">The client-area read of get_window_info's detail 'full'; without it clientBounds is left out.</param>
+    /// <param name="windowWait">wait_for_window's waits (roadmap M3.7); the server always registers it.</param>
     /// <param name="virtualDesktops">
     /// The shell's virtual desktop manager, which marks a cloaked window on another virtual desktop with isOnOtherDesktop
     /// (roadmap M7.3); the server always registers it. Without it isOnOtherDesktop is left out.
@@ -34,9 +33,9 @@ public partial class WindowFinderTools
     /// <param name="journal">get_window_events' journal (roadmap M7.2); the server always registers it.</param>
     public WindowFinderTools(
         IWindowService windowService,
+        IProcessSecurityProbe securityProbe,
         INativeHitTestWrapper? hitTest = null,
         IWindowWaitService? windowWait = null,
-        IProcessSecurityProbe? securityProbe = null,
         INativeVirtualDesktopWrapper? virtualDesktops = null,
         IWindowEventJournal? journal = null)
     {
@@ -45,7 +44,7 @@ public partial class WindowFinderTools
         _windowService = windowService;
         _hitTest = hitTest;
         _windowWait = windowWait;
-        _securityProbe = securityProbe;
+        _securityProbe = securityProbe ?? throw new ArgumentNullException(nameof(securityProbe));
     }
 
     /// <summary>The window parameters every tool shares with find_windows (roadmap M2.4).</summary>
@@ -245,16 +244,10 @@ public partial class WindowFinderTools
     /// <summary>
     /// The integrity of the window's process (for a UWP frame, the app's), and whether it or the frame host runs above the
     /// server by the input guard's own test (<see cref="ProcessIntegrity.IsMorePrivilegedThan"/>), as get_ui_elements'
-    /// TargetElevated warning tells it. Token reads, cached per process, which no window's thread answers; nothing without a
-    /// probe.
+    /// TargetElevated warning tells it. Token reads, cached per process, which no window's thread answers.
     /// </summary>
     private (ProcessIntegrity? Integrity, bool AboveServer) ReadIntegrity(WindowInfo window)
     {
-        if (_securityProbe == null)
-        {
-            return (null, false);
-        }
-
         var server = _securityProbe.ServerIntegrity;
         var integrity = _securityProbe.GetIntegrity(window.ProcessId);
         var aboveServer = integrity.IsMorePrivilegedThan(server) ||
@@ -270,7 +263,7 @@ public partial class WindowFinderTools
         // The lock right after the window, which it qualifies: neither LockApp's window in front nor no window in front says
         // the session is locked (issue #18)
         var window = _windowService.GetForegroundWindow();
-        var sessionLock = _securityProbe?.GetSessionLock() ?? SessionLockState.Unknown;
+        var sessionLock = _securityProbe.GetSessionLock();
 
         // Never null: the SDK sends null as empty content, which tells the agent nothing (roadmap M2.1)
         return window is null

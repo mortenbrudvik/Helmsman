@@ -16,7 +16,7 @@ public class WindowFinderToolsTests
         _mockWindowService = new Mock<IWindowService>();
     }
 
-    private WindowFinderTools CreateSut() => new WindowFinderTools(_mockWindowService.Object);
+    private WindowFinderTools CreateSut() => new WindowFinderTools(_mockWindowService.Object, Permissive.SecurityProbe);
 
     #region FindWindows Tests
 
@@ -542,21 +542,6 @@ public class WindowFinderToolsTests
         _mockSecurityProbe.Verify(p => p.GetIntegrity(It.IsAny<int>()), Times.Never);
     }
 
-    [Fact]
-    public void GetWindowInfo_Full_WithoutASecurityProbe_LeavesTheIntegrityOut()
-    {
-        // Arrange
-        var window = UseWindow(TestDataFactory.CreateWindowInfo(0x100));
-
-        // Act
-        var result = CreateSut().GetWindowInfo(handle: window.Handle, detail: WindowDetail.Full);
-
-        // Assert
-        result.Success.Should().BeTrue();
-        result.IntegrityLevel.Should().BeNull();
-        result.AboveServer.Should().BeNull();
-    }
-
     // Issue #12: the monitor's identity and the zone from standard up, and where a minimized window comes back at full
 
     [Theory]
@@ -624,7 +609,7 @@ public class WindowFinderToolsTests
         _mockVirtualDesktops.Setup(d => d.GetPlacements(It.IsAny<IReadOnlyList<nint>>()))
             .Returns<IReadOnlyList<nint>>(windows => windows
                 .Select(w => placements.TryGetValue(w, out var placement) ? placement : VirtualDesktopPlacement.Unknown).ToList());
-        return new WindowFinderTools(_mockWindowService.Object, virtualDesktops: _mockVirtualDesktops.Object);
+        return new WindowFinderTools(_mockWindowService.Object, Permissive.SecurityProbe, virtualDesktops: _mockVirtualDesktops.Object);
     }
 
     [Fact]
@@ -716,7 +701,7 @@ public class WindowFinderToolsTests
     [InlineData(201)]
     public void GetWindowEvents_ALimitOutside1To200_IsInvalidArguments_AndReadsNothing(int limit)
     {
-        var sut = new WindowFinderTools(_mockWindowService.Object, journal: _journal.Object);
+        var sut = new WindowFinderTools(_mockWindowService.Object, Permissive.SecurityProbe, journal: _journal.Object);
 
         var act = () => sut.GetWindowEvents(limit: limit);
 
@@ -732,7 +717,7 @@ public class WindowFinderToolsTests
         _journal.Setup(j => j.Read(41, 20, It.IsAny<Func<WindowEventEntry, bool>?>()))
             .Callback<long?, int, Func<WindowEventEntry, bool>?>((_, _, filter) => include = filter)
             .Returns(new WindowEventRead([], 41, EventTime, StartedNow: false, Missed: 0, More: false));
-        var sut = new WindowFinderTools(_mockWindowService.Object, journal: _journal.Object);
+        var sut = new WindowFinderTools(_mockWindowService.Object, Permissive.SecurityProbe, journal: _journal.Object);
 
         // Act
         sut.GetWindowEvents(sinceSeq: 41, types: [WindowEventType.Shown], processName: "Notepad.exe", handle: 0x200, limit: 20);
@@ -753,7 +738,7 @@ public class WindowFinderToolsTests
         var events = new[] { Event(1, WindowEventType.Shown, 0x200, "notepad") };
         _journal.Setup(j => j.Read(null, 50, null))
             .Returns(new WindowEventRead(events, 1, EventTime, StartedNow: true, Missed: 0, More: false));
-        var sut = new WindowFinderTools(_mockWindowService.Object, journal: _journal.Object);
+        var sut = new WindowFinderTools(_mockWindowService.Object, Permissive.SecurityProbe, journal: _journal.Object);
 
         // Act
         var result = sut.GetWindowEvents();

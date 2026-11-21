@@ -56,8 +56,8 @@ public class BrowserPageServiceTests
     }
 
     private BrowserPageService CreateSut() => new(
-        _windows.Object, new BrowserDetectionService(), _reading.Object, _cdp.Object, _pages.Object, _owners, _viewports.Object, _policy,
-        _locator.Object, _session, _dialogs.Object);
+        _windows.Object, new BrowserDetectionService(), _reading.Object, _cdp.Object, _pages.Object, _owners,
+        _viewports.Object, _policy, _session, _locator.Object, _dialogs.Object);
 
     private static BrowserTabTarget ByWindow(string? targetId = null) => new(BrowserWindow, null, targetId);
 

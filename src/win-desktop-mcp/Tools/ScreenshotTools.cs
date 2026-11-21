@@ -94,7 +94,7 @@ public class ScreenshotTools
     private readonly IScreenshotService _screenshotService;
     private readonly IUIElementService _uiElementService;
     private readonly IWindowService _windowService;
-    private readonly IInputSession? _session;
+    private readonly IInputSession _session;
     private readonly IElementRegistry? _elementRegistry;
     private readonly ICaptureTargetPolicy _capturePolicy;
     private readonly IMonitorService? _monitorService;
@@ -120,14 +120,14 @@ public class ScreenshotTools
         IUIElementService uiElementService,
         IWindowService windowService,
         ICaptureTargetPolicy capturePolicy,
-        IInputSession? session = null,
+        IInputSession session,
         IElementRegistry? elementRegistry = null,
         IMonitorService? monitorService = null)
     {
         _screenshotService = screenshotService;
         _uiElementService = uiElementService;
         _windowService = windowService;
-        _session = session;
+        _session = session ?? throw new ArgumentNullException(nameof(session));
         _elementRegistry = elementRegistry;
         _capturePolicy = capturePolicy ?? throw new ArgumentNullException(nameof(capturePolicy));
         _monitorService = monitorService;

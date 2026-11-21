@@ -16,7 +16,7 @@ public class InputSimulationToolsTests
     }
 
     private InputSimulationTools CreateSut() =>
-        new InputSimulationTools(_mockInputService.Object);
+        new InputSimulationTools(_mockInputService.Object, Mock.Of<ICoordinateSpaceResolver>());
 
     private static Mock<IInputSimulationService> CreateMockInputSimulationService(
         bool success = true,

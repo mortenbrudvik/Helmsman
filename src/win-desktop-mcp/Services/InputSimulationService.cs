@@ -49,16 +49,24 @@ public partial class InputSimulationService : IInputSimulationService
     private readonly INativeHitTestWrapper? _hitTest;
     private readonly INativeSystemInfoWrapper? _systemInfo;
     private readonly IClipboardOrigin? _clipboardOrigin;
-    private readonly IClipboardPasteGuard? _pasteGuard;
+    private readonly IClipboardPasteGuard _pasteGuard;
     private readonly INativeKeyboardLayoutWrapper? _keyboardLayout;
     private readonly IPasteClipboard? _pasteClipboard;
     private readonly TimeSpan _pasteSettleTime;
-    private readonly ITakeoverMonitor? _takeover;
+    private readonly ITakeoverMonitor _takeover;
 
     /// <param name="monitorService">The monitors, for coordinate checks.</param>
     /// <param name="inputWrapper">The native input layer, for cursor reads; input itself goes through <paramref name="session"/>.</param>
     /// <param name="guard">The input guard.</param>
     /// <param name="session">The input session: the user's pause and the held-input bookkeeping.</param>
+    /// <param name="pasteGuard">
+    /// Checks the batches that paste, right before they are sent, so the agent pastes only what get_clipboard would return
+    /// (PasteNotAllowed), and refuses a batch that copies and then pastes.
+    /// </param>
+    /// <param name="takeover">
+    /// Takeover detection (roadmap M7.4): type_text's typing and drag stop (mode stop) or warn (mode warn) when the user uses
+    /// the keyboard or mouse meanwhile; with mode off nothing is watched.
+    /// </param>
     /// <param name="gateTimeout">How long to wait for the input gate; default <see cref="InputGate.InputWaitTimeout"/>.</param>
     /// <param name="hitTest">scroll: the client area of the target window, where it scrolls when no point is given.</param>
     /// <param name="systemInfo">
@@ -68,10 +76,6 @@ public partial class InputSimulationService : IInputSimulationService
     /// routing. The server always passes it.
     /// </param>
     /// <param name="clipboardOrigin">Told about the batches that can copy, so get_clipboard knows the agent's copies.</param>
-    /// <param name="pasteGuard">
-    /// Checks the batches that paste, right before they are sent, so the agent pastes only what get_clipboard would return
-    /// (PasteNotAllowed). The server always passes it.
-    /// </param>
     /// <param name="keyboardLayout">
     /// The keyboard layout queries send_keys maps characters with (roadmap M4.1). The server always passes it; without it
     /// keys are mapped with <see cref="KeyboardLayout.Invariant"/>.
@@ -81,26 +85,22 @@ public partial class InputSimulationService : IInputSimulationService
     /// types, and method paste cannot be used.
     /// </param>
     /// <param name="pasteSettleTime">How long a paste keeps the text on the clipboard after Ctrl+V; default <see cref="PasteSettleTime"/>.</param>
-    /// <param name="takeover">
-    /// Takeover detection (roadmap M7.4): type_text's typing and drag stop (mode stop) or warn (mode warn) when the user uses
-    /// the keyboard or mouse meanwhile. The server always passes it; without it nothing is watched.
-    /// </param>
     public InputSimulationService(
         IMonitorService monitorService,
         INativeInputWrapper inputWrapper,
         IInputTargetGuard guard,
         IInputSession session,
+        IClipboardPasteGuard pasteGuard,
+        ITakeoverMonitor takeover,
         TimeSpan? gateTimeout = null,
         INativeHitTestWrapper? hitTest = null,
         INativeSystemInfoWrapper? systemInfo = null,
         IClipboardOrigin? clipboardOrigin = null,
-        IClipboardPasteGuard? pasteGuard = null,
         INativeKeyboardLayoutWrapper? keyboardLayout = null,
         IPasteClipboard? pasteClipboard = null,
-        TimeSpan? pasteSettleTime = null,
-        ITakeoverMonitor? takeover = null)
+        TimeSpan? pasteSettleTime = null)
     {
-        _takeover = takeover;
+        _takeover = takeover ?? throw new ArgumentNullException(nameof(takeover));
         _monitorService = monitorService;
         _inputWrapper = inputWrapper;
         _guard = guard ?? throw new ArgumentNullException(nameof(guard));
@@ -109,7 +109,7 @@ public partial class InputSimulationService : IInputSimulationService
         _hitTest = hitTest;
         _systemInfo = systemInfo;
         _clipboardOrigin = clipboardOrigin;
-        _pasteGuard = pasteGuard;
+        _pasteGuard = pasteGuard ?? throw new ArgumentNullException(nameof(pasteGuard));
         _keyboardLayout = keyboardLayout;
         _pasteClipboard = pasteClipboard;
         _pasteSettleTime = pasteSettleTime ?? PasteSettleTime;
@@ -807,7 +807,7 @@ public partial class InputSimulationService : IInputSimulationService
 
         // The text goes out in several batches, each checked on its own: a copy (ETX, CAN) in one and the paste (SYN) in a
         // later one would paste what the copy took unchecked, so the order is checked on the whole text first
-        if (_pasteGuard != null && ClipboardPasteGuard.CopyThenPasteRefusal(events, receivingClass: null, "Nothing was typed.") is { } copyThenPaste)
+        if (ClipboardPasteGuard.CopyThenPasteRefusal(events, receivingClass: null, "Nothing was typed.") is { } copyThenPaste)
         {
             return (null, InputErrorCode.PasteNotAllowed, copyThenPaste);
         }
@@ -1486,7 +1486,7 @@ public partial class InputSimulationService : IInputSimulationService
     /// <see cref="IClipboardPasteGuard"/>); null when it may be sent.
     /// </summary>
     private string? PasteRefusal(IReadOnlyList<InputEvent> batch, InputGuardResult approved) =>
-        _pasteGuard?.Check(batch, approved.Receiving);
+        _pasteGuard.Check(batch, approved.Receiving);
 
     /// <summary>
     /// <paramref name="batch"/> with a key-down in front of it for every modifier the server holds down now: what the
@@ -1898,9 +1898,9 @@ public partial class InputSimulationService : IInputSimulationService
         /// Watches for the user's input from now on (roadmap M7.4): with mode stop, <see cref="Token"/> is cancelled too when
         /// the user acts. Only the long operations call it (type_text's typing, drag's press to drop), right before they send.
         /// </summary>
-        public void WatchForTakeover(ITakeoverMonitor? monitor)
+        public void WatchForTakeover(ITakeoverMonitor monitor)
         {
-            if (monitor == null || monitor.Mode == TakeoverMode.Off || _beforeWatch != null)
+            if (monitor.Mode == TakeoverMode.Off || _beforeWatch != null)
             {
                 return;
             }

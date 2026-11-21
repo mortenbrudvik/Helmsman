@@ -16,13 +16,13 @@ namespace WinDesktopMcp.Tools;
 public class WorkspaceTools
 {
     private readonly IWorkspaceService _workspaces;
-    private readonly IInputSession? _session;
+    private readonly IInputSession _session;
     private readonly TimeSpan? _gateWaitTimeout;
 
-    public WorkspaceTools(IWorkspaceService workspaces, IInputSession? session = null, TimeSpan? gateWaitTimeout = null)
+    public WorkspaceTools(IWorkspaceService workspaces, IInputSession session, TimeSpan? gateWaitTimeout = null)
     {
         _workspaces = workspaces;
-        _session = session;
+        _session = session ?? throw new ArgumentNullException(nameof(session));
         _gateWaitTimeout = gateWaitTimeout;
     }
 

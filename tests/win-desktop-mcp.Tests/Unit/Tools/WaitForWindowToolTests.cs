@@ -44,7 +44,7 @@ public class WaitForWindowToolTests
             .Callback((WindowConditionRequest request, IProgress<OperationProgress>? _, CancellationToken _) => _request = request)
             .ReturnsAsync(result);
 
-    private WindowFinderTools CreateTools() => new(_windows.Object, windowWait: _wait.Object);
+    private WindowFinderTools CreateTools() => new(_windows.Object, Permissive.SecurityProbe, windowWait: _wait.Object);
 
     [Fact]
     public async Task ASatisfiedWait_ReturnsTheWindow()

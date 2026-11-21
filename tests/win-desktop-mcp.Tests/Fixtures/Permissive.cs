@@ -32,6 +32,9 @@ public static class Permissive
     /// </summary>
     public static IProcessSecurityProbe SecurityProbe { get; } = new UnknownSecurity();
 
+    /// <summary>An input session over a <see cref="FakeInputWrapper"/> that the user never pauses.</summary>
+    public static IInputSession Session => new InputSession(new FakeInputWrapper());
+
     /// <summary>Takeover detection off (WAM_TAKEOVER_DETECTION unset): nothing is watched.</summary>
     public static ITakeoverMonitor Takeover => new StubTakeoverMonitor(TakeoverMode.Off);
 

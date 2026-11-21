@@ -27,9 +27,8 @@ public class SendKeysHeldModifierAcrossBatchesTests
 
     private InputSimulationService CreateSut(bool allowUserClipboard = false) =>
         new(TestDataFactory.CreateMockMonitorService().Object, _input, _guard.Object, _session,
-            clipboardOrigin: _origin,
-            pasteGuard: new ClipboardPasteGuard(_clipboard, _origin, new ClipboardOptions(allowUserClipboard), new Mock<INativeWindowWrapper>().Object),
-            keyboardLayout: new FakeKeyboardLayoutWrapper());
+            new ClipboardPasteGuard(_clipboard, _origin, new ClipboardOptions(allowUserClipboard), new Mock<INativeWindowWrapper>().Object),
+            Permissive.Takeover, clipboardOrigin: _origin, keyboardLayout: new FakeKeyboardLayoutWrapper());
 
     /// <summary>The clipboard holds set_clipboard's text: the agent may paste it.</summary>
     private void AgentsTextOnTheClipboard()

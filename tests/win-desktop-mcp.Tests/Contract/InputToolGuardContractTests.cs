@@ -97,11 +97,11 @@ public class InputToolGuardContractTests
             _windows.Object, _hitTest.Object, _threads.Object, new Mock<INativeProcessWrapper>().Object,
             _windowService.Object, _foreground.Object, _security.Object, _hostGuard.Object,
             new TargetPolicy(TargetPolicySettings.Default), InputGuardOptions.Default);
-        var service = new InputSimulationService(monitors.Object, _input.Object, guard, new InputSession(_input.Object),
-            hitTest: _hitTest.Object, systemInfo: _systemInfo.Object);
+        var service = new InputSimulationService(monitors.Object, _input.Object, guard, new InputSession(_input.Object), Permissive.PasteGuard,
+            Permissive.Takeover, hitTest: _hitTest.Object, systemInfo: _systemInfo.Object);
         return InProcessMcpServer.StartAsync(
             [],
-            builder => builder.AddToolErrorReporting().WithServerTools(new InputSimulationTools(service)));
+            builder => builder.AddToolErrorReporting().WithServerTools(new InputSimulationTools(service, Mock.Of<ICoordinateSpaceResolver>())));
     }
 
     private static JsonElement ParsePayload(CallToolResult result)

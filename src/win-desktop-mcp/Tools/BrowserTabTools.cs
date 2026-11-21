@@ -30,16 +30,16 @@ public class BrowserTabTools
 
     private readonly IBrowserTabService _tabs;
     private readonly IWindowService? _windowService;
-    private readonly IInputSession? _session;
+    private readonly IInputSession _session;
 
     /// <param name="tabs">The tab service.</param>
     /// <param name="windowService">Resolves the window selector; the server always passes it.</param>
-    /// <param name="session">Refuses the tools that change the browser while input is paused; the server always passes it.</param>
-    public BrowserTabTools(IBrowserTabService tabs, IWindowService? windowService = null, IInputSession? session = null)
+    /// <param name="session">Refuses the tools that change the browser while input is paused.</param>
+    public BrowserTabTools(IBrowserTabService tabs, IInputSession session, IWindowService? windowService = null)
     {
         _tabs = tabs;
         _windowService = windowService;
-        _session = session;
+        _session = session ?? throw new ArgumentNullException(nameof(session));
     }
 
     internal const string HandleDescription = "Browser window handle. Pass handle, window or cdpPort.";

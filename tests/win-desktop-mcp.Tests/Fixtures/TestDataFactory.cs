@@ -222,7 +222,7 @@ public static class TestDataFactory
         IWindowService windows, IForegroundService foreground, IInputSession? session = null, Action? duringWait = null)
     {
         var clock = new ManualClock();
-        return new LaunchPlacementService(windows, foreground, session, clock, (delay, token) =>
+        return new LaunchPlacementService(windows, foreground, session ?? Permissive.Session, clock, (delay, token) =>
         {
             token.ThrowIfCancellationRequested();
             clock.Advance(delay);

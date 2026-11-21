@@ -73,7 +73,7 @@ public sealed class InputControlToolContractTests : IDisposable
 
         var monitors = TestDataFactory.CreateMockMonitorService(
             [TestDataFactory.CreateMonitorInfo(boundsX: 0, boundsY: 0, boundsWidth: 1920, boundsHeight: 1080)]);
-        var service = new InputSimulationService(monitors.Object, input, TestDataFactory.CreateAllowingInputGuard().Object, session);
+        var service = new InputSimulationService(monitors.Object, input, TestDataFactory.CreateAllowingInputGuard().Object, session, Permissive.PasteGuard, Permissive.Takeover);
 
         // A window-changing tool that only records that it ran
         var windowTool = McpServerTool.Create(
@@ -99,13 +99,13 @@ public sealed class InputControlToolContractTests : IDisposable
                     }))
                     .AddToolErrorReporting()
                     .AddInputGateSerialization()
-                    .WithServerTools(new InputSimulationTools(service));
+                    .WithServerTools(new InputSimulationTools(service, Mock.Of<ICoordinateSpaceResolver>()));
 
                 // The input control tools are registered as the server registers them: the SDK builds a new
                 // instance from the services for every call, so no state of theirs outlives a call. Only a test
                 // that needs a shorter answer timeout registers one instance instead.
                 _ = answerTimeout is { } timeout
-                    ? builder.WithServerTools(new InputControlTools(session, _hotkey, timeout))
+                    ? builder.WithServerTools(new InputControlTools(session, _hotkey, Permissive.Takeover, securityProbe ?? Permissive.SecurityProbe, timeout))
                     : builder.WithServerTools<InputControlTools>();
             },
             clientOptions: InProcessMcpServer.WithRevision(options, revision),
@@ -113,11 +113,9 @@ public sealed class InputControlToolContractTests : IDisposable
             {
                 services
                     .AddSingleton<IInputSession>(session)
-                    .AddSingleton<IPauseHotkey>(_hotkey);
-                if (securityProbe != null)
-                {
-                    services.AddSingleton(securityProbe);
-                }
+                    .AddSingleton<IPauseHotkey>(_hotkey)
+                    .AddSingleton(Permissive.Takeover)
+                    .AddSingleton(securityProbe ?? Permissive.SecurityProbe);
             });
     }
 
@@ -1017,7 +1015,7 @@ public sealed class InputControlToolContractTests : IDisposable
         // left down too, so the error must not call every key down a modifier of the hotkey
         _input.Press(VkLControl);
         _input.Press(VkLWin);
-        var tools = new InputControlTools(_session, _hotkey);
+        var tools = new InputControlTools(_session, _hotkey, Permissive.Takeover, Permissive.SecurityProbe);
 
         var result = tools.ReleaseAllInput(releaseHeldModifiers: true);
 

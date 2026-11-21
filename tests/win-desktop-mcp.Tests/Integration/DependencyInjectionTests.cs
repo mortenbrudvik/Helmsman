@@ -98,17 +98,6 @@ public class DependencyInjectionTests : IDisposable
     }
 
     [Fact]
-    public void TheFullWindowRead_GetsTheSecurityProbe()
-    {
-        // get_window_info's 'full' reports the window's integrity (roadmap M6.6). Built without the probe, the field would
-        // silently be left out
-        var windowTools = _serviceProvider.GetRequiredService<WindowFinderTools>();
-
-        typeof(WindowFinderTools).GetField("_securityProbe", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(windowTools)
-            .Should().BeSameAs(_serviceProvider.GetRequiredService<IProcessSecurityProbe>());
-    }
-
-    [Fact]
     public void TheWindowListingsFocusAndCapture_GetTheVirtualDesktopManager()
     {
         // isOnOtherDesktop and the Cloaked messages that name another virtual desktop (roadmap M7.3). Built without it,
@@ -123,17 +112,12 @@ public class DependencyInjectionTests : IDisposable
     }
 
     [Fact]
-    public void TypeTextDragRunStepsAndTheControlStatus_GetTheTakeoverMonitor()
+    public void TheTakeoverMonitor_UsesTheModeTheServerReads()
     {
-        // Takeover detection (roadmap M7.4): built without it, WAM_TAKEOVER_DETECTION=stop would silently stop nothing
+        // Takeover detection (roadmap M7.4): type_text, drag, run_steps and get_control_status take the monitor as a required
+        // collaborator, so it is enough that the one the container holds runs in the mode the server reads
         var monitor = _serviceProvider.GetRequiredService<ITakeoverMonitor>();
-        static object? Field(object service, string name) =>
-            service.GetType().GetField(name, BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(service);
 
-        Field(_serviceProvider.GetRequiredService<IInputSimulationService>(), "_takeover").Should().BeSameAs(monitor);
-        Field(_serviceProvider.GetRequiredService<InputControlTools>(), "_takeover").Should().BeSameAs(monitor);
-        var runner = Field(_serviceProvider.GetRequiredService<StepSequenceTools>(), "_runner")!;
-        Field(runner, "_takeover").Should().BeSameAs(monitor);
         // The mode the user set (WAM_TAKEOVER_DETECTION), whatever it is on the machine that runs the tests; off when unset
         // is TakeoverOptions' own rule (UserTakeoverMonitorTests.Options_ReadTheMode_FromTheEnvironment)
         monitor.Mode.Should().Be(TakeoverOptions.FromEnvironment().Mode, "the monitor uses the mode the server reads from its environment");

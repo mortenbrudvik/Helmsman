@@ -198,8 +198,8 @@ public sealed class UserConfirmationFailClosedContractTests : IDisposable
     public async Task CloseDebugBrowser_TheQuestionFails_IsConfirmationDeclined_AndNothingIsClosed(Failure failure, string? revision)
     {
         // Arrange
-        var tools = new BrowserReadingTools(_services.Browser.Object, _services.Processes.Object, _services.Windows.Object,
-            _services.DebugBrowsers.Object, _services.Placement.Object, _services.Monitors.Object, _services.Session, AnswerTimeout);
+        var tools = new BrowserReadingTools(_services.Browser.Object, _services.Processes.Object, _services.Session, _services.Windows.Object,
+            _services.DebugBrowsers.Object, _services.Placement.Object, _services.Monitors.Object, AnswerTimeout);
         await using var server = await StartAsync(failure, revision, builder => builder.WithServerTools(tools));
 
         // Act
@@ -312,8 +312,9 @@ public sealed class UserConfirmationFailClosedContractTests : IDisposable
     // ---- helpers ----
 
     private AppLauncherTools LauncherTools() =>
-        new(_services.Processes.Object, _services.Windows.Object, _services.Session, AnswerTimeout,
-            placementService: _services.Placement.Object, monitorService: _services.Monitors.Object, installedApps: _services.InstalledApps.Object);
+        new(_services.Processes.Object, _services.Session, _services.Windows.Object, AnswerTimeout,
+            placementService: _services.Placement.Object, monitorService: _services.Monitors.Object,
+            installedApps: _services.InstalledApps.Object);
 
     private WindowManagerTools WindowTools() =>
         new(_services.Windows.Object, _services.Foreground.Object, _services.Session, AnswerTimeout,

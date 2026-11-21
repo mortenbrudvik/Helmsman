@@ -39,7 +39,7 @@ public class StepRunnerTakeoverUnavailableTests
 
     private Task<StepRunOutcome> RunAsync(StubTakeoverMonitor monitor)
     {
-        var runner = new StepRunner(_session.Object, _windows.Object, _elements.Object, takeover: monitor);
+        var runner = new StepRunner(_session.Object, _windows.Object, _elements.Object, InputGuardOptions.Default, monitor);
         return runner.RunAsync((nint)Window, runner.Check([Click(), Click()], _dispatcher), _dispatcher, TimeSpan.FromSeconds(30),
             TimeSpan.Zero, null, CancellationToken.None);
     }

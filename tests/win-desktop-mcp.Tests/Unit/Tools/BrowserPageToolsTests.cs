@@ -35,7 +35,7 @@ public class BrowserPageToolsTests
             .ReturnsAsync(new BrowserScreenshot(new BrowserScreenshotResult(true, Width: 10, Height: 10), new EncodedImage([1, 2, 3], "image/png")));
     }
 
-    private BrowserPageTools CreateSut() => new(_pages.Object, windowService: null, _session, _dialogs.Object);
+    private BrowserPageTools CreateSut() => new(_pages.Object, _session, null, _dialogs.Object);
 
     private static async Task<ToolErrorException> RefusedAsync(Func<Task> act) =>
         (await act.Should().ThrowAsync<ToolErrorException>()).Which;

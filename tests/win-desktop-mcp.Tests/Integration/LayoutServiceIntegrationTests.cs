@@ -34,8 +34,8 @@ public class LayoutServiceIntegrationTests : IDisposable
             _mockMonitorService.Object,
             _mockProcessService.Object,
             foreground,
-            _testLayoutPath,
-            TestDataFactory.CreateInstantLaunchPlacement(_mockWindowService.Object, foreground));
+            TestDataFactory.CreateInstantLaunchPlacement(_mockWindowService.Object, foreground),
+            _testLayoutPath);
     }
 
     public void Dispose()

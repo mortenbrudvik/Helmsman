@@ -38,7 +38,7 @@ public class CaptureMonitorSelectorTests
     }
 
     private ScreenshotTools Screenshots() =>
-        new(_screenshots.Object, Mock.Of<IUIElementService>(), _windows.Object, new CaptureTargetPolicy(_windows.Object, Mock.Of<ITargetPolicy>()), monitorService: _monitors.Object);
+        new(_screenshots.Object, Mock.Of<IUIElementService>(), _windows.Object, new CaptureTargetPolicy(_windows.Object, Mock.Of<ITargetPolicy>()), Permissive.Session, monitorService: _monitors.Object);
 
     private OcrTools Ocr() => new(_ocr.Object, _screenshots.Object, _windows.Object, _monitors.Object);
 

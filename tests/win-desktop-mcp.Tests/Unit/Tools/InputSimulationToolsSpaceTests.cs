@@ -48,7 +48,7 @@ public class InputSimulationToolsSpaceTests
         return result;
     }
 
-    private InputSimulationTools CreateSut() => new(_input.Object, _windows.Object, _resolver.Object);
+    private InputSimulationTools CreateSut() => new(_input.Object, _resolver.Object, _windows.Object);
 
     [Fact]
     public async Task MouseClick_WithoutSpace_SendsTheScreenPointAsBefore()

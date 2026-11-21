@@ -996,8 +996,8 @@ public class ForegroundServiceTests
     public void EnsureForeground_WhenTheActivationThreadDoesNotFinishInTime_ReturnsNotResponding()
     {
         // Arrange - a window call blocked on the activation thread
-        var sut = new ForegroundService(_windows.Object, _threads.Object, _input.Object, _security.Object,
-            _windowService.Object, new TimingOutThread(), Timing(TimeSpan.Zero));
+        var sut = new ForegroundService(_windows.Object, _threads.Object, _security.Object, _windowService.Object, new TimingOutThread(),
+            new InputSession(_input.Object), Timing(TimeSpan.Zero));
 
         // Act
         var outcome = sut.EnsureForeground(Target, timeoutMs: 0);
@@ -1013,8 +1013,8 @@ public class ForegroundServiceTests
     public void EnsureForeground_WhenAnotherActivationStillHoldsTheThread_ReportsFocusFailedNotNotResponding()
     {
         // Arrange - no window was slow; another focus call was still running
-        var sut = new ForegroundService(_windows.Object, _threads.Object, _input.Object, _security.Object,
-            _windowService.Object, new BusyThread(), Timing(TimeSpan.Zero));
+        var sut = new ForegroundService(_windows.Object, _threads.Object, _security.Object, _windowService.Object, new BusyThread(),
+            new InputSession(_input.Object), Timing(TimeSpan.Zero));
 
         // Act
         var outcome = sut.EnsureForeground(Target, timeoutMs: 0);
@@ -1040,8 +1040,8 @@ public class ForegroundServiceTests
             thread.Cancel();
             return true;
         });
-        var sut = new ForegroundService(_windows.Object, _threads.Object, _input.Object, _security.Object,
-            _windowService.Object, thread, Timing(TimeSpan.Zero));
+        var sut = new ForegroundService(_windows.Object, _threads.Object, _security.Object, _windowService.Object, thread,
+            new InputSession(_input.Object), Timing(TimeSpan.Zero));
 
         // Act
         sut.EnsureForeground(Target, timeoutMs: 0);
@@ -1120,8 +1120,8 @@ public class ForegroundServiceTests
     private static readonly TimeSpan Grace = TimeSpan.FromSeconds(3);
 
     private ForegroundService CreateSut(TimeSpan? stepSettle = null, INativeVirtualDesktopWrapper? virtualDesktops = null) =>
-        new(_windows.Object, _threads.Object, _input.Object, _security.Object, _windowService.Object, _activationThread,
-            Timing(stepSettle ?? TimeSpan.Zero), virtualDesktops: virtualDesktops);
+        new(_windows.Object, _threads.Object, _security.Object, _windowService.Object, _activationThread,
+            new InputSession(_input.Object), Timing(stepSettle ?? TimeSpan.Zero), virtualDesktops: virtualDesktops);
 
     /// <summary>
     /// The window service's own target policy check (<see cref="WindowService.EvaluateTargetPolicy"/>) over the mocked

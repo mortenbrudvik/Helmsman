@@ -20,7 +20,7 @@ public class BrowserReadingToolsTests
         _mockProcessService = new Mock<IProcessService>();
     }
 
-    private BrowserReadingTools CreateSut() => new(_mockBrowserReadingService.Object, _mockProcessService.Object);
+    private BrowserReadingTools CreateSut() => new(_mockBrowserReadingService.Object, _mockProcessService.Object, Permissive.Session);
 
     #region GetBrowserUrl Tests
 
@@ -346,7 +346,7 @@ public class BrowserReadingToolsTests
             .Callback((CdpOptions? cdp, CancellationToken _) => passed = cdp)
             .ReturnsAsync(new BrowserUrlResult(true, "https://example.com", "chrome", "Example", null, BrowserErrorCode.None));
         var windows = new Mock<IWindowService>(MockBehavior.Strict);
-        var sut = new BrowserReadingTools(_mockBrowserReadingService.Object, _mockProcessService.Object, windows.Object);
+        var sut = new BrowserReadingTools(_mockBrowserReadingService.Object, _mockProcessService.Object, Permissive.Session, windows.Object);
 
         // Act
         var result = await sut.GetBrowserUrl(window: new WindowSelector { Foreground = true }, cdpPort: 9222, requireCdp: true, timeoutMs: 4000);
@@ -384,7 +384,7 @@ public class BrowserReadingToolsTests
             .Returns(WindowResolution.Found(TestDataFactory.CreateWindowInfo(handleValue: 0x5150, processName: "chrome")));
         _mockBrowserReadingService.Setup(s => s.GetBrowserUrlAsync(browser, It.IsAny<CdpOptions?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BrowserUrlResult(true, "https://example.com", "chrome", "Example", null, BrowserErrorCode.None));
-        var sut = new BrowserReadingTools(_mockBrowserReadingService.Object, _mockProcessService.Object, windows.Object);
+        var sut = new BrowserReadingTools(_mockBrowserReadingService.Object, _mockProcessService.Object, Permissive.Session, windows.Object);
 
         // Act
         var result = await sut.GetBrowserUrl(window: new WindowSelector { Foreground = true, ProcessName = "chrome" });
@@ -735,7 +735,7 @@ public class BrowserReadingToolsTests
         // Arrange - another browser's DevTools port: its pages list and show its tabs, past the target policy
         var requests = LaunchReturns(Launched);
         _mockProcessService.Setup(p => p.GetProcessName(4242)).Returns(listener);
-        var sut = new BrowserReadingTools(_mockBrowserReadingService.Object, _mockProcessService.Object,
+        var sut = new BrowserReadingTools(_mockBrowserReadingService.Object, _mockProcessService.Object, Permissive.Session,
             portOwners: new FakePortOwnerResolver(owner: 4242), browserDetection: new BrowserDetectionService());
 
         // Act
@@ -761,8 +761,9 @@ public class BrowserReadingToolsTests
     {
         // Arrange - fails closed, as browser_navigate does
         var requests = LaunchReturns(Launched);
-        var sut = new BrowserReadingTools(_mockBrowserReadingService.Object, _mockProcessService.Object,
-            portOwners: new FakePortOwnerResolver(owner: null, tableReadable: false), browserDetection: new BrowserDetectionService());
+        var sut = new BrowserReadingTools(_mockBrowserReadingService.Object, _mockProcessService.Object, Permissive.Session,
+            portOwners: new FakePortOwnerResolver(owner: null, tableReadable: false),
+            browserDetection: new BrowserDetectionService());
 
         // Act
         var act = () => sut.LaunchBrowserWithDebug(url: "http://127.0.0.1:8080/");

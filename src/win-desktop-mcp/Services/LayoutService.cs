@@ -83,15 +83,15 @@ public class LayoutService : ILayoutService
         IMonitorService monitorService,
         IProcessService processService,
         IForegroundService foregroundService,
-        string? layoutsPath = null,
-        ILaunchPlacementService? launchPlacement = null)
+        ILaunchPlacementService launchPlacement,
+        string? layoutsPath = null)
         : this(
             windowService,
             monitorService,
             processService,
             foregroundService,
             layoutsPath == null ? LayoutStorageOptions.FromEnvironment() : LayoutStorageOptions.ForPath(layoutsPath),
-            launchPlacement: launchPlacement)
+            launchPlacement)
     {
     }
 
@@ -101,12 +101,11 @@ public class LayoutService : ILayoutService
     /// <see cref="LayoutErrorCode.StorageUnavailable"/> instead of failing service construction.
     /// </summary>
     /// <param name="foregroundService">Brings the windows of placements with focus set to the front, verified.</param>
-    /// <param name="folderAccess">Checks that the folder can be listed and written; defaults to the real file system.</param>
     /// <param name="launchPlacement">
-    /// Places the windows launchMissing launches, as the launch tools place theirs (roadmap M3.F27). The server passes its
-    /// own, which respects the user's pause; by default one over <paramref name="windowService"/> and
-    /// <paramref name="foregroundService"/>.
+    /// Places the windows launchMissing launches, as the launch tools place theirs (roadmap M3.F27), and respects the user's
+    /// pause.
     /// </param>
+    /// <param name="folderAccess">Checks that the folder can be listed and written; defaults to the real file system.</param>
     /// <param name="apps">
     /// Tells a packaged app's window by its package and the AppUserModelID it carries, so save_layout records the app to
     /// launch rather than a program inside its package folder (roadmap M6.8). Without it every window records its program.
@@ -119,8 +118,8 @@ public class LayoutService : ILayoutService
         IProcessService processService,
         IForegroundService foregroundService,
         LayoutStorageOptions options,
+        ILaunchPlacementService launchPlacement,
         ILayoutFolderAccess? folderAccess = null,
-        ILaunchPlacementService? launchPlacement = null,
         INativeAppsWrapper? apps = null,
         IInstalledAppsService? installedApps = null,
         ILogger<LayoutService>? logger = null)
@@ -129,7 +128,7 @@ public class LayoutService : ILayoutService
         _monitorService = monitorService;
         _processService = processService;
         _foregroundService = foregroundService;
-        _launchPlacement = launchPlacement ?? new LaunchPlacementService(windowService, foregroundService);
+        _launchPlacement = launchPlacement ?? throw new ArgumentNullException(nameof(launchPlacement));
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _folderAccess = folderAccess ?? new LayoutFolderAccess();
         _apps = apps;

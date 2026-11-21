@@ -39,7 +39,7 @@ public class WindowManagerToolsMonitorTests
             .Returns((nint h, int _, MonitorPositioning _, bool _) => WindowChangeResult.Done(h));
     }
 
-    private WindowManagerTools CreateSut() => new(_windows.Object, Mock.Of<IForegroundService>(), monitorService: _monitors.Object);
+    private WindowManagerTools CreateSut() => new(_windows.Object, Mock.Of<IForegroundService>(), Permissive.Session, monitorService: _monitors.Object);
 
     private void Resolves(string name, int index, Action? then = null) =>
         _monitors.Setup(m => m.ResolveMonitor(It.Is<MonitorSelector>(s => s.Name == name)))

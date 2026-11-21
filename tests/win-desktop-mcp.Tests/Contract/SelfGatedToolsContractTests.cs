@@ -606,9 +606,9 @@ public sealed class SelfGatedToolsContractTests : IDisposable
         var tabs = (ICdpTabService)observer.WatchEveryChange(typeof(ICdpTabService), browser.Tabs.Object, NoDesktopChange[typeof(ICdpTabService)],
             [new WatchedCall(method, HandsOnTheGate: true)]);
         services.Replace(ServiceDescriptor.Singleton<IBrowserTabService>(new BrowserTabService(
-            Watched<INativeWindowWrapper>(observer, browser.Windows.Object), new BrowserDetectionService(), browser.Reading.Object,
-            Watched<ICdpService>(observer, browser.Cdp.Object), tabs, browser.Owners, new TargetPolicy(TargetPolicySettings.Default),
-            browser.Locator.Object, c.Session)));
+            Watched<INativeWindowWrapper>(observer, browser.Windows.Object), new BrowserDetectionService(),
+            browser.Reading.Object, Watched<ICdpService>(observer, browser.Cdp.Object), tabs, browser.Owners,
+            new TargetPolicy(TargetPolicySettings.Default), c.Session, browser.Locator.Object)));
     }, [Call<ICdpTabService>(method)]);
 
     private static GatedWork BrowserPages(string method) => new((c, services, observer) =>
@@ -617,9 +617,10 @@ public sealed class SelfGatedToolsContractTests : IDisposable
         var pages = (ICdpPageService)observer.WatchEveryChange(typeof(ICdpPageService), browser.Pages.Object, NoDesktopChange[typeof(ICdpPageService)],
             [new WatchedCall(method, HandsOnTheGate: true)]);
         services.Replace(ServiceDescriptor.Singleton<IBrowserPageService>(new BrowserPageService(
-            Watched<INativeWindowWrapper>(observer, browser.Windows.Object), new BrowserDetectionService(), browser.Reading.Object,
-            Watched<ICdpService>(observer, browser.Cdp.Object), pages, browser.Owners, Mock.Of<IBrowserViewportLocator>(),
-            new TargetPolicy(TargetPolicySettings.Default), browser.Locator.Object, c.Session)));
+            Watched<INativeWindowWrapper>(observer, browser.Windows.Object), new BrowserDetectionService(),
+            browser.Reading.Object, Watched<ICdpService>(observer, browser.Cdp.Object), pages, browser.Owners,
+            Mock.Of<IBrowserViewportLocator>(), new TargetPolicy(TargetPolicySettings.Default), c.Session,
+            browser.Locator.Object)));
     }, [Call<ICdpPageService>(method)]);
 
     /// <summary>A seam or service the browser services are handed, with every change of it watched (<see cref="NoDesktopChange"/>).</summary>

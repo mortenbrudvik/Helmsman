@@ -38,7 +38,7 @@ public class SharedPauseUnreadableMessageTests : IDisposable
         // Arrange
         var monitors = TestDataFactory.CreateMockMonitorService(
             [TestDataFactory.CreateMonitorInfo(boundsX: 0, boundsY: 0, boundsWidth: 1920, boundsHeight: 1080)]);
-        var sut = new InputSimulationService(monitors.Object, _input, TestDataFactory.CreateAllowingInputGuard().Object, _session);
+        var sut = new InputSimulationService(monitors.Object, _input, TestDataFactory.CreateAllowingInputGuard().Object, _session, Permissive.PasteGuard, Permissive.Takeover);
 
         // Act
         var result = await sut.TypeTextAsync("hello");
@@ -84,7 +84,7 @@ public class SharedPauseUnreadableMessageTests : IDisposable
         var hotkey = new Mock<IPauseHotkey>();
         hotkey.Setup(h => h.Status).Returns(new PauseHotkeyStatus("Ctrl+Alt+Shift+Pause", PauseHotkeyState.Registered, "default"));
 
-        var status = new InputControlTools(_session, hotkey.Object).GetControlStatus();
+        var status = new InputControlTools(_session, hotkey.Object, Permissive.Takeover, Permissive.SecurityProbe).GetControlStatus();
 
         status.Paused.Should().BeTrue();
         status.PausedBy.Should().Be(InputControlSources.SharedPauseUnreadable);
@@ -104,7 +104,7 @@ public class SharedPauseUnreadableMessageTests : IDisposable
         var hotkey = new Mock<IPauseHotkey>();
         hotkey.Setup(h => h.Status).Returns(new PauseHotkeyStatus("Ctrl+Alt+Shift+Pause", PauseHotkeyState.Registered, "default"));
 
-        var status = new InputControlTools(session, hotkey.Object).GetControlStatus();
+        var status = new InputControlTools(session, hotkey.Object, Permissive.Takeover, Permissive.SecurityProbe).GetControlStatus();
 
         status.Message.Should().Contain("Only the user can resume: Ctrl+Alt+Shift+Pause again, or by confirming resume_input")
             .And.NotContain("twice");
@@ -116,7 +116,7 @@ public class SharedPauseUnreadableMessageTests : IDisposable
         // A stuck Windows key: not one of the pause hotkey's modifiers, so only the pause leaves it down
         _input.Press(0x5B);
 
-        var result = new InputControlTools(_session, new Mock<IPauseHotkey>().Object).ReleaseAllInput(releaseHeldModifiers: true);
+        var result = new InputControlTools(_session, new Mock<IPauseHotkey>().Object, Permissive.Takeover, Permissive.SecurityProbe).ReleaseAllInput(releaseHeldModifiers: true);
 
         result.ErrorCode.Should().Be(InputErrorCode.PausedByUser);
         result.Error.Should().Contain("Input is paused").And.Contain("could not read the pause it shares")
@@ -159,7 +159,7 @@ public class SharedPauseUnreadableMessageTests : IDisposable
     [Fact]
     public void ReleaseAllInput_WithReleaseHeldModifiers_SaysTheServerPausedItself_NotTheUser()
     {
-        var result = new InputControlTools(_session, HotkeyWith(PauseHotkeyState.Registered)).ReleaseAllInput(releaseHeldModifiers: true);
+        var result = new InputControlTools(_session, HotkeyWith(PauseHotkeyState.Registered), Permissive.Takeover, Permissive.SecurityProbe).ReleaseAllInput(releaseHeldModifiers: true);
 
         result.ErrorCode.Should().Be(InputErrorCode.PausedByUser);
         result.Error.Should().Contain("could not read the pause it shares").And.Contain("were left alone")
@@ -168,7 +168,7 @@ public class SharedPauseUnreadableMessageTests : IDisposable
     }
 
     private ControlStatusResult StatusWith(PauseHotkeyState state) =>
-        new InputControlTools(_session, HotkeyWith(state)).GetControlStatus();
+        new InputControlTools(_session, HotkeyWith(state), Permissive.Takeover, Permissive.SecurityProbe).GetControlStatus();
 
     private static IPauseHotkey HotkeyWith(PauseHotkeyState state)
     {

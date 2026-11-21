@@ -24,7 +24,7 @@ public class SendKeysLimitsTests
     }
 
     private InputSimulationService CreateSut() =>
-        new(TestDataFactory.CreateMockMonitorService().Object, _input, _guard.Object, _session);
+        new(TestDataFactory.CreateMockMonitorService().Object, _input, _guard.Object, _session, Permissive.PasteGuard, Permissive.Takeover);
 
     /// <summary><paramref name="count"/> presses of <paramref name="key"/>, as {KEY 100} groups.</summary>
     private static string Presses(char key, int count) =>
@@ -82,7 +82,7 @@ public class SendKeysLimitsTests
     {
         // type_text refuses to paste then (PauseChordNotAllowed), so the advice must not send the agent there
         var session = new InputSession(_input, PauseHotkeyOptions.FromEnvironment(_ => "Ctrl+V"));
-        var sut = new InputSimulationService(TestDataFactory.CreateMockMonitorService().Object, _input, _guard.Object, session);
+        var sut = new InputSimulationService(TestDataFactory.CreateMockMonitorService().Object, _input, _guard.Object, session, Permissive.PasteGuard, Permissive.Takeover);
 
         var result = await sut.SendKeysAsync(Presses('a', InputSimulationService.MaxSendKeysPresses + 1));
 
@@ -96,7 +96,7 @@ public class SendKeysLimitsTests
     public async Task MoreKeysThanTheMaximum_WithAnotherPauseChord_StillSayToPasteLongText()
     {
         var session = new InputSession(_input, PauseHotkeyOptions.FromEnvironment(_ => "Ctrl+Alt+Q"));
-        var sut = new InputSimulationService(TestDataFactory.CreateMockMonitorService().Object, _input, _guard.Object, session);
+        var sut = new InputSimulationService(TestDataFactory.CreateMockMonitorService().Object, _input, _guard.Object, session, Permissive.PasteGuard, Permissive.Takeover);
 
         var result = await sut.SendKeysAsync(Presses('a', InputSimulationService.MaxSendKeysPresses + 1));
 

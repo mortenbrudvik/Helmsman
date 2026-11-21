@@ -30,7 +30,7 @@ public class InputSimulationServiceMouseClickTests
     }
 
     private InputSimulationService CreateSut() =>
-        new(_monitors.Object, _input, _guard.Object, _session, systemInfo: _systemInfo.Object);
+        new(_monitors.Object, _input, _guard.Object, _session, Permissive.PasteGuard, Permissive.Takeover, systemInfo: _systemInfo.Object);
 
     private static InputEvent MoveTo(int x, int y)
     {
@@ -67,8 +67,8 @@ public class InputSimulationServiceMouseClickTests
     public void MouseClick_TheModifiers_CarryTheTargetLayoutsScanCodes()
     {
         var layouts = new FakeKeyboardLayoutWrapper { Layout = FakeKeyboardLayoutWrapper.Us };
-        var sut = new InputSimulationService(_monitors.Object, _input, _guard.Object, _session, systemInfo: _systemInfo.Object,
-            keyboardLayout: layouts);
+        var sut = new InputSimulationService(_monitors.Object, _input, _guard.Object, _session, Permissive.PasteGuard, Permissive.Takeover,
+            systemInfo: _systemInfo.Object, keyboardLayout: layouts);
 
         sut.MouseClick(500, 300, MouseButton.Primary, 1, [MouseModifier.Ctrl, MouseModifier.Shift], InputTarget.Window(0x5150));
 
@@ -81,8 +81,8 @@ public class InputSimulationServiceMouseClickTests
     public void MouseClick_WithoutModifiers_ReadsNoLayout()
     {
         var layouts = new FakeKeyboardLayoutWrapper();
-        var sut = new InputSimulationService(_monitors.Object, _input, _guard.Object, _session, systemInfo: _systemInfo.Object,
-            keyboardLayout: layouts);
+        var sut = new InputSimulationService(_monitors.Object, _input, _guard.Object, _session, Permissive.PasteGuard, Permissive.Takeover,
+            systemInfo: _systemInfo.Object, keyboardLayout: layouts);
 
         sut.MouseClick(500, 300, MouseButton.Primary, 1, []);
 

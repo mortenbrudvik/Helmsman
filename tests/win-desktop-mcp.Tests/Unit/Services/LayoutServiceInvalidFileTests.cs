@@ -30,7 +30,7 @@ public class LayoutServiceInvalidFileTests : IDisposable
 
     private LayoutService CreateSut(ILayoutFolderAccess? folderAccess = null) => new(
         _windows.Object, _monitors.Object, TestDataFactory.CreateMockProcessService().Object, _foreground.Object,
-        LayoutStorageOptions.ForPath(_layoutsPath), folderAccess,
+        LayoutStorageOptions.ForPath(_layoutsPath), new LaunchPlacementService(_windows.Object, _foreground.Object, Permissive.Session), folderAccess,
         logger: LoggerFactory.Create(b => b.AddProvider(_logs)).CreateLogger<LayoutService>());
 
     private IEnumerable<CapturedLogEntry> Warnings => _logs.Entries.Where(e => e.Level == LogLevel.Warning);

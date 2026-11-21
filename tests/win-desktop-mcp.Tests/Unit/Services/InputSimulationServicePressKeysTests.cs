@@ -24,7 +24,7 @@ public class InputSimulationServicePressKeysTests
     }
 
     private InputSimulationService CreateSut() =>
-        new(TestDataFactory.CreateMockMonitorService().Object, _input, _guard.Object, _session, keyboardLayout: _layouts);
+        new(TestDataFactory.CreateMockMonitorService().Object, _input, _guard.Object, _session, Permissive.PasteGuard, Permissive.Takeover, keyboardLayout: _layouts);
 
     private void VerifyNothingIsDown()
     {

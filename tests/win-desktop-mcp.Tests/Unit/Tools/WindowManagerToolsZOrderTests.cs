@@ -23,7 +23,7 @@ public class WindowManagerToolsZOrderTests
             IsForeground: false, ZOrder: 3, IsTopmost: true, IsEnabled: true, IsResponding: true, Dpi: 96));
     }
 
-    private WindowManagerTools CreateSut() => new(_windows.Object, Mock.Of<IForegroundService>());
+    private WindowManagerTools CreateSut() => new(_windows.Object, Mock.Of<IForegroundService>(), Permissive.Session);
 
     [Fact]
     public async Task SetWindowZOrder_ChangesTheZOrder_AndReportsItReadBack()

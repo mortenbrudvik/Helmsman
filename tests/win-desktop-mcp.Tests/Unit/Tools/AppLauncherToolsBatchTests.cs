@@ -11,7 +11,7 @@ public class AppLauncherToolsBatchTests
 {
     private readonly Mock<IProcessService> _mockProcessService = new();
 
-    private AppLauncherTools CreateSut() => new(_mockProcessService.Object);
+    private AppLauncherTools CreateSut() => new(_mockProcessService.Object, Permissive.Session);
 
     [Fact]
     public async Task LaunchApplicationsBatch_MapsErrorCodePerItem()

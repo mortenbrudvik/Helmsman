@@ -63,7 +63,7 @@ public class LayoutServiceApplyV2Tests : IDisposable
     }
 
     private LayoutService CreateSut() =>
-        new(_windows.Object, _monitors.Object, _processes.Object, _foreground.Object, _layoutsPath, _placer.Object);
+        new(_windows.Object, _monitors.Object, _processes.Object, _foreground.Object, _placer.Object, _layoutsPath);
 
     private WindowChangeResult Record(nint handle, string call)
     {

@@ -123,7 +123,7 @@ public class ToolResultSerializationTests
                 BrowserVersion: "Edg/141.0.3537.57",
                 CdpEndpoint: "http://127.0.0.1:9222",
                 BrowserWsEndpoint: "ws://127.0.0.1:9222/devtools/browser/0a1b"));
-        var tools = new BrowserReadingTools(Mock.Of<IBrowserReadingService>(), processService.Object);
+        var tools = new BrowserReadingTools(Mock.Of<IBrowserReadingService>(), processService.Object, Permissive.Session);
         await using var server = await InProcessMcpServer.StartAsync([], builder => builder.WithTools(tools));
 
         // Act - goes through the SDK's own argument binding and result serialization.
@@ -163,7 +163,7 @@ public class ToolResultSerializationTests
                         ErrorCode: nameof(WindowErrorCode.FocusFailed))
                 ]));
         await using var server = await InProcessMcpServer.StartAsync(
-            [], builder => builder.WithServerTools(new LayoutPresetTools(layoutService.Object)));
+            [], builder => builder.WithServerTools(new LayoutPresetTools(layoutService.Object, Permissive.Session)));
 
         // Act - goes through the SDK's own argument binding and result serialization
         var result = await server.CallToolAsync("apply_layout", new Dictionary<string, object?> { ["name"] = "work-setup" });
@@ -202,7 +202,7 @@ public class ToolResultSerializationTests
                         Error: "Skipped placement 2 (no matcher): ...")
                 ]));
         await using var server = await InProcessMcpServer.StartAsync(
-            [], builder => builder.AddToolErrorReporting().WithServerTools(new LayoutPresetTools(layoutService.Object)));
+            [], builder => builder.AddToolErrorReporting().WithServerTools(new LayoutPresetTools(layoutService.Object, Permissive.Session)));
 
         // Act
         var result = await server.CallToolAsync("apply_layout", new Dictionary<string, object?> { ["name"] = "work-setup" });

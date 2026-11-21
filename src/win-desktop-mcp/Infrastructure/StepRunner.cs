@@ -139,27 +139,27 @@ public sealed partial class StepRunner
     private readonly IElementRegistry _elements;
     private readonly InputGuardOptions _keyGuard;
     private readonly TimeProvider _time;
-    private readonly ITakeoverMonitor? _takeover;
+    private readonly ITakeoverMonitor _takeover;
     private readonly INativeKeyboardLayoutWrapper? _keyboardLayout;
 
     /// <param name="keyGuard">
     /// The server's destructive chords (WAM_DESTRUCTIVE_CHORDS): a step's keys may contain none of them, nor any of the
-    /// default ones, whatever the variable says. Null: the defaults.
+    /// default ones, whatever the variable says.
     /// </param>
-    /// <param name="takeover">Takeover detection (roadmap M7.4); without it the run is not watched.</param>
+    /// <param name="takeover">Takeover detection (roadmap M7.4), which watches the run unless its mode is off.</param>
     /// <param name="keyboardLayout">
     /// The keyboard layout queries, to read a send_keys or press_keys step's keys as its tool maps them: on the layout of
     /// the window they go to. Null: only on the invariant layout, as the tools map them without these queries (tests).
     /// </param>
-    public StepRunner(IInputSession session, IWindowService windows, IElementRegistry elements, InputGuardOptions? keyGuard = null,
-        TimeProvider? time = null, ITakeoverMonitor? takeover = null, INativeKeyboardLayoutWrapper? keyboardLayout = null)
+    public StepRunner(IInputSession session, IWindowService windows, IElementRegistry elements, InputGuardOptions keyGuard,
+        ITakeoverMonitor takeover, TimeProvider? time = null, INativeKeyboardLayoutWrapper? keyboardLayout = null)
     {
         _keyboardLayout = keyboardLayout;
-        _takeover = takeover;
+        _takeover = takeover ?? throw new ArgumentNullException(nameof(takeover));
         _session = session;
         _windows = windows;
         _elements = elements;
-        _keyGuard = keyGuard ?? InputGuardOptions.Default;
+        _keyGuard = keyGuard ?? throw new ArgumentNullException(nameof(keyGuard));
         _time = time ?? TimeProvider.System;
     }
 
@@ -307,7 +307,7 @@ public sealed partial class StepRunner
 
             // Takeover detection (roadmap M7.4) watches the whole run; its token ends only the waits between steps, so a step
             // that runs is never cut off by it (an input step watches itself)
-            using var takeover = _takeover?.Watch() ?? TakeoverWatch.None;
+            using var takeover = _takeover.Watch();
             var foregroundWasOurs = false;
             try
             {

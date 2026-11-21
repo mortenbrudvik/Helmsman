@@ -139,7 +139,7 @@ public sealed class HungWindowContractTests : IDisposable
                 // The server's filters, in the server's order (ServiceRegistration.AddWindowsAppManagerTools)
                 .AddToolErrorReporting()
                 .AddInputGateSerialization()
-                .WithServerTools(new WindowManagerTools(windows, Mock.Of<IForegroundService>())));
+                .WithServerTools(new WindowManagerTools(windows, Mock.Of<IForegroundService>(), Permissive.Session)));
     }
 
     private static Dictionary<string, object?> Arguments(long handle, params (string Name, object Value)[] more)
