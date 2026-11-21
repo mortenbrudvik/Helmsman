@@ -103,6 +103,12 @@ public sealed class WorkspaceService : IWorkspaceService
                 ErrorCode: captured.ErrorCode ?? nameof(LayoutErrorCode.SaveFailed));
         }
 
+        // A layouts folder that cannot be used fails the save now, as the write would, before any folder or page is read
+        if (_layouts.GetStorageError() is { } storageError)
+        {
+            return new WorkspaceSaveResult(false, name, Error: storageError, ErrorCode: nameof(LayoutErrorCode.StorageUnavailable));
+        }
+
         // The windows as the capture saw them a moment ago: each placement is matched to its window by process, title and
         // its place among the process's windows
         var windows = _windows.GetAllWindows(includeMinimized);

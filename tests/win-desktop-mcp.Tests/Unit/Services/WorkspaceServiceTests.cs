@@ -214,6 +214,24 @@ public class WorkspaceServiceTests : IDisposable
         _layouts.Verify(l => l.SavePresetAsync(It.IsAny<LayoutPreset>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Fact]
+    public async Task Save_WhenTheLayoutsFolderIsUnavailable_FailsBeforeItReadsAnyFolderOrPage()
+    {
+        // Arrange - the save could only fail at its write, after a debug port read and a tab listing per browser window
+        _layouts.Setup(l => l.GetStorageError()).Returns(@"The layouts folder 'C:\layouts' cannot be written.");
+
+        // Act
+        var result = await CreateSut().SaveAsync("morning", null, null, null, includeMinimized: false);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.ErrorCode.Should().Be(nameof(LayoutErrorCode.StorageUnavailable));
+        result.Error.Should().Contain("cannot be written");
+        _shell.Verify(s => s.GetExplorerFolders(), Times.Never);
+        _browsers.Verify(b => b.GetBrowserUrlAsync(It.IsAny<nint>(), It.IsAny<CdpOptions?>(), It.IsAny<CancellationToken>()), Times.Never);
+        _layouts.Verify(l => l.SavePresetAsync(It.IsAny<LayoutPreset>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     // ---- Restore ----
 
     [Fact]
@@ -303,7 +321,6 @@ public class WorkspaceServiceTests : IDisposable
         _windows.Setup(w => w.GetAllWindows(It.IsAny<bool>())).Returns([Window(Edge, title, "msedge")]);
         _layouts.Setup(l => l.CaptureLayout(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string[]?>(), It.IsAny<string[]?>(), It.IsAny<bool>()))
             .Returns(new LayoutSaveResult(true, Preset(Placement("msedge", title))));
-        Saved(Preset(Placement("msedge", title)));
 
         // Act
         var result = await CreateSut().SaveAsync("morning", null, null, null, includeMinimized: false);

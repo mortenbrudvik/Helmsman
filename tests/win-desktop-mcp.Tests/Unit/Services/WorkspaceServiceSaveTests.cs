@@ -38,7 +38,7 @@ public class WorkspaceServiceSaveTests : IDisposable
                 It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .Returns((string name, string? description, string[]? include, string[]? exclude, bool minimized, CancellationToken token) =>
                 _storage.CaptureCurrentLayoutAsync(name, description, include, exclude, minimized, token));
-        _layouts.Setup(l => l.GetPreset(It.IsAny<string>())).Returns((string name) => _storage.GetPreset(name));
+        _layouts.Setup(l => l.GetStorageError()).Returns(() => _storage.GetStorageError());
         _layouts.Setup(l => l.SavePresetAsync(It.IsAny<LayoutPreset>(), It.IsAny<CancellationToken>()))
             .Returns((LayoutPreset preset, CancellationToken token) => _failWrites
                 ? Task.FromResult(new LayoutSaveResult(false, preset, true,
