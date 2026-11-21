@@ -359,6 +359,17 @@ public class LayoutService : ILayoutService
         bool includeMinimized = false,
         CancellationToken cancellationToken = default)
     {
+        var captured = CaptureLayout(name, description, includeProcesses, excludeProcesses, includeMinimized);
+        return captured is { Success: true, Preset: { } preset } ? await SavePresetAsync(preset, cancellationToken) : captured;
+    }
+
+    public LayoutSaveResult CaptureLayout(
+        string name,
+        string? description = null,
+        string[]? includeProcesses = null,
+        string[]? excludeProcesses = null,
+        bool includeMinimized = false)
+    {
         var nameError = ValidateName(name);
         if (nameError != null)
             return new LayoutSaveResult(false, null, ErrorMessage: nameError, ErrorCode: nameof(LayoutErrorCode.InvalidName));
@@ -484,7 +495,7 @@ public class LayoutService : ILayoutService
                 ErrorCode: nameof(LayoutErrorCode.NoWindowsCaptured));
         }
 
-        return await SavePresetAsync(preset, cancellationToken);
+        return new LayoutSaveResult(true, preset);
     }
 
     /// <summary>

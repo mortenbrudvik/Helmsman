@@ -90,7 +90,7 @@ public sealed class SelfGatedToolsContractTests : IDisposable
             nameof(ILayoutService.GetStorageError), nameof(ILayoutService.GetAllPresets), nameof(ILayoutService.GetPreset),
             nameof(ILayoutService.GetInvalidFiles), nameof(ILayoutService.AreLaunchesConfirmed), nameof(ILayoutService.ConfirmLaunches),
             nameof(ILayoutService.SavePresetAsync), nameof(ILayoutService.DeletePresetAsync), nameof(ILayoutService.CaptureCurrentLayoutAsync),
-            nameof(ILayoutService.SaveAuthoredLayoutAsync)
+            nameof(ILayoutService.CaptureLayout), nameof(ILayoutService.SaveAuthoredLayoutAsync)
         },
         [typeof(IWorkspaceService)] = new(StringComparer.Ordinal) { nameof(IWorkspaceService.SaveAsync) },
         [typeof(IDebugBrowserLifecycle)] = new(StringComparer.Ordinal) { nameof(IDebugBrowserLifecycle.CheckClose) },

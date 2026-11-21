@@ -52,6 +52,19 @@ public interface ILayoutService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Captures the windows as <see cref="CaptureCurrentLayoutAsync"/> does, with the same checks and filters (a denied
+    /// window's title and launch left out), but writes nothing: a successful result holds the preset, for the caller to
+    /// complete and save in one write with <see cref="SavePresetAsync"/>, so a preset of that name stays as it was until
+    /// then. A failed one has the error code CaptureCurrentLayoutAsync would return for it.
+    /// </summary>
+    LayoutSaveResult CaptureLayout(
+        string name,
+        string? description = null,
+        string[]? includeProcesses = null,
+        string[]? excludeProcesses = null,
+        bool includeMinimized = false);
+
+    /// <summary>
     /// Saves the placements an agent wrote as a preset (roadmap M6.8), marked as agent-written
     /// (<see cref="LayoutPreset.AuthoredBy"/>). Each is checked first (<see cref="LayoutPresetSchema.TryBuildPlacement"/>):
     /// one that is not valid fails the save with InvalidPlacement, and nothing is written.

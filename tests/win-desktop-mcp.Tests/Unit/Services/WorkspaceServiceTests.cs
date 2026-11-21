@@ -34,9 +34,8 @@ public class WorkspaceServiceTests : IDisposable
         _browsers.Setup(b => b.GetBrowserUrlAsync(Edge, It.IsAny<CdpOptions?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BrowserUrlResult(true, "https://mail.example.com/inbox?folder=1&access_token=abc", "edge", "Inbox", null, BrowserErrorCode.None));
         _policy.Setup(p => p.Evaluate(It.IsAny<IReadOnlyCollection<string?>>())).Returns(TargetPolicyVerdict.Allow);
-        _layouts.Setup(l => l.CaptureCurrentLayoutAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string[]?>(), It.IsAny<string[]?>(),
-                It.IsAny<bool>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new LayoutSaveResult(true, Preset()));
+        _layouts.Setup(l => l.CaptureLayout(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string[]?>(), It.IsAny<string[]?>(), It.IsAny<bool>()))
+            .Returns(new LayoutSaveResult(true, Preset()));
         _layouts.Setup(l => l.GetPreset("morning")).Returns(() => _saved ?? Preset());
         _layouts.Setup(l => l.SavePresetAsync(It.IsAny<LayoutPreset>(), It.IsAny<CancellationToken>()))
             .Callback<LayoutPreset, CancellationToken>((preset, _) => _saved = preset)
@@ -205,9 +204,8 @@ public class WorkspaceServiceTests : IDisposable
     [Fact]
     public async Task Save_WhenTheCaptureFails_SavesNothingMore()
     {
-        _layouts.Setup(l => l.CaptureCurrentLayoutAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string[]?>(), It.IsAny<string[]?>(),
-                It.IsAny<bool>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new LayoutSaveResult(false, null, ErrorMessage: "No windows", ErrorCode: nameof(LayoutErrorCode.NoWindowsCaptured)));
+        _layouts.Setup(l => l.CaptureLayout(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string[]?>(), It.IsAny<string[]?>(), It.IsAny<bool>()))
+            .Returns(new LayoutSaveResult(false, null, ErrorMessage: "No windows", ErrorCode: nameof(LayoutErrorCode.NoWindowsCaptured)));
 
         var result = await CreateSut().SaveAsync("morning", null, null, null, includeMinimized: false);
 
@@ -303,9 +301,8 @@ public class WorkspaceServiceTests : IDisposable
     {
         // Arrange - its pages must not reach the file, nor come back in a window that is not private
         _windows.Setup(w => w.GetAllWindows(It.IsAny<bool>())).Returns([Window(Edge, title, "msedge")]);
-        _layouts.Setup(l => l.CaptureCurrentLayoutAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string[]?>(), It.IsAny<string[]?>(),
-                It.IsAny<bool>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new LayoutSaveResult(true, Preset(Placement("msedge", title))));
+        _layouts.Setup(l => l.CaptureLayout(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string[]?>(), It.IsAny<string[]?>(), It.IsAny<bool>()))
+            .Returns(new LayoutSaveResult(true, Preset(Placement("msedge", title))));
         Saved(Preset(Placement("msedge", title)));
 
         // Act

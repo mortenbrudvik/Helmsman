@@ -7171,7 +7171,7 @@ Pages are http and https only (at most 50 per window). A user name and password 
 { "success": true, "name": "morning", "windows": 5, "folders": 1, "browserWindows": 1, "urls": 3, "partialBrowsers": 0 }
 ```
 
-In the preset file, each window with content has `content`: `{ "folder": "C:\\Users\\user\\Documents\\Reports" }` or `{ "urls": ["https://mail.example.com/inbox", "..."], "urlsPartial": true }`. A save that captures no window, or cannot read the monitors, fails as save_layout does (`NoWindowsCaptured`, `MonitorNotFound`).
+In the preset file, each window with content has `content`: `{ "folder": "C:\\Users\\user\\Documents\\Reports" }` or `{ "urls": ["https://mail.example.com/inbox", "..."], "urlsPartial": true }`. A save that captures no window, or cannot read the monitors, fails as save_layout does (`NoWindowsCaptured`, `MonitorNotFound`). The preset is written once, with its content: a save that fails (or is cancelled) leaves a layout or workspace of the same name as it was.
 
 ---
 

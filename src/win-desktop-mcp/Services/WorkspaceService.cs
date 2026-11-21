@@ -14,7 +14,8 @@ public interface IWorkspaceService
 {
     /// <summary>
     /// Captures the windows as save_layout does (the same filters), then records each File Explorer window's folder and each
-    /// browser window's pages in its placement, and saves the preset again.
+    /// browser window's pages in its placement, and saves the preset once, complete: a save that fails leaves a preset of
+    /// that name as it was.
     /// </summary>
     Task<WorkspaceSaveResult> SaveAsync(string name, string? description, string[]? includeProcesses, string[]? excludeProcesses,
         bool includeMinimized, CancellationToken cancellationToken = default);
@@ -93,12 +94,13 @@ public sealed class WorkspaceService : IWorkspaceService
     public async Task<WorkspaceSaveResult> SaveAsync(string name, string? description, string[]? includeProcesses,
         string[]? excludeProcesses, bool includeMinimized, CancellationToken cancellationToken = default)
     {
-        var saved = await _layouts.CaptureCurrentLayoutAsync(name, description, includeProcesses, excludeProcesses, includeMinimized,
-            cancellationToken).ConfigureAwait(false);
-        if (!saved.Success || _layouts.GetPreset(name) is not { } preset)
+        // Captured only: the preset is written once, with its content, so a save that fails before or while it writes leaves a
+        // workspace of that name as it was
+        var captured = _layouts.CaptureLayout(name, description, includeProcesses, excludeProcesses, includeMinimized);
+        if (captured is not { Success: true, Preset: { } preset })
         {
-            return new WorkspaceSaveResult(false, name, Error: saved.ErrorMessage ?? "The workspace could not be saved.",
-                ErrorCode: saved.ErrorCode ?? nameof(LayoutErrorCode.SaveFailed));
+            return new WorkspaceSaveResult(false, name, Error: captured.ErrorMessage ?? "The workspace could not be saved.",
+                ErrorCode: captured.ErrorCode ?? nameof(LayoutErrorCode.SaveFailed));
         }
 
         // The windows as the capture saw them a moment ago: each placement is matched to its window by process, title and
@@ -158,14 +160,12 @@ public sealed class WorkspaceService : IWorkspaceService
             placements.Add(content == null ? placement : placement with { Content = content });
         }
 
-        if (folderCount + browserCount > 0)
+        var saved = await _layouts.SavePresetAsync(preset with { Placements = placements, UpdatedAt = DateTime.UtcNow },
+            cancellationToken).ConfigureAwait(false);
+        if (!saved.Success)
         {
-            var withContent = await _layouts.SavePresetAsync(preset with { Placements = placements, UpdatedAt = DateTime.UtcNow },
-                cancellationToken).ConfigureAwait(false);
-            if (!withContent.Success)
-            {
-                return new WorkspaceSaveResult(false, name, Error: withContent.ErrorMessage, ErrorCode: withContent.ErrorCode);
-            }
+            return new WorkspaceSaveResult(false, name, Error: saved.ErrorMessage ?? "The workspace could not be saved.",
+                ErrorCode: saved.ErrorCode ?? nameof(LayoutErrorCode.SaveFailed));
         }
 
         if (partialCount > 0)
