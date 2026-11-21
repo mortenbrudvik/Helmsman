@@ -69,6 +69,40 @@ public static class IlCalls
         return called;
     }
 
+    /// <summary>
+    /// Every member and type <paramref name="method"/>'s body names by token, as its IL names them: the methods it calls or
+    /// loads (call, callvirt, newobj, ldftn), the fields it reads, writes or takes the address of, and the types it creates,
+    /// casts to, boxes, unboxes, sizes or loads (newarr, castclass, isinst, box, initobj, ldtoken and the rest). A token that
+    /// cannot be resolved in this generic context is left out, as <see cref="CalledMethods"/> leaves it out.
+    /// </summary>
+    public static IReadOnlyList<MemberInfo> ReferencedMembers(MethodBase method)
+    {
+        var referenced = new List<MemberInfo>();
+        var typeArguments = method.DeclaringType is { IsGenericType: true } declaring ? declaring.GetGenericArguments() : null;
+        var methodArguments = method.IsGenericMethod ? method.GetGenericArguments() : null;
+        foreach (var (_, opCode, operand, _) in Instructions(method))
+        {
+            if (opCode.OperandType is not (OperandType.InlineMethod or OperandType.InlineField or OperandType.InlineType or OperandType.InlineTok))
+            {
+                continue;
+            }
+
+            try
+            {
+                if (method.Module.ResolveMember(operand, typeArguments, methodArguments) is { } member)
+                {
+                    referenced.Add(member);
+                }
+            }
+            catch (ArgumentException)
+            {
+                // A token that cannot be resolved in this generic context
+            }
+        }
+
+        return referenced;
+    }
+
     /// <summary>True when <paramref name="method"/>'s body has an instruction with <paramref name="opCode"/> (calli, for example).</summary>
     public static bool Uses(MethodBase method, OpCode opCode) => Instructions(method).Any(i => i.OpCode == opCode);
 

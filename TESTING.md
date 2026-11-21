@@ -286,7 +286,7 @@ win-desktop-mcp/
     │   ├── Fixtures/              # TestDataFactory, RepositoryFiles, RawMcpConnection, FakeCdp, Contract/NativeFakedServer, ...
     │   ├── Integration/           # DI, file persistence, layout service, screen capture (read-only)
     │   └── Unit/
-    │       ├── Architecture/      # IL scans: NativeCallGuardTests, ManagedDesktopApiTests, TestCodeNativeWrapperTests
+    │       ├── Architecture/      # IL scans: NativeCallGuardTests, ManagedDesktopApiTests, TestCodeNativeWrapperTests, NamespaceDependencyTests (layering)
     │       ├── Infrastructure/    # DesktopTestGateTests, InProcessMcpServerTests
     │       ├── Models/
     │       ├── Native/
@@ -3061,6 +3061,12 @@ tests stay skipped). Without it, CI fails on a stale snapshot or table. A run wh
 `TF_BUILD` is set to anything but `false` or `0` refuses it (the tests fail with a message), because there it would turn the guards into rewrites
 that pass. Each regenerated file replaces the old one in one step, so a test that reads it in parallel never sees it
 half written. Set the variable after any `env -u` options: `env -u WAM_ALLOW_DESKTOP_TESTS UPDATE_SNAPSHOTS=1 dotnet test ...`.
+
+The layering test (`Unit/Architecture/NamespaceDependencyTests`) keeps a baseline of today's layering violations in
+`Unit/Architecture/NamespaceDependencyBaseline.txt`. It fails on a dependency against the layering that is not in the
+baseline, and on a baseline line that no longer occurs, so the baseline only shrinks. With `UPDATE_SNAPSHOTS=1`
+(`--filter "FullyQualifiedName~NamespaceDependencyTests"`) it deletes the stale lines and sorts the file, but it never
+adds a line. Add a line by hand only when a dependency cannot be avoided yet, and give the reason after `  # `.
 
 **The CI guard on the built exes.** A version or commit check cannot tell whether an exe serves the tools
 its sources define. `.github/workflows/build.yml` therefore runs `scripts/Test-ToolsSnapshot.ps1`, which
