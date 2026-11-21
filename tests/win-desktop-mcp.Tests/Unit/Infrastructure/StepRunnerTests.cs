@@ -60,7 +60,7 @@ public class StepRunnerTests
         _ => null
     };
 
-    private StepRunner Runner() => new(_session.Object, _windows.Object, _elements.Object);
+    private StepRunner Runner(TimeProvider? time = null) => new(_session.Object, _windows.Object, _elements.Object, time: time);
 
     private static RunStep Step(StepTool tool, string? args = null, string? id = null, bool optional = false, bool @return = false) =>
         new(tool, args == null ? null : JsonNode.Parse(args)!.AsObject(), id, optional, @return);
@@ -71,6 +71,21 @@ public class StepRunnerTests
 
     private Task<StepRunOutcome> RunAsync(TimeSpan maxDuration, params RunStep[] steps) =>
         Runner().RunAsync((nint)Window, Runner().Check(steps, _dispatcher), _dispatcher, maxDuration, TimeSpan.Zero, null, CancellationToken.None);
+
+    /// <summary>
+    /// Runs the steps with the default maxDurationMs on <paramref name="clock"/>, which moves only when a test advances it
+    /// (a step's OnCall), so the time each step has left is exact.
+    /// </summary>
+    private Task<StepRunOutcome> RunAsync(ManualTimerClock clock, params RunStep[] steps) =>
+        Runner(clock).RunAsync((nint)Window, Runner(clock).Check(steps, _dispatcher), _dispatcher,
+            TimeSpan.FromMilliseconds(StepRunner.DefaultMaxDurationMs), TimeSpan.Zero, null, CancellationToken.None);
+
+    /// <summary>The default of a wait tool's timeoutMs parameter, as the SDK binds it when a call leaves it out.</summary>
+    private static long ToolDefaultTimeoutMs(Type tools, string method) =>
+        Convert.ToInt64(tools.GetMethod(method)!.GetParameters().Single(p => p.Name == "timeoutMs").DefaultValue);
+
+    /// <summary>The steps' timeoutMs as the fake dispatcher saw them; null for a step called without one.</summary>
+    private List<long?> Timeouts() => _dispatcher.Calls.Select(c => c.Args["timeoutMs"]?.GetValue<long>()).ToList();
 
     private static string Refusal(Action check)
     {
@@ -685,6 +700,77 @@ public class StepRunnerTests
         run.Result.StoppedBy.Should().Be(StepStopReason.TimedOut);
         run.Result.ErrorCode.Should().Be("OperationTimedOut");
         run.Result.Steps[0].ErrorCode.Should().Be("WaitTimedOut");
+    }
+
+    [Fact]
+    public async Task AWaitStepWithoutTimeoutMs_GetsItsToolsDefault_NotAllTheTimeTheRunHasLeft()
+    {
+        // Arrange - the default maxDurationMs (30 s) leaves the run more than either wait's own default
+        var clock = new ManualTimerClock();
+
+        // Act - one step leaves timeoutMs out, the other passes null, which counts as not given
+        var run = await RunAsync(clock,
+            Step(StepTool.WaitForElement, """{ "automationId": "ok" }"""),
+            Step(StepTool.WaitForWindow, """{ "window": { "titleContains": "Saved" }, "timeoutMs": null }"""));
+
+        // Assert
+        run.Result.Success.Should().BeTrue();
+        Timeouts().Should().Equal(
+            ToolDefaultTimeoutMs(typeof(WinDesktopMcp.Tools.ElementWaitTools), nameof(WinDesktopMcp.Tools.ElementWaitTools.WaitForElement)),
+            ToolDefaultTimeoutMs(typeof(WinDesktopMcp.Tools.WindowFinderTools), nameof(WinDesktopMcp.Tools.WindowFinderTools.WaitForWindow)));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task AWaitThatTimesOutOnItsOwn_IsAnOrdinaryFailedStep_NotTheRunsTimeout(bool optional)
+    {
+        // Arrange - the wait runs its whole timeoutMs, its tool's default, and gives up; the run still has 20 s
+        var clock = new ManualTimerClock();
+        _dispatcher.OnCall = call => clock.Advance(TimeSpan.FromMilliseconds(call.Args["timeoutMs"]?.GetValue<long>() ?? 0));
+        _dispatcher.Failures["wait_for_element"] = "WaitTimedOut";
+
+        // Act
+        var run = await RunAsync(clock,
+            Step(StepTool.WaitForElement, """{ "automationId": "tip" }""", optional: optional), Step(StepTool.FocusWindow));
+
+        // Assert
+        run.Result.Steps[0].Status.Should().Be(StepStatus.Failed);
+        run.Result.Steps[0].ErrorCode.Should().Be("WaitTimedOut");
+        if (optional)
+        {
+            run.Result.Success.Should().BeTrue();
+            run.Result.StoppedBy.Should().BeNull("an optional wait that gave up on its own lets the run go on");
+            run.Result.Steps[1].Status.Should().Be(StepStatus.Ok);
+        }
+        else
+        {
+            run.Result.StoppedBy.Should().Be(StepStopReason.StepFailed);
+            run.Result.ErrorCode.Should().Be("WaitTimedOut", "the wait's own code, not the run's OperationTimedOut");
+            run.Result.Steps[1].Status.Should().Be(StepStatus.Skipped);
+        }
+    }
+
+    [Fact]
+    public async Task AWaitTheRunCutToItsTimeLeft_ThatTimesOut_StopsTheRunAsTimedOut_EvenWhenOptional()
+    {
+        // Arrange - the first step takes 25 s of the 30, so the wait gets 5 s less the margin instead of its default 10 s
+        var clock = new ManualTimerClock();
+        _dispatcher.OnCall = call => clock.Advance(call.Tool == "focus_window"
+            ? TimeSpan.FromSeconds(25)
+            : TimeSpan.FromMilliseconds(call.Args["timeoutMs"]!.GetValue<long>()));
+        _dispatcher.Failures["wait_for_element"] = "WaitTimedOut";
+
+        // Act
+        var run = await RunAsync(clock,
+            Step(StepTool.FocusWindow), Step(StepTool.WaitForElement, """{ "automationId": "tip" }""", optional: true), Step(StepTool.FocusWindow));
+
+        // Assert
+        Timeouts()[1].Should().Be(5_000 - 250);
+        run.Result.StoppedBy.Should().Be(StepStopReason.TimedOut);
+        run.Result.ErrorCode.Should().Be("OperationTimedOut");
+        run.Result.Steps.Select(s => s.Status).Should().Equal(StepStatus.Ok, StepStatus.Failed, StepStatus.Skipped);
+        run.Result.Steps[1].ErrorCode.Should().Be("WaitTimedOut");
     }
 
     [Fact]

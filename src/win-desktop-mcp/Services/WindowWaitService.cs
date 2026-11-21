@@ -22,6 +22,9 @@ public sealed partial class WindowWaitService : IWindowWaitService
     /// <summary>The longest wait, whatever a caller asks for.</summary>
     public const int MaxTimeoutMs = 60_000;
 
+    /// <summary>wait_for_window's timeoutMs when a call leaves it out (also a run_steps wait step's, before the run cuts it).</summary>
+    public const int DefaultTimeoutMs = 10_000;
+
     private const uint GW_OWNER = 4;
 
     private readonly INativeWindowWrapper _native;

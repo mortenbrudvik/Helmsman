@@ -66,7 +66,7 @@ public class ElementWaitTools
         [Description("name_equals and value_equals: the exact text (case-sensitive). toggle_state: 'on', 'off' or 'indeterminate'. Not for the other conditions")]
         string? expected = null,
         [Description("How long to wait in milliseconds, the wait for the window included (default: 10000, min: 0, max: 60000); 0 checks once")]
-        int timeoutMs = 10_000,
+        int timeoutMs = ElementWaitService.DefaultTimeoutMs,
         [Description("How long the condition must hold before it counts, in milliseconds (default: 0, min: 0, max: 10000; cut to timeoutMs)")]
         int stableMs = 0,
         IProgress<ProgressNotificationValue>? progress = null,

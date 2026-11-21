@@ -55,7 +55,7 @@ public partial class WindowFinderTools
                      "change that already happened)")]
         string? previousTitle = null,
         [Description("How long to wait in milliseconds (default: 10000, min: 0, max: 60000); 0 checks once")]
-        int timeoutMs = 10_000,
+        int timeoutMs = WindowWaitService.DefaultTimeoutMs,
         [Description("How long the condition must hold before it counts, in milliseconds (default: 300, min: 0, max: 10000; cut to timeoutMs)")]
         int stableMs = 300,
         IProgress<ProgressNotificationValue>? progress = null,

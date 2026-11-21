@@ -60,6 +60,9 @@ public sealed class ElementWaitService : IElementWaitService
     /// <summary>The longest wait, whatever a caller asks for.</summary>
     public const int MaxTimeoutMs = 60_000;
 
+    /// <summary>wait_for_element's timeoutMs when a call leaves it out (also a run_steps wait step's, before the run cuts it).</summary>
+    public const int DefaultTimeoutMs = 10_000;
+
     /// <summary>The first interval between two checks; it grows by half each time up to <see cref="MaxPollIntervalMs"/>.</summary>
     public const int MinPollIntervalMs = 100;
 

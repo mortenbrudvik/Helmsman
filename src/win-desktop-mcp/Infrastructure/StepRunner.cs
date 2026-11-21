@@ -52,7 +52,8 @@ public sealed record StepRunOutcome(RunStepsResult Result, IReadOnlyList<ImageCo
 /// and may read outside the run's window. The run's window is read again once the gate is held: closed, reused by another process or
 /// the agent's host, it refuses the run.</para>
 /// <para><b>During the run</b>, before each step after the first: a pause stops it (PausedByUser), maxDurationMs running out
-/// stops it (OperationTimedOut; a wait step's timeoutMs is cut to what is left, and a step still running then is
+/// stops it (OperationTimedOut; a wait step's timeoutMs, its tool's default when the step gives none, is cut to what is
+/// left, and a step still running then is
 /// cancelled), and once the run's window (or its dialog) has been in front, a window outside it in front stops it
 /// (TargetNotForeground): the user took the foreground, and the run does not take it back. With WAM_TAKEOVER_DETECTION=stop,
 /// the user's keyboard or mouse input since the run held the gate stops it too (UserInterrupted, roadmap M7.4), as does a
@@ -111,8 +112,15 @@ public sealed partial class StepRunner
     /// <summary>The arguments that name an element, and with it its window.</summary>
     private static readonly string[] RefArguments = ["ref", "withinRef", "listRef"];
 
-    /// <summary>The tools whose timeoutMs is the step's wait, cut to the run's time left.</summary>
-    private static readonly HashSet<string> WaitTools = new(StringComparer.Ordinal) { "wait_for_window", "wait_for_element" };
+    /// <summary>
+    /// The tools whose timeoutMs is the step's wait, cut to the run's time left, each with the timeoutMs its tool takes when a
+    /// call leaves it out (the same constant its parameter defaults to).
+    /// </summary>
+    private static readonly Dictionary<string, int> WaitTools = new(StringComparer.Ordinal)
+    {
+        ["wait_for_window"] = WindowWaitService.DefaultTimeoutMs,
+        ["wait_for_element"] = ElementWaitService.DefaultTimeoutMs,
+    };
 
     /// <summary>The tool whose window argument is the window it waits for, not a target.</summary>
     private const string WaitForWindowTool = "wait_for_window";
@@ -713,7 +721,8 @@ public sealed partial class StepRunner
     /// <summary>
     /// The arguments the step's tool is called with: null arguments left out, references resolved, the run's window added
     /// when the step names none, a window selector replaced by the handle it names now, type_text's method unicode when it
-    /// names none, and a wait's timeoutMs cut to the time left. Or why the step is not run, with the code: a reference to a
+    /// names none, and a wait's timeoutMs (its tool's default when it names none) cut to the time left. Or why the step is
+    /// not run, with the code: a reference to a
     /// step that failed, a selector that names no single window, or a window that is not the run's.
     /// </summary>
     private (JsonObject? Arguments, string? Refusal, string? RefusalCode, bool WaitCut) Prepare(
@@ -773,15 +782,27 @@ public sealed partial class StepRunner
             arguments["method"] = "unicode";
         }
 
+        // Missing (a null was left out above): the tool's own default, which the run cuts only when it has less time left,
+        // so only a wait the run really shortened is the run's timeout when it runs out. A value that is no whole number is
+        // replaced by the time left, as one longer than it.
         var waitCut = false;
-        if (WaitTools.Contains(step.Tool))
+        if (WaitTools.TryGetValue(step.Tool, out var defaultTimeoutMs))
         {
             var leftMs = Math.Max(0, (long)left.TotalMilliseconds - WaitMarginMs);
-            var asked = arguments["timeoutMs"] is JsonValue given && given.TryGetValue<long>(out var value) ? value : long.MaxValue;
+            var asked = arguments["timeoutMs"] switch
+            {
+                null => defaultTimeoutMs,
+                JsonValue given when given.TryGetValue<long>(out var value) => value,
+                _ => long.MaxValue
+            };
             if (asked > leftMs)
             {
                 arguments["timeoutMs"] = leftMs;
                 waitCut = true;
+            }
+            else if (!arguments.ContainsKey("timeoutMs"))
+            {
+                arguments["timeoutMs"] = asked;
             }
         }
 
