@@ -32,6 +32,14 @@ public sealed class ProductionWiringTests : IDisposable
         [typeof(CdpTransportLimits)] = "CdpTransport's size and time limits, a test seam; the default is the production limits"
     };
 
+    /// <summary>
+    /// The fields ("Type.field") that may hold an instance of a served type other than the container's singleton, each with
+    /// the reason. Keep it short: a collaborator the container serves belongs to the container.
+    /// </summary>
+    private static readonly IReadOnlyDictionary<string, string> PrivateInstances = new Dictionary<string, string>
+    {
+    };
+
     private readonly string _folder = Path.Combine(Path.GetTempPath(), $"WiringTests_{Guid.NewGuid()}");
     private readonly ServiceCollection _services;
     private readonly ServiceProvider _provider;
@@ -120,7 +128,7 @@ public sealed class ProductionWiringTests : IDisposable
         var unserved = new List<string>();
         foreach (var descriptor in _services.Where(d => !d.IsKeyedService && d.ImplementationFactory != null))
         {
-            var instance = _provider.GetRequiredService(descriptor.ServiceType);
+            var instance = InstanceOf(_services, _provider, descriptor);
             var type = instance.GetType();
             if (type.Assembly != Server)
             {
@@ -144,24 +152,70 @@ public sealed class ProductionWiringTests : IDisposable
         // The factory registrations call a constructor themselves and may leave an optional collaborator out; so may a service
         // that creates a helper itself. Every server object the container hands out, and the server objects it holds, must have
         // a value in each field whose type the container serves
-        var empty = new List<string>();
-        var visited = new HashSet<object>(ReferenceEqualityComparer.Instance);
-        foreach (var descriptor in _services.Where(d => !d.IsKeyedService && d.ServiceType.Assembly == Server && !d.ServiceType.IsGenericTypeDefinition))
-        {
-            Inspect(_provider.GetRequiredService(descriptor.ServiceType), descriptor.ServiceType.Name, empty, visited);
-        }
+        var (empty, _) = InspectAll();
 
-        foreach (var hosted in _provider.GetServices<Microsoft.Extensions.Hosting.IHostedService>())
+        empty.Should().BeEmpty("a server object built without a collaborator the container serves silently goes without it");
+    }
+
+    [Fact]
+    public void EveryResolvedServerObject_HoldsTheContainersOwnSingleton_NotACopy()
+    {
+        // A collaborator the container holds as a singleton must be that singleton: a factory or a service that builds its own
+        // (a policy, a guard, a session) would pass every check above and still not be the one the user configured
+        var (_, copies) = InspectAll();
+
+        copies.Should().BeEmpty("a server object must hold the container's singleton of each collaborator it serves");
+    }
+
+    [Fact]
+    public void InstanceOf_GivesTheInstanceOfEachRegistration_NotOnlyTheLastOfItsServiceType()
+    {
+        // Arrange - two registrations of one service type, as AddHostedService makes for IHostedService
+        var first = new object();
+        var second = new object();
+        var services = new ServiceCollection();
+        services.AddSingleton<object>(_ => first);
+        services.AddSingleton<object>(_ => second);
+        using var provider = services.BuildServiceProvider();
+
+        // Act & Assert
+        InstanceOf(services, provider, services[0]).Should().BeSameAs(first);
+        InstanceOf(services, provider, services[1]).Should().BeSameAs(second);
+    }
+
+    /// <summary>
+    /// The instance the container holds for <paramref name="descriptor"/>: for a service type registered more than once (every
+    /// hosted service is an IHostedService) the one of this registration, not the last.
+    /// </summary>
+    private static object InstanceOf(IServiceCollection services, IServiceProvider provider, ServiceDescriptor descriptor)
+    {
+        var index = services.Where(d => !d.IsKeyedService && d.ServiceType == descriptor.ServiceType).ToList().IndexOf(descriptor);
+        return provider.GetServices(descriptor.ServiceType).ElementAt(index)!;
+    }
+
+    /// <summary>
+    /// Inspects every server object the container hands out (each registration's own instance), the hosted services and the
+    /// tool, resource and prompt classes: the served collaborators they hold as null, and those that are not the container's
+    /// singleton.
+    /// </summary>
+    private (List<string> Empty, List<string> Copies) InspectAll()
+    {
+        var empty = new List<string>();
+        var copies = new List<string>();
+        var visited = new HashSet<object>(ReferenceEqualityComparer.Instance);
+        foreach (var descriptor in _services.Where(d => !d.IsKeyedService && !d.ServiceType.IsGenericTypeDefinition &&
+                                                         (d.ServiceType.Assembly == Server || d.ServiceType == typeof(Microsoft.Extensions.Hosting.IHostedService))))
         {
-            Inspect(hosted, hosted.GetType().Name, empty, visited);
+            var instance = InstanceOf(_services, _provider, descriptor);
+            Inspect(instance, instance.GetType().Name, empty, copies, visited);
         }
 
         foreach (var perCall in PerCallClasses().Select(row => (Type)row[0]))
         {
-            Inspect(ActivatorUtilities.CreateInstance(_provider, perCall), perCall.Name, empty, visited);
+            Inspect(ActivatorUtilities.CreateInstance(_provider, perCall), perCall.Name, empty, copies, visited);
         }
 
-        empty.Should().BeEmpty("a server object built without a collaborator the container serves silently goes without it");
+        return (empty, copies);
     }
 
     [Theory]
@@ -209,11 +263,15 @@ public sealed class ProductionWiringTests : IDisposable
                ?? throw new InvalidOperationException($"The container can call no constructor of {type.Name}.");
     }
 
+    /// <summary>Whether the container's (last) registration of <paramref name="type"/> is a singleton.</summary>
+    private bool IsSingleton(Type type) =>
+        _services.LastOrDefault(d => !d.IsKeyedService && d.ServiceType == type)?.Lifetime == ServiceLifetime.Singleton;
+
     /// <summary>One of the server's classes or interfaces: not a value, an enum, a delegate or a type of another assembly.</summary>
     private static bool IsServerCollaborator(Type type) =>
         type.Assembly == Server && !type.IsValueType && !typeof(Delegate).IsAssignableFrom(type);
 
-    private void Inspect(object? instance, string path, List<string> empty, HashSet<object> visited)
+    private void Inspect(object? instance, string path, List<string> empty, List<string> copies, HashSet<object> visited)
     {
         if (instance == null || instance.GetType().Assembly != Server || !visited.Add(instance))
         {
@@ -243,7 +301,14 @@ public sealed class ProductionWiringTests : IDisposable
                 // A helper the object made itself (not one the container hands out) is looked into as well
                 if (!_isService.IsService(field.FieldType))
                 {
-                    Inspect(value, $"{path}.{field.Name}", empty, visited);
+                    Inspect(value, $"{path}.{field.Name}", empty, copies, visited);
+                    continue;
+                }
+
+                if (IsSingleton(field.FieldType) && !ReferenceEquals(value, _provider.GetService(field.FieldType)) &&
+                    !PrivateInstances.ContainsKey($"{type.Name}.{field.Name}"))
+                {
+                    copies.Add($"{path}.{field.Name} ({field.FieldType.Name}: a {value.GetType().Name} of its own)");
                 }
             }
         }
