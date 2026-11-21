@@ -1790,7 +1790,7 @@ public class ProcessServiceTests
 
     private static ISet<string> GetProtectedProcessNames()
     {
-        var field = typeof(ProcessService)
+        var field = typeof(ProcessTerminationService)
             .GetFields(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static)
             .SingleOrDefault(f => f.Name.Contains("Protected", StringComparison.OrdinalIgnoreCase)
                                   && typeof(ISet<string>).IsAssignableFrom(f.FieldType));

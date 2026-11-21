@@ -9,11 +9,11 @@ public sealed class WiredProcessService : ProcessService
 {
     private WiredProcessService(
         ProcessListingService listing,
+        ProcessTerminationService termination,
         IWindowService windowService,
         IInputValidationService validationService,
         IBrowserDetectionService browserDetection,
         IExecutableResolver executableResolver,
-        ITargetPolicy targetPolicy,
         IHostGuard hostGuard,
         ChromiumPrograms chromiumPrograms,
         InterpreterGuard interpreterGuard,
@@ -26,15 +26,19 @@ public sealed class WiredProcessService : ProcessService
         DebugBrowserProfiles? debugBrowserProfiles,
         INativeAppsWrapper? appsWrapper,
         IInstalledAppsService? installedApps)
-        : base(listing, windowService, validationService, browserDetection, executableResolver, targetPolicy, hostGuard,
+        : base(listing, termination, windowService, validationService, browserDetection, executableResolver, hostGuard,
             chromiumPrograms, interpreterGuard, debugBrowserLocator, securityProbe, switchGuard, processWrapper, windowWait,
             debugBrowserReadiness, debugBrowserProfiles, appsWrapper, installedApps)
     {
         Listing = listing;
+        Termination = termination;
     }
 
     /// <summary>list_processes and the reads of a process's name and path.</summary>
     public ProcessListingService Listing { get; }
+
+    /// <summary>kill_process.</summary>
+    public ProcessTerminationService Termination { get; }
 
     /// <summary>
     /// The parts wired together. <paramref name="startTimeout"/>, <paramref name="activationTimeout"/> and
@@ -63,7 +67,8 @@ public sealed class WiredProcessService : ProcessService
         TimeSpan? devToolsPortTimeout = null)
     {
         var listing = new ProcessListingService(windowService, processWrapper, targetPolicy, securityProbe);
-        WiredProcessService Wire() => new(listing, windowService, validationService, browserDetection, executableResolver, targetPolicy,
+        var termination = new ProcessTerminationService(processWrapper, targetPolicy, hostGuard);
+        WiredProcessService Wire() => new(listing, termination, windowService, validationService, browserDetection, executableResolver,
             hostGuard, chromiumPrograms, interpreterGuard, debugBrowserLocator, securityProbe, switchGuard, processWrapper, windowWait,
             debugBrowserReadiness, debugBrowserProfiles, appsWrapper, installedApps)
         {
@@ -74,7 +79,7 @@ public sealed class WiredProcessService : ProcessService
         if (devToolsPortTimeout is not { } portTimeout)
             return Wire();
 
-        var wired = new WiredProcessService(listing, windowService, validationService, browserDetection, executableResolver, targetPolicy,
+        var wired = new WiredProcessService(listing, termination, windowService, validationService, browserDetection, executableResolver,
             hostGuard, chromiumPrograms, interpreterGuard, debugBrowserLocator, securityProbe, switchGuard, processWrapper, windowWait,
             debugBrowserReadiness, debugBrowserProfiles, appsWrapper, installedApps)
         {

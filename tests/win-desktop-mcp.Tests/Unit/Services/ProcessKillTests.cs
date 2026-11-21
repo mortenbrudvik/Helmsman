@@ -24,19 +24,10 @@ public class ProcessKillTests
         _hostGuard.Setup(g => g.IsHostProcess(It.IsAny<int>())).Returns(false);
     }
 
-    private WiredProcessService CreateSut(bool withHostGuard = true) => WiredProcessService.Create(
-        TestDataFactory.CreateMockWindowService().Object,
-        new Mock<IInputValidationService>().Object,
-        TestDataFactory.CreateMockBrowserDetectionService().Object,
-        new Mock<IExecutableResolver>().Object,
+    private ProcessTerminationService CreateSut(bool withHostGuard = true) => new(
+        _mockWrapper.Object,
         Permissive.TargetPolicy,
-        withHostGuard ? _hostGuard.Object : Permissive.HostGuard,
-        new ChromiumPrograms(),
-        new InterpreterGuard(),
-        new DebugBrowserLocator(),
-        Permissive.SecurityProbe,
-        new ChromiumSwitchGuard(),
-        _mockWrapper.Object);
+        withHostGuard ? _hostGuard.Object : Permissive.HostGuard);
 
     private void VerifyNeverForceKilled() =>
         _mockProcess.Verify(p => p.Kill(It.IsAny<bool>()), Times.Never);

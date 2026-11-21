@@ -104,11 +104,11 @@ public class ServerHarnessTests : IDisposable
         // Arrange - built the way the container would build them if the wrappers were not registered
         var processService = new ProcessService(
             Mock.Of<IProcessListing>(),
+            Mock.Of<IProcessTermination>(),
             Mock.Of<IWindowService>(MockBehavior.Strict),
             Mock.Of<IInputValidationService>(MockBehavior.Strict),
             Mock.Of<IBrowserDetectionService>(MockBehavior.Strict),
             new ExecutableResolver(),
-            Mock.Of<ITargetPolicy>(),
             Mock.Of<IHostGuard>(),
             new ChromiumPrograms(),
             new InterpreterGuard(),
