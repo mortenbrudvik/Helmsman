@@ -8828,6 +8828,118 @@ tools/list grows by about 400 tokens (56,039 to 56,443), and every tool together
   every error code's entry, `MonitorNotFound` and `InvalidPresetFile` included (issue #11). The take_screenshot example
   passes `monitor`, not the removed `monitorIndex`.
 
+Release 4.0.0 (the rename to win-desktop-mcp, and tighter rules for launches and for input to the agent's host):
+
+This is a major release for two reasons: the product is renamed, so an existing installation must be removed and
+installed again under the new name, and calls that worked with 3.2.0 are now refused (input to the agent's own host
+window without the user's yes for that call, launches of more programs with arguments and of more file types, and Win+R
+and Win+X). The markers mean what they mean for 3.1.0 above: **Changed:** where a call that worked with 3.2.0 can now be
+refused or return something else. No result field that 3.2.0 always sent is left out, so no bullet says **Breaking:**;
+what breaks an existing setup is the rename in the first three bullets. The default tools/list grows by about 770 tokens
+(56,443 to 57,210), and every tool together from 66,545 to 67,312, most of it in the `allowHostTarget` descriptions.
+
+- **The product is win-desktop-mcp: reinstall the plugin.** The Claude Code plugin is `win-desktop-mcp` in the
+  marketplace `win-desktop-mcp-marketplace` (they were `windows-app-manager` and `windows-app-manager-marketplace`), so
+  Claude Code takes it for a new plugin and a 3.x install does not update to it: remove the old plugin and marketplace
+  and install the new one, as [Upgrading from 3.x](../README.md#upgrading-from-3x) in the README says. Claude Code names
+  its tools `mcp__plugin_win-desktop-mcp_win-desktop-mcp__<tool>` (they were
+  `mcp__plugin_windows-app-manager_windows-app-manager__<tool>`), so permission rules, hook matchers and subagent
+  `tools` lists that name the old ones must be changed, and the skill is `using-win-desktop-mcp`. The exe is
+  `win-desktop-mcp.exe` (it was `WindowsAppManagerMcp.exe`), in the plugin's `bin` folder and in a release's
+  `win-desktop-mcp-<tag>-win-x64.zip`: point a hand-written MCP config's `command` at it. **Changed:** the server
+  reports `serverInfo.name` and get_server_info's `server.name` as `win-desktop-mcp` (they were `windows-app-manager`),
+  its instructions, prompts and messages call it so, and its stderr log categories start with `WinDesktopMcp.`
+  (`WinDesktopMcp.ToolCalls`). Unchanged: every `WAM_*` environment variable, the `wam://` resources, and the tool names
+  after the prefix and their arguments.
+- **The server's folders moved.** Its default folders are `%LOCALAPPDATA%\win-desktop-mcp` and `%TEMP%\win-desktop-mcp`
+  (they were `...\WindowsAppManagerMcp`): layout presets in `layouts`, the audit log in `audit`, named debug-browser
+  profiles in `browser-profiles`, and under `%TEMP%` the temporary debug-browser profiles (`browser-debug`) and the
+  capture files written without `outputPath` (`captures`). The first time the server uses its layouts folder, it copies
+  the presets in `%LOCALAPPDATA%\WindowsAppManagerMcp\layouts`, and in the `layouts` folder of an installed older plugin
+  version, into it, never moving or overwriting one; with `WAM_LAYOUTS_PATH` set, that folder is used as before. Nothing
+  else is copied: the audit log goes on in the new folder (`WAM_AUDIT_PATH` still overrides it), and the files 3.x wrote
+  stay in `%LOCALAPPDATA%\WindowsAppManagerMcp\audit`. **Changed:** a
+  [launch_browser_with_debug](#launch_browser_with_debug) `profile` made with 3.x is not found, so a launch with its
+  name starts a new, empty profile (signed out), and close_debug_browser counts only the new folders as the server's
+  own.
+- **3.x and 4.0.0 servers do not share the pause.** **Changed:** the pause that every server on the desktop shares, and
+  the mark of the server that registered the pause hotkey, have new names, so a 3.x server still running beside a 4.0.0
+  one (another client still set up with the old exe) is neither paused nor resumed by the other's hotkey or confirmed
+  resume_input. The one that finds the chord taken by the other reports `hotkey.state` `Failed` in
+  [get_control_status](#get_control_status), not `OtherServer`, and registers the chord once the other stops. Upgrade or
+  remove every 3.x setup.
+- **allowHostTarget asks the user on every call.** **Changed:** `allowHostTarget: true` with `windowHandle` (or
+  `window.handle`) naming the agent's own host window sent the input there at once; now the server first asks the user
+  through the client (elicitation), once per call, naming the window and showing every character and key the call would
+  send (line breaks, tabs and characters it cannot show as themselves are marked, and Enter, or a line break, Ctrl+M or
+  Ctrl+J, is said to run a command in a terminal). Nothing is sent without a ticked yes within 2 minutes
+  (`ConfirmationDeclined`) or when the client cannot ask (`ConfirmationRequired`; no argument replaces the answer), and
+  no answer is remembered for a later call. This holds for the [Input Simulation](#input-simulation) tools,
+  [element_action](#element_action), [file_dialog](#file_dialog) and a [respond_to_dialog](#respond_to_dialog) that
+  presses a button (a read asks nothing). Input that shows as more than 300 characters is refused without a question
+  (`TextTooLong`). Only input whose effect the question can state goes to the host: text the question shows as itself,
+  Enter, Tab and Backspace (also with Shift), the arrows, Home, End, Page Up and Page Down (also with Shift, Ctrl or
+  both), Delete (also with Ctrl), Esc (also with Shift), Ctrl with A, C, D, J, M, U or Z, and mouse input without
+  modifier keys. Anything else (a modifier pressed alone, Alt or Win with any key, other Ctrl chords, the function keys,
+  the Apps key, the numeric keypad, right-to-left letters or fullwidth text, a modifier held around a click or scroll)
+  is `InvalidArguments`, before the question and again before every batch. A paste (Ctrl+V, Shift+Insert, Win+V, the SYN
+  character, type_text's `method: "paste"`, element_action's `mode: "paste"`), a drag and a right or middle click are
+  `PasteNotAllowed`, and type_text's `auto` types there. Keys stop with `TargetInMenuMode` while the host is in a menu,
+  and with `HandleMismatch` when its keyboard layout or Caps Lock changed after the yes. The question shows what is
+  sent, not what the host application will do with it. See [Safety and Coordinates](#safety-and-coordinates).
+- **More launches are refused.** **Changed:** launch_application, the items of launch_applications_batch, and the
+  launches of apply_layout's `launchMissing` and of restore_workspace (in `LaunchFailed`'s `error`) start nothing for
+  these. With arguments (`InterpreterWithArguments`), besides 3.2.0's shells, script hosts, runtimes and programs that
+  load code: more shells (`zsh`, `fish`, `nu`, `busybox`, `mintty`, ...), AutoHotkey and AutoIt, more runtimes and the
+  package managers (`go`, `cargo`, `bun`, `lua`, `winget`, `choco`, `pip`, `uv`, `pnpm`, ...), container tools
+  (`docker`, `podman`, `kubectl`), more programs that run code (`runas`, `psexec`, `msdt`, `at`, `winrs`, ...), the
+  programs that open a refused file type (`control`, `mmc`, `hh`, `mstsc`, `msrdc`, `javaws`, `appinstaller`, ...), and
+  system tools that shut down, kill processes, edit the registry, control services, drivers, the network, accounts or
+  boot, wipe, format, encrypt, copy or take over files and disks, or download, upload or open a remote session
+  (`shutdown`, `taskkill`, `reg`, `regedit`, `sc`, `net`, `netsh`, `ipconfig`, `bcdedit`, `diskpart`, `cipher`,
+  `icacls`, `robocopy`, `xcopy`, `tar`, `curl`, `certutil`, `ssh`, `scp`, `git`, `gh`, `aws`, ...); `control` with
+  arguments is told to launch an `ms-settings:` URI instead. Without arguments they start as before. As the target or as
+  what `explorer` is asked to open, with or without arguments (`ScriptFile`), besides 3.2.0's scripts, `.msi`, `.msp`
+  and `.cpl`: shortcuts (`.lnk`, `.url`, `.website`, `.pif`, `.settingcontent-ms`), installers and packages (`.msu`,
+  `.msix`, `.msixbundle`, `.appx`, `.appxbundle`, `.appinstaller`, `.application`, `.appref-ms`, `.vsto`, `.ppkg`,
+  `.gadget`, `.xll`), `.reg`, `.msc`, `.chm`, `.scr`, `.diagcab` and `.rdp`, and the scripts `.psc1`, `.wsc`, `.sct`,
+  `.jnlp`, `.ahk` and `.au3`. An installed app launched by its name or `shell:AppsFolder` entry is still checked by the
+  program its shortcut starts, not refused as a shortcut. The exception is Windows' own consoles: an existing `.msc`
+  file directly in System32 (`services.msc`, `devmgmt.msc`, `eventvwr.msc`), launched by its name or plain full path
+  without arguments, opens, and now always starts in System32: a `workingDirectory` asked for is not used, and the
+  result's `warning` says so. Any other `.msc`, and a console with arguments, is `ScriptFile`. The system programs are
+  matched by their exact name (`SC2.exe` is not `sc`); a version after the name still counts for shells, script hosts,
+  runtimes and package managers. It is a list of names, not a sandbox: see [Commands and
+  scripts](#commands-and-scripts).
+- **Win+R and Win+X are refused.** **Changed:** send_keys and press_keys refuse keys that press Win+R (the Run dialog)
+  or Win+X (the power-user menu), with either Windows key and also with more modifiers, with or without `windowHandle`
+  (`DestructiveChordNeedsTarget`; nothing is sent). A run_steps step with such keys refuses the whole run with
+  `InvalidArguments` before any step runs, also when the chord's character is the R or X key of the window's keyboard
+  layout (`win+к` on a Russian one); a step whose keys read so only after the layout changed during the run is not run.
+  `WAM_DESTRUCTIVE_CHORDS` does not change this. Start programs with launch_application.
+- **run_steps' wait steps wait their tool's default.** **Changed:** a wait_for_window or wait_for_element step without
+  `timeoutMs` (or with `null`) waits its tool's default, 10,000 ms, cut to what is left of `maxDurationMs` (less 250 ms)
+  only when less is left; it waited all that was left. A `timeoutMs` written as a string of digits (`"5000"`) is read as
+  that number, where it was taken as missing, and a value the tool does not bind (`"abc"`, `1.5`, `true`) is handed to
+  the tool, which refuses it (`InvalidArguments`), where it was replaced by the time left. Only a wait the run cut ends
+  the run as timed out (`OperationTimedOut`, `stoppedBy: "timedOut"`); one that times out on its own is an ordinary
+  failed step (`WaitTimedOut`), which an `optional` step may be. In 3.2.0 every wait without a numeric `timeoutMs` that
+  timed out ended the run, also an optional one.
+- **Fixes.** [save_workspace](#save_workspace) writes the preset once, with its folders and pages, so a save that fails
+  as it writes, or is cancelled while it reads the browsers' pages, leaves a layout or workspace of that name as it was;
+  it left one without that content. **Changed:** a launch of a packaged app is refused with `ActivationFailed` while
+  three earlier activations still wait for Windows to answer, now also when their calls were cancelled; an activation
+  whose call was cancelled before Windows answered was not counted. A clipboard call whose thread could not be started
+  (no memory for its stack) now fails alone; every later read or write of the clipboard (get_clipboard and set_clipboard
+  with `ClipboardBusy`, type_text's paste, the paste check) failed until the server restarted.
+- **Documented.** What the process allow and deny lists (`WAM_ALLOW_PROCESSES`, `WAM_DENY_PROCESSES`) refuse, mask and
+  leave alone, in the README and in [What the policy covers](#what-the-policy-covers): monitor and region captures, a
+  window copied from the screen, the browser reads with an explicit `cdpPort`, launches, the window titles in the window
+  lists and the audit log are not filtered. The behaviour is unchanged.
+- **Internal.** The large services are split into smaller ones, and the checks' collaborators (target policy, host
+  guard, input session, paste guard, takeover monitor and others) are required rather than optional, so a server built
+  without one fails instead of skipping the check; the server always had them, so nothing changes for a client.
+
 ## Error Codes
 
 ### Tool errors
