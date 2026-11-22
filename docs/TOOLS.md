@@ -9009,17 +9009,16 @@ sizes are those of 4.0.0.
   save_layout's `placements` refuse such a `processName` (`InvalidPlacement`; 4.0.0 saved it), and apply_layout skips a
   placement read from a file that has one (`notApplicable`, `NoMatchCriterion`): with `matchBy: "title_only"` 4.0.0
   ignored the `processName` and arranged the window its `titleContains` named, and otherwise it found no window
-  (`notFound`; with `launchMissing`, it started the program the placement names). **Changed:** a name that is blank once read
-  (only spaces, quotes or `.exe`) names no process. An entry of save_layout's or save_workspace's `includeProcesses` or
+  (`notFound`; with `launchMissing`, it started the program the placement names). **Changed:** a name that is blank once
+  read (only spaces, quotes or `.exe`) names no process. An entry of save_layout's or save_workspace's `includeProcesses` or
   `excludeProcesses` such as `.exe` (or, in save_workspace's array, `" "`) is refused with `InvalidArguments`; 4.0.0
   read it as part of every name, so an exclude entry left out every window and the save failed (`NoWindowsCaptured`),
   and an include entry kept every window. An `expectWindow.processName` of `.exe` matches no window: 4.0.0 matched every
   new window, so a launch could take another process's window for its own, and with `reuseExisting` it reused any open
   window of the app whose title fit (of any app, when the app was not known); now such a launch reuses nothing and starts
-  the program. A
-  selector's `processName` of only quotes is blank (`InvalidArguments`), as one of only `.exe` was. list_processes
-  refuses a `nameFilter` that is blank once read (`InvalidArguments`): 4.0.0 listed the processes whose names contain the
-  spaces given (`" "`: every name with a space) and nothing for `.exe`. find_windows' `processName` of only `.exe` with
+  the program. A selector's `processName` of only quotes is blank (`InvalidArguments`), as one of only `.exe` was.
+  list_processes refuses a `nameFilter` that is blank once read (`InvalidArguments`): 4.0.0 listed the processes whose
+  names contain the spaces given (`" "`: every name with a space) and nothing for `.exe`. find_windows' `processName` of only `.exe` with
   `processNameContains: true` lists no window, where it listed every one. The target policy is unchanged: it reads its
   lists and the processes' names as before, and no verdict changed.
 
