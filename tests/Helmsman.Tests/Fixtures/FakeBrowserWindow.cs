@@ -93,9 +93,9 @@ public sealed record BrowserNames(
 /// </summary>
 public sealed class FakeBrowserWindow
 {
-    public const string PageTitle = "mortenbrudvik/WindowsAppManagerMcp";
-    public const string CommittedUrl = "https://github.com/mortenbrudvik/WindowsAppManagerMcp";
-    public const string ShownUrl = "github.com/mortenbrudvik/WindowsAppManagerMcp";
+    public const string PageTitle = "mortenbrudvik/Helmsman";
+    public const string CommittedUrl = "https://github.com/mortenbrudvik/Helmsman";
+    public const string ShownUrl = "github.com/mortenbrudvik/Helmsman";
     public const string AttackerUrl = "https://evil.example/login";
     public const string SidebarUrl = "https://edgeservices.bing.com/edgesvc/chat";
 

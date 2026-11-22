@@ -6,7 +6,7 @@ namespace Helmsman.Tests.Unit.Services;
 public class BrowserUrlsTests
 {
     [Theory]
-    [InlineData("https://github.com/mortenbrudvik/WindowsAppManagerMcp")]
+    [InlineData("https://github.com/mortenbrudvik/Helmsman")]
     [InlineData("http://127.0.0.1:8080/a?b=c#d")]
     [InlineData("HTTPS://EXAMPLE.COM")]
     [InlineData("file:///C:/Users/me/page.html")]
@@ -42,7 +42,7 @@ public class BrowserUrlsTests
     }
 
     [Theory]
-    [InlineData("github.com/mortenbrudvik/WindowsAppManagerMcp", true)]
+    [InlineData("github.com/mortenbrudvik/Helmsman", true)]
     [InlineData("www.example.com", true)]
     [InlineData("localhost:3000", true)]
     [InlineData("localhost", true)]

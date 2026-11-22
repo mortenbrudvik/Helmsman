@@ -243,7 +243,7 @@ public class ToolErrorReportingTests
             ["items"] = JsonSerializer.Deserialize<JsonElement>(items), ["note"] = "n"
         });
 
-        // Assert - System.Text.Json's own text names CLR types (win-desktop-mcp...Item), which mean nothing to the agent
+        // Assert - System.Text.Json's own text names CLR types (Helmsman...Item), which mean nothing to the agent
         var error = ParsePayload(result).GetProperty("error").GetString();
         error.Should().Be($"Invalid arguments for tool '{NestedTool}'. {expected} Check the argument names and types against the " +
                           "tool's input schema. Nothing was done.");

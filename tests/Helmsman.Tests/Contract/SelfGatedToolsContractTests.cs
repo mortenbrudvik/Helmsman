@@ -640,8 +640,8 @@ public sealed class SelfGatedToolsContractTests : IDisposable
             var window = TypicalDesktop.Windows.Single(w => w.Handle == (nint)TypicalDesktop.BrowserHandle);
             var handle = window.Handle;
             var processId = (uint)window.ProcessId;
-            var shown = new CdpTarget("8F4C1D2E9A7B6C5D4E3F2A1B0C9D8E7F", "page", "win-desktop-mcp - GitHub",
-                "https://github.com/mortenbrudvik/WindowsAppManagerMcp", $"ws://127.0.0.1:{Port}/devtools/page/8F4C1D2E9A7B6C5D4E3F2A1B0C9D8E7F", Port);
+            var shown = new CdpTarget("8F4C1D2E9A7B6C5D4E3F2A1B0C9D8E7F", "page", "Helmsman - GitHub",
+                "https://github.com/mortenbrudvik/Helmsman", $"ws://127.0.0.1:{Port}/devtools/page/8F4C1D2E9A7B6C5D4E3F2A1B0C9D8E7F", Port);
             Owners = new FakePortOwnerResolver(owner: (int)processId);
 
             Windows.Setup(w => w.IsWindow(handle)).Returns(true);

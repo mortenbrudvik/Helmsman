@@ -93,7 +93,7 @@ public static class TypicalDesktop
     ], Total: 140, Truncated: true, Unreadable: false);
 
     public static string Article { get; } = string.Concat(Enumerable.Repeat(
-        "win-desktop-mcp lets an agent find, arrange and read the windows on a desktop. ", 200))[..ArticleLength];
+        "Helmsman lets an agent find, arrange and read the windows on a desktop. ", 250))[..ArticleLength];
 
     /// <summary>A paragraph of 300 characters the agent copied with send_keys '^c' (get_clipboard).</summary>
     public static string CopiedParagraph { get; } = Article[..300];
@@ -103,15 +103,15 @@ public static class TypicalDesktop
         (string Title, string Process, string Class)[] apps =
         [
             ("notes.txt - Notepad", "notepad", "Notepad"),
-            ("win-desktop-mcp - GitHub - Google Chrome", "chrome", "Chrome_WidgetWin_1"),
-            ("README.md - win-desktop-mcp - Visual Studio Code", "Code", "Chrome_WidgetWin_1"),
-            ("pwsh in win-desktop-mcp", "WindowsTerminal", "CASCADIA_HOSTING_WINDOW_CLASS"),
+            ("Helmsman - GitHub - Google Chrome", "chrome", "Chrome_WidgetWin_1"),
+            ("README.md - Helmsman - Visual Studio Code", "Code", "Chrome_WidgetWin_1"),
+            ("pwsh in Helmsman", "WindowsTerminal", "CASCADIA_HOSTING_WINDOW_CLASS"),
             ("Documents - File Explorer", "explorer", "CabinetWClass"),
             ("Inbox - user@example.com - Outlook", "OUTLOOK", "rctrl_renwnd32"),
             ("Microsoft Teams", "Teams", "TeamsWebView"),
             ("Slack | general | Example Workspace", "slack", "Chrome_WidgetWin_1"),
             ("Spotify Premium", "Spotify", "Chrome_WidgetWin_1"),
-            ("win-desktop-mcp - Microsoft Visual Studio", "devenv", "HwndWrapper[DefaultDomain;;]"),
+            ("Helmsman - Microsoft Visual Studio", "devenv", "HwndWrapper[DefaultDomain;;]"),
             ("Calculator", "CalculatorApp", "ApplicationFrameWindow"),
             ("Settings", "SystemSettings", "ApplicationFrameWindow"),
             ("Docker Desktop", "Docker Desktop", "Chrome_WidgetWin_1"),
@@ -344,7 +344,7 @@ public static class TypicalDesktop
                 Matcher: new WindowMatcher(ProcessName: ProcessNames[p], ClassName: "Chrome_WidgetWin_1")
                 {
                     ExactProcessName = true,
-                    TitlePattern = $"README.md - win-desktop-mcp - {ProcessNames[p]}",
+                    TitlePattern = $"README.md - Helmsman - {ProcessNames[p]}",
                     ExePath = $@"C:\Program Files\{ProcessNames[p]}\{ProcessNames[p]}.exe",
                     Ordinal = 0
                 },

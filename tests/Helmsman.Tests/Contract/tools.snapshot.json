@@ -1244,7 +1244,7 @@
             ]
           },
           "outputPath": {
-            "description": "Absolute path on a drive letter (no network or device paths) of the image file for output 'file' or 'both', ending in .png, .jpg or .jpeg to match the format. The folder must exist; it is not created. Default: a new file in %TEMP%\\win-desktop-mcp\\captures.",
+            "description": "Absolute path on a drive letter (no network or device paths) of the image file for output 'file' or 'both', ending in .png, .jpg or .jpeg to match the format. The folder must exist; it is not created. Default: a new file in %TEMP%\\Helmsman\\captures.",
             "type": [
               "string",
               "null"
@@ -1446,7 +1446,7 @@
             ]
           },
           "outputPath": {
-            "description": "Absolute path on a drive letter (no network or device paths) of the image file for output 'file' or 'both', ending in .png, .jpg or .jpeg to match the format. The folder must exist; it is not created. Default: a new file in %TEMP%\\win-desktop-mcp\\captures.",
+            "description": "Absolute path on a drive letter (no network or device paths) of the image file for output 'file' or 'both', ending in .png, .jpg or .jpeg to match the format. The folder must exist; it is not created. Default: a new file in %TEMP%\\Helmsman\\captures.",
             "type": [
               "string",
               "null"
@@ -1702,7 +1702,7 @@
             ]
           },
           "outputPath": {
-            "description": "Absolute path on a drive letter (no network or device paths) of the image file for output 'file' or 'both', ending in .png, .jpg or .jpeg to match the format. The folder must exist; it is not created. Default: a new file in %TEMP%\\win-desktop-mcp\\captures.",
+            "description": "Absolute path on a drive letter (no network or device paths) of the image file for output 'file' or 'both', ending in .png, .jpg or .jpeg to match the format. The folder must exist; it is not created. Default: a new file in %TEMP%\\Helmsman\\captures.",
             "type": [
               "string",
               "null"
@@ -5174,7 +5174,7 @@
     {
       "name": "list_layouts",
       "title": "List Layouts",
-      "description": "List the saved layout presets (name, description, window count), then any invalid preset file, with its error. Presets are JSON files in %LOCALAPPDATA%\\win-desktop-mcp\\layouts (or the folder in the WAM_LAYOUTS_PATH environment variable); the samples work-setup, dual-monitor and focus-mode are added on first run.",
+      "description": "List the saved layout presets (name, description, window count), then any invalid preset file, with its error. Presets are JSON files in %LOCALAPPDATA%\\Helmsman\\layouts (or the folder in the WAM_LAYOUTS_PATH environment variable); the samples work-setup, dual-monitor and focus-mode are added on first run.",
       "inputSchema": {
         "type": "object",
         "properties": {}
@@ -8315,7 +8315,7 @@
             ]
           },
           "outputPath": {
-            "description": "Absolute path on a drive letter (no network or device paths) of the image file for output 'file' or 'both', ending in .png, .jpg or .jpeg to match the format. The folder must exist; it is not created. Default: a new file in %TEMP%\\win-desktop-mcp\\captures.",
+            "description": "Absolute path on a drive letter (no network or device paths) of the image file for output 'file' or 'both', ending in .png, .jpg or .jpeg to match the format. The folder must exist; it is not created. Default: a new file in %TEMP%\\Helmsman\\captures.",
             "type": [
               "string",
               "null"

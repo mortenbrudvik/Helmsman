@@ -13,7 +13,7 @@ namespace Helmsman.Tests.Unit.Architecture;
 /// foreground and type. And native code can be called without a declared P/Invoke at all: a library
 /// loaded and an export looked up (NativeLibrary), a function pointer turned into a delegate (Marshal.GetDelegateForFunctionPointer)
 /// or called directly (the calli instruction), a COM class created by its ProgID or CLSID, or a late-bound COM call (dynamic). So
-/// the server's own code (its win-desktop-mcp namespaces; the generated WinRT projection is pinned by NativeCallGuardTests)
+/// the server's own code (its Helmsman namespaces; the generated WinRT projection is pinned by NativeCallGuardTests)
 /// may reference none of them, except the reviewed uses on <see cref="SanctionedUses"/>, each in a Native wrapper that tests fake.
 /// </summary>
 public class ManagedDesktopApiTests
@@ -145,7 +145,7 @@ public class ManagedDesktopApiTests
     }
 
     /// <summary>
-    /// The server's own code: its win-desktop-mcp namespaces and Program.cs's top-level statements; not the generated WinRT
+    /// The server's own code: its Helmsman namespaces and Program.cs's top-level statements; not the generated WinRT
     /// projection, Coverlet's trackers or the compiler's own helper types.
     /// </summary>
     private static IEnumerable<MethodBase> ServerCode() =>
