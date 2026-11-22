@@ -130,8 +130,9 @@ public partial class OldProductNameTests
         new(LayoutStorageOptionsFile, @"plugin whose exe was win-desktop-mcp\.exe\.",
             "the comment on the AppData folder of the build published on main"),
 
-        // The layout section names the earlier AppData folders presets are copied from.
-        new("README.md", @"or in `%LOCALAPPDATA%\\win-desktop-mcp\\layouts` or `%LOCALAPPDATA%\\WindowsAppManagerMcp\\layouts`\)",
+        // The layout section names the earlier AppData folders presets are copied from, and when the newer one is the only one.
+        new("README.md", @"or in `%LOCALAPPDATA%\\win-desktop-mcp\\layouts` or `%LOCALAPPDATA%\\WindowsAppManagerMcp\\layouts`\) " +
+                         @"are copied there and the originals are left in place; once the `win-desktop-mcp` folder has had its own first run",
             "the layout presets: the AppData folder of the build published on main, which presets are copied from"),
     ];
 

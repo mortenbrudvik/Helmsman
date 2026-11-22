@@ -10,6 +10,17 @@ namespace Helmsman.Services;
 public sealed record SampleLayout(string FileName, string Json);
 
 /// <summary>
+/// An earlier generation's layouts folder that, once its own first-time setup has run (it holds the
+/// <c>.initialized</c> marker), is the user's complete and current set of presets: it already copied the presets of
+/// <paramref name="AbsorbedSources"/> and the samples, and a preset or sample missing from it was deleted by the user.
+/// When the marker is there, LayoutPresetStore copies from the migration sources except
+/// <paramref name="AbsorbedSources"/> and seeds no samples; without it nothing changes.
+/// </summary>
+/// <param name="LayoutsPath">The earlier generation's layouts folder; also one of the migration sources.</param>
+/// <param name="AbsorbedSources">Migration sources whose presets that generation already copied on its first start.</param>
+public sealed record EarlierLayoutsGeneration(string LayoutsPath, IReadOnlyList<string> AbsorbedSources);
+
+/// <summary>
 /// Where layout presets are stored and how the folder is prepared the first time it is used.
 /// </summary>
 /// <remarks>
@@ -17,7 +28,8 @@ public sealed record SampleLayout(string FileName, string Json);
 /// per-version cache folder, so every plugin update started with an empty folder. Presets now live in
 /// <c>%LOCALAPPDATA%\Helmsman\layouts</c> (or <see cref="LayoutsPathEnvironmentVariable"/>).
 /// Presets saved under the earlier folder names, <c>%LOCALAPPDATA%\win-desktop-mcp\layouts</c> and
-/// <c>%LOCALAPPDATA%\WindowsAppManagerMcp\layouts</c>, are copied once into the new folder.
+/// <c>%LOCALAPPDATA%\WindowsAppManagerMcp\layouts</c>, are copied once into the new folder; when the first of them
+/// finished its own first-time setup, it alone stands for both (see <see cref="EarlierLayoutsGeneration"/>).
 /// </remarks>
 /// <param name="LayoutsPath">Folder that holds the preset JSON files.</param>
 /// <param name="MigrationSources">
@@ -25,10 +37,15 @@ public sealed record SampleLayout(string FileName, string Json);
 /// overwriting) into <paramref name="LayoutsPath"/>.
 /// </param>
 /// <param name="Samples">Sample presets seeded on first use, without overwriting existing presets.</param>
+/// <param name="PreviousGeneration">
+/// The earlier generation whose initialised folder replaces the sources it already absorbed and the sample seeding, or
+/// null (a layouts-path override, or a plain folder).
+/// </param>
 public sealed record LayoutStorageOptions(
     string LayoutsPath,
     IReadOnlyList<string> MigrationSources,
-    IReadOnlyList<SampleLayout> Samples)
+    IReadOnlyList<SampleLayout> Samples,
+    EarlierLayoutsGeneration? PreviousGeneration = null)
 {
     /// <summary>
     /// Environment variable that overrides the layouts folder. It should be an absolute path;
@@ -110,13 +127,28 @@ public sealed record LayoutStorageOptions(
         string baseDirectory,
         IReadOnlyList<SampleLayout> samples)
     {
-        var sources = FindLegacyLayoutFolders(baseDirectory).ToList();
+        var legacyFolders = FindLegacyLayoutFolderEntries(baseDirectory);
+        var sources = legacyFolders.Select(f => f.Path).ToList();
+        EarlierLayoutsGeneration? previousGeneration = null;
         if (string.IsNullOrWhiteSpace(overridePath))
         {
-            sources.AddRange(PreviousAppDataFolderNames.Select(name => Path.Combine(localAppDataPath, name, LayoutsFolderName)));
+            var appDataFolders = PreviousAppDataFolderNames.Select(name => Path.Combine(localAppDataPath, name, LayoutsFolderName)).ToList();
+            sources.AddRange(appDataFolders);
+
+            // What the build published on main copied on its first start (the migration code was unchanged from 1.12.0 up to
+            // the rename to Helmsman): its own exe folder, the other versions of its plugin in the plugin cache, and the
+            // OriginalAppDataFolderName folder. Every version folder under PreviousPluginFolderName counts, in whichever of
+            // the scanned marketplaces it is: that plugin was only published from PreviousMarketplaceFolderName, where the
+            // build published on main ran from, and a version there either is that build (it kept nothing next to its
+            // exe) or is older and was scanned by it. Helmsman's own versions and exe folder are newer and stay sources.
+            var absorbed = legacyFolders.Where(f => f.UnderPreviousPluginName).Select(f => f.Path)
+                .Append(Path.Combine(localAppDataPath, OriginalAppDataFolderName, LayoutsFolderName))
+                .ToList();
+            previousGeneration = new EarlierLayoutsGeneration(
+                Path.Combine(localAppDataPath, PreviousAppDataFolderName, LayoutsFolderName), absorbed);
         }
 
-        return new(ResolveLayoutsPath(overridePath, localAppDataPath), sources, samples);
+        return new(ResolveLayoutsPath(overridePath, localAppDataPath), sources, samples, previousGeneration);
     }
 
     /// <summary>
@@ -145,9 +177,16 @@ public sealed record LayoutStorageOptions(
     /// asking, so only folders this project's installs wrote are trusted. Nothing is scanned next to an arbitrary
     /// install location.
     /// </summary>
-    public static IReadOnlyList<string> FindLegacyLayoutFolders(string baseDirectory)
+    public static IReadOnlyList<string> FindLegacyLayoutFolders(string baseDirectory) =>
+        FindLegacyLayoutFolderEntries(baseDirectory).Select(f => f.Path).ToList();
+
+    /// <summary>
+    /// <see cref="FindLegacyLayoutFolders"/>, each folder with whether it is inside a version folder of the plugin's
+    /// previous name (<see cref="PreviousPluginFolderName"/>).
+    /// </summary>
+    private static List<(string Path, bool UnderPreviousPluginName)> FindLegacyLayoutFolderEntries(string baseDirectory)
     {
-        var folders = new List<string>();
+        var folders = new List<(string Path, bool UnderPreviousPluginName)>();
         if (string.IsNullOrWhiteSpace(baseDirectory))
             return folders;
 
@@ -161,9 +200,9 @@ public sealed record LayoutStorageOptions(
             return folders;
         }
 
-        folders.Add(Path.Combine(baseDir, LayoutsFolderName));
-
         var versionDir = FindPluginVersionFolder(baseDir);
+        folders.Add((Path.Combine(baseDir, LayoutsFolderName), IsUnderPreviousPluginName(versionDir)));
+
         var ownMarketplaceDir = versionDir?.Parent?.Parent;
         var cacheDir = ownMarketplaceDir?.Parent;
         if (versionDir == null || ownMarketplaceDir == null || cacheDir == null)
@@ -185,14 +224,18 @@ public sealed record LayoutStorageOptions(
             if (string.Equals(otherVersion.FullName, versionDir.FullName, StringComparison.OrdinalIgnoreCase))
                 continue;
 
+            var underPreviousPluginName = IsUnderPreviousPluginName(otherVersion);
             foreach (var relative in relativeExeFolders)
             {
-                folders.Add(Path.Combine(otherVersion.FullName, relative, LayoutsFolderName));
+                folders.Add((Path.Combine(otherVersion.FullName, relative, LayoutsFolderName), underPreviousPluginName));
             }
         }
 
         return folders;
     }
+
+    private static bool IsUnderPreviousPluginName(DirectoryInfo? versionDir) =>
+        versionDir?.Parent?.Name.Equals(PreviousPluginFolderName, StringComparison.OrdinalIgnoreCase) == true;
 
     /// <summary>
     /// The version folders of this plugin, under its current or previous name, in the marketplace this exe is

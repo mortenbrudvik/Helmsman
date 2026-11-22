@@ -25,7 +25,8 @@ public class LayoutPresetStore : ILayoutPresetStore
 
     /// <summary>
     /// Written once the folder has been migrated and seeded, so that presets the user deletes
-    /// are not migrated or seeded again on the next start.
+    /// are not migrated or seeded again on the next start. Earlier generations wrote the same name, which is how an
+    /// initialised <see cref="LayoutStorageOptions.PreviousGeneration"/> folder is recognised.
     /// </summary>
     private const string InitializedMarkerFileName = ".initialized";
 
@@ -391,8 +392,20 @@ public class LayoutPresetStore : ILayoutPresetStore
             return;
 
         var knownNames = ReadPresetNames(LayoutsPath);
-        MigrateLegacyPresets(knownNames);
-        SeedSamplePresets(knownNames);
+        if (_options.PreviousGeneration is { } previous && File.Exists(Path.Combine(previous.LayoutsPath, InitializedMarkerFileName)))
+        {
+            // That generation's folder already holds what it copied from the older sources, and the samples; whatever is
+            // missing there the user deleted. Copy from it (and from sources newer than it), and seed nothing, as the
+            // marker means inside one folder.
+            MigrateLegacyPresets(
+                _options.MigrationSources.Where(s => !previous.AbsorbedSources.Any(a => IsSameFolder(a, s))),
+                knownNames);
+        }
+        else
+        {
+            MigrateLegacyPresets(_options.MigrationSources, knownNames);
+            SeedSamplePresets(knownNames);
+        }
 
         try
         {
@@ -406,11 +419,11 @@ public class LayoutPresetStore : ILayoutPresetStore
         }
     }
 
-    private void MigrateLegacyPresets(HashSet<string> knownNames)
+    private void MigrateLegacyPresets(IEnumerable<string> sources, HashSet<string> knownNames)
     {
         var candidates = new List<(FileInfo File, LayoutPreset Preset)>();
 
-        foreach (var source in _options.MigrationSources)
+        foreach (var source in sources)
         {
             if (IsSameFolder(source, LayoutsPath))
                 continue;
