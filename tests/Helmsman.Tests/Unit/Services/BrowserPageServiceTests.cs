@@ -541,7 +541,7 @@ public class BrowserPageServiceTests
     [Theory]
     [InlineData("jpeg")] // a valid image, but not the PNG asked for: its header is not read here, so it is not decoded
     [InlineData("truncated")] // the PNG signature, cut off inside its header
-    [InlineData("empty")]
+    [InlineData("empty")] // BrowserPageService's own defence: the page service already reports an empty reply as CdpProtocolError (CdpPageServiceTests.CaptureAsync_AReplyWithoutAnImage_IsCdpProtocolError)
     [InlineData("garbage")]
     public async Task Capture_DataThatIsNotAPngWithAReadableSize_IsCaptureFailed_BeforeItIsDecoded(string kind)
     {

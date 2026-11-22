@@ -876,6 +876,19 @@ public class CdpPageServiceTests
         page.GateAt["Page.captureScreenshot"].Should().BeFalse();
     }
 
+    [Theory]
+    [InlineData("")] // an empty image: browser_screenshot's empty data ends here, before BrowserPageService
+    [InlineData("not base64!")]
+    public async Task CaptureAsync_AReplyWithoutAnImage_IsCdpProtocolError(string data)
+    {
+        var page = new FakePage { CaptureData = data };
+
+        var result = await CreateSut(page).CaptureAsync(Tab, new RecordingGate().EnterAsync, LongTimeout);
+
+        result.ErrorCode.Should().Be(nameof(BrowserErrorCode.CdpProtocolError));
+        result.Error.Should().Contain("without an image");
+    }
+
     [Fact]
     public async Task CaptureAsync_NoFrame_IsCdpTimeout_PointingToFocusWindow()
     {
@@ -1049,6 +1062,9 @@ public class CdpPageServiceTests
 
         public bool CaptureNeverAnswers { get; init; }
 
+        /// <summary>Page.captureScreenshot's data field as sent, or null for <see cref="Png"/> in base64.</summary>
+        public string? CaptureData { get; init; }
+
         public Func<bool>? GateHeld { get; init; }
 
         /// <summary>Whether the gate was held when each method was first sent.</summary>
@@ -1187,7 +1203,7 @@ public class CdpPageServiceTests
                         break;
 
                     case "Page.captureScreenshot":
-                        Reply(socket, command, new { data = Convert.ToBase64String(Png) });
+                        Reply(socket, command, new { data = CaptureData ?? Convert.ToBase64String(Png) });
                         break;
 
                     case "Page.getFrameTree":

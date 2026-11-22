@@ -230,8 +230,9 @@ public sealed class BrowserPageService : IBrowserPageService
         var shot = captured.Value!;
 
         // The image's size from its PNG header, before it is decoded into a bitmap of that size: held to the pixel budget of a
-        // capture (CaptureLimits). The server asks for PNG, so anything else (another format, a header cut short, no data) is
-        // refused here too: the decoder would take any format at whatever size its header claims
+        // capture (CaptureLimits). The server asks for PNG, so anything else (another format, a header cut short) is refused here
+        // too: the decoder would take any format at whatever size its header claims. An empty reply never gets here: the page
+        // service reports it as CdpProtocolError; it is refused here too, should another caller pass one
         if (PngSize(shot.Png) is not { } png)
         {
             return new BrowserScreenshot(BrowserScreenshotResult.Failed(nameof(ScreenshotErrorCode.CaptureFailed),
