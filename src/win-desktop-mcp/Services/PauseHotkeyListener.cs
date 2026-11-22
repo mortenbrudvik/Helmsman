@@ -241,7 +241,7 @@ public sealed class PauseHotkeyListener : IPauseHotkey, IDisposable
             {
                 State = PauseHotkeyState.OtherServer,
                 Error = Join(_options.Warning,
-                    $"Another Windows App Manager server on this desktop has registered {chord.Text}. Pressing it pauses and resumes " +
+                    $"Another win-desktop-mcp server on this desktop has registered {chord.Text}. Pressing it pauses and resumes " +
                     "this server too, because the servers share the pause; this server registers the chord itself once that server stops.")
             };
             return false;

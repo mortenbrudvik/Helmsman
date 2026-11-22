@@ -87,19 +87,19 @@ public class InputControlTools
             {
                 PauseHotkeyState.Registered => $"Input is running. The user can pause it at any time with {hotkey.Chord}.",
                 PauseHotkeyState.OtherServer when unreadable =>
-                    $"Input is running. Another Windows App Manager server has registered {hotkey.Chord}, and this server cannot read the " +
+                    $"Input is running. Another win-desktop-mcp server has registered {hotkey.Chord}, and this server cannot read the " +
                     "pause they share, so the hotkey does not pause this server. Tell the user.",
                 PauseHotkeyState.OtherServer when shared =>
-                    $"Input is running. The user can pause it at any time with {hotkey.Chord}, which another Windows App Manager server on this " +
+                    $"Input is running. The user can pause it at any time with {hotkey.Chord}, which another win-desktop-mcp server on this " +
                     "desktop has registered; it pauses every server.",
                 PauseHotkeyState.OtherServer =>
-                    $"Input is running. Another Windows App Manager server has registered {hotkey.Chord}, and this server could not share its " +
+                    $"Input is running. Another win-desktop-mcp server has registered {hotkey.Chord}, and this server could not share its " +
                     "pause, so the hotkey does not pause this server. Tell the user.",
                 _ => $"Input is running. The pause hotkey is not available ({hotkey.State}){(hotkey.Error is { } error ? $": {error}" : ".")}"
             };
         if (!state.Paused && unreadable && hotkey.State != PauseHotkeyState.OtherServer)
         {
-            message += " This server cannot read the pause it shares with the other Windows App Manager servers on this desktop, so a " +
+            message += " This server cannot read the pause it shares with the other win-desktop-mcp servers on this desktop, so a " +
                        "pause made in another one does not reach it.";
         }
 
@@ -177,12 +177,12 @@ public class InputControlTools
         }
 
         var everyServer = _session.SharesDesktopPause
-            ? " The pause is shared: resuming lets every Windows App Manager server on this desktop send input again."
+            ? " The pause is shared: resuming lets every win-desktop-mcp server on this desktop send input again."
             : string.Empty;
         // The user did not make the server's own pause, and after a resume a pause made in another server does not
         // reach this one while the shared pause cannot be read (InputSession.SyncLocked), whoever paused it: the user hears both
         var pausedBy = selfPaused
-            ? $"This Windows App Manager server paused it itself{Since(state.PausedAt)}, not you: it could not read the pause it " +
+            ? $"This win-desktop-mcp server paused it itself{Since(state.PausedAt)}, not you: it could not read the pause it " +
               "shares with the other servers on this desktop, so it cannot tell whether you paused input in another one."
             : $"You paused it{(chord == null ? string.Empty : $" with {chord}")}{Since(state.PausedAt)}.";
         var afterResume = string.Empty;
@@ -402,7 +402,7 @@ public class InputControlTools
 
     /// <summary>What the presses of the hotkey do to the server's own pause.</summary>
     private static string SelfPauseHotkeyPresses() =>
-        "the first press keeps the pause, as the user's own (and pauses every Windows App Manager server on this desktop), and a " +
+        "the first press keeps the pause, as the user's own (and pauses every win-desktop-mcp server on this desktop), and a " +
         $"second press {InputSession.HotkeyResumeDelay.TotalSeconds.ToString("0.#", CultureInfo.InvariantCulture)} seconds or more " +
         "later resumes";
 
@@ -411,7 +411,7 @@ public class InputControlTools
     /// chord and the shared pause cannot be read, or this server has not registered it.
     /// </summary>
     private static string WhyTheHotkeyCannotResume(PauseHotkeyStatus hotkey) => hotkey.State == PauseHotkeyState.OtherServer
-        ? $"another Windows App Manager server has registered {hotkey.Chord ?? "it"}, and its presses reach this server only " +
+        ? $"another win-desktop-mcp server has registered {hotkey.Chord ?? "it"}, and its presses reach this server only " +
           "through the shared pause, which this server cannot read (a press pauses or resumes only the other servers)"
         : $"this server has not registered it ({hotkey.State})";
 

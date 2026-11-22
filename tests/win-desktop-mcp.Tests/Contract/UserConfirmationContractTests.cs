@@ -297,7 +297,7 @@ public sealed class UserConfirmationContractTests : IDisposable
         _questions.Should().ContainSingle().Which.Should()
             .Contain("close 4 windows")
             .And.Contain("'notes.txt - Notepad' (notepad, PID 10244)")
-            .And.Contain("'Windows App Manager - GitHub - Google Chrome' (chrome, PID");
+            .And.Contain("'win-desktop-mcp - GitHub - Google Chrome' (chrome, PID");
         _gateWasFreeDuringTheQuestion.Should().BeTrue("a question must never hold the input gate");
         gateHeldDuringTheClose.Should().BeTrue("the close itself runs inside the gate");
     }

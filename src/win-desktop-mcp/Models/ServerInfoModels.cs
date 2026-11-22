@@ -49,7 +49,7 @@ public sealed record UiAutomationInfo(
     int? TransactionTimeoutMs);
 
 /// <summary>What is running.</summary>
-/// <param name="Name">The MCP server name, windows-app-manager.</param>
+/// <param name="Name">The MCP server name, win-desktop-mcp.</param>
 /// <param name="Version">The product version with the commit it was built from, as serverInfo.version.</param>
 /// <param name="GitSha">The commit, or null when the build has none.</param>
 /// <param name="SdkVersion">The version of the MCP C# SDK (ModelContextProtocol).</param>
@@ -121,7 +121,7 @@ public sealed record AgentHostProcess(int ProcessId, string Role, string? Proces
 /// <param name="PausedBy">How it was paused; null while running.</param>
 /// <param name="PausedAt">When it was paused; null while running.</param>
 /// <param name="Hotkey">The pause hotkey: chord, state, source and error.</param>
-/// <param name="SharedPause">True when the pause is shared with the other Windows App Manager servers on the desktop.</param>
+/// <param name="SharedPause">True when the pause is shared with the other win-desktop-mcp servers on the desktop.</param>
 public sealed record InputControlInfo(bool Paused, string? PausedBy, DateTimeOffset? PausedAt, PauseHotkeyStatus Hotkey, bool SharedPause);
 
 /// <summary>The safety settings the user chose.</summary>

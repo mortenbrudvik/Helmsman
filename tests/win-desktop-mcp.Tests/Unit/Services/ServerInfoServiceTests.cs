@@ -109,7 +109,7 @@ public sealed class ServerInfoServiceTests : IDisposable
     {
         var info = CreateSut().Read(Connection, servedTools: 48);
 
-        info.Server.Name.Should().Be("windows-app-manager");
+        info.Server.Name.Should().Be("win-desktop-mcp");
         info.Server.Version.Should().Be(ServerVersion.Current);
         info.Server.GitSha.Should().Be(ServerVersion.GitSha);
         info.Server.SdkVersion.Should().Be(ServerVersion.SdkVersion);

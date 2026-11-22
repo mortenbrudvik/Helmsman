@@ -12,11 +12,11 @@ namespace WinDesktopMcp.Infrastructure;
 public static class ServerIdentity
 {
     /// <summary>The MCP server name (serverInfo.name).</summary>
-    public const string Name = "windows-app-manager";
+    public const string Name = "win-desktop-mcp";
 
     private static readonly string[] InstructionLines =
     [
-        "Windows App Manager acts on the user's real desktop: windows, UI elements, input, screenshots, launches. Loop: locate, activate and verify, act, verify.",
+        "win-desktop-mcp acts on the user's real desktop: windows, UI elements, input, screenshots, launches. Loop: locate, activate and verify, act, verify.",
         "- Locate: call get_desktop_state first: windows, focus, popups and a window's elements (refs). find_windows (or launch_application with waitForWindow) gives handles; or name a window by selector ({\"processName\": \"notepad\"}). find_ui_elements finds controls by name or type (refs, click points).",
         "- Activate and verify: focus_window brings a window to the front and reports what is in front; check before you type.",
         "- Act: element_action acts on an element ref via UI Automation. Input tools (mouse_click, drag, mouse_move, scroll, type_text, send_keys, press_keys) take the target as windowHandle (or a window selector); click at a clickPoint or at an image point with its captureId. Close windows with close_window, not key chords. Several steps on one window: run_steps.",

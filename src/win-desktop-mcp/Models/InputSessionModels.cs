@@ -315,7 +315,7 @@ public static class InputControlSources
     /// <param name="pausedBy">How it was paused (<see cref="InputPauseState.PausedBy"/>).</param>
     /// <param name="chord">The pause hotkey's chord; null when it is not known.</param>
     public static string PauseCause(string? pausedBy, string? chord) => pausedBy == SharedPauseUnreadable
-        ? "this server could not read the pause it shares with the other Windows App Manager servers on this desktop, so it " +
+        ? "this server could not read the pause it shares with the other win-desktop-mcp servers on this desktop, so it " +
           "paused itself in case the user paused input in another one"
         : $"the user pressed the pause hotkey{(chord is null ? string.Empty : $" ({chord})")}";
 
@@ -351,7 +351,7 @@ public enum PauseHotkeyState
     Disabled,
 
     /// <summary>
-    /// Another Windows App Manager server on this desktop has registered the chord. Its presses pause and resume
+    /// Another win-desktop-mcp server on this desktop has registered the chord. Its presses pause and resume
     /// this server too, since every server shares the pause; this server registers the chord itself once that
     /// server stops.
     /// </summary>
@@ -385,7 +385,7 @@ public sealed record HeldInputStatus(
 /// <param name="ResumedAt">When it was last resumed; null if never.</param>
 /// <param name="Hotkey">The pause hotkey and whether it is registered.</param>
 /// <param name="SharedPause">
-/// True when the pause is shared by every Windows App Manager server on this desktop: the hotkey pauses and resumes
+/// True when the pause is shared by every win-desktop-mcp server on this desktop: the hotkey pauses and resumes
 /// all of them, and so does resume_input.
 /// </param>
 /// <param name="HeldInput">The keys and buttons the server could not release, and the modifier keys that are down.</param>

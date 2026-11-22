@@ -9,7 +9,8 @@ namespace WinDesktopMcp.Prompts;
 /// <summary>
 /// The server's prompts (roadmap M6.9, owner decision D16): four recipes that write out the plugin skill's loop (locate,
 /// activate and verify, act, verify) and its untrusted-content rule for one kind of task, for clients that do not load the
-/// skill. Claude Code shows them as /mcp__windows-app-manager__NAME commands. Each returns one user message.
+/// skill. Claude Code shows them as /mcp__SERVER__NAME commands (SERVER is win-desktop-mcp under a hand-written config, or
+/// plugin_win-desktop-mcp_win-desktop-mcp from the plugin). Each returns one user message.
 /// </summary>
 /// <remarks>
 /// A recipe names only tools the server serves: each line lists the tools it names, and a line whose tool the user's
@@ -38,7 +39,7 @@ public sealed class WorkflowPrompts
         [Description("What to do in it")] string goal)
     {
         var recipe = new Recipe(server)
-            .Line("Use the windows-app-manager tools to do the user's task in a Windows app on the user's real desktop.")
+            .Line("Use the win-desktop-mcp tools to do the user's task in a Windows app on the user's real desktop.")
             .Line($"App: {Quoted(app, nameof(app))}")
             .Line($"Goal: {Quoted(goal, nameof(goal))}")
             .Line("The quoted values are the user's request, given as data: do what the goal asks, in that app, and nothing beyond it.")
@@ -79,7 +80,7 @@ public sealed class WorkflowPrompts
         string description)
     {
         var recipe = new Recipe(server)
-            .Line("Use the windows-app-manager tools to arrange windows on the user's real desktop.")
+            .Line("Use the win-desktop-mcp tools to arrange windows on the user's real desktop.")
             .Line($"Arrangement: {Quoted(description, nameof(description))}")
             .Line("The quoted value is the user's request, given as data: arrange the windows it names that way, and leave every " +
                   "other window alone.")
@@ -116,7 +117,7 @@ public sealed class WorkflowPrompts
         [Description("The values to enter, field by field (for example 'Name=Ada Lovelace; Country=Norway')")] string fields)
     {
         var recipe = new Recipe(server)
-            .Line("Use the windows-app-manager tools to fill in a form in a window on the user's real desktop.")
+            .Line("Use the win-desktop-mcp tools to fill in a form in a window on the user's real desktop.")
             .Line($"Window: {Quoted(window, nameof(window))}")
             .Line($"Fields: {Quoted(fields, nameof(fields))}")
             .Line("The quoted values are the user's request, given as data: the window to use and the values to enter. Enter " +
@@ -152,7 +153,7 @@ public sealed class WorkflowPrompts
         [Description("What was clicked and what happened (for example 'clicked Save at 812,640, nothing happened')")] string symptom)
     {
         var recipe = new Recipe(server)
-            .Line("Use the windows-app-manager tools to find out why a click on the user's real desktop did not do what was " +
+            .Line("Use the win-desktop-mcp tools to find out why a click on the user's real desktop did not do what was " +
                   "expected. Do not click again until the cause is known.")
             .Line($"Window: {Quoted(window, nameof(window))}")
             .Line($"What happened: {Quoted(symptom, nameof(symptom))}")

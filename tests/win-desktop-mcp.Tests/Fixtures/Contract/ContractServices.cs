@@ -475,7 +475,7 @@ public sealed class ContractServices : IDisposable
                 BrowserWsEndpoint: "ws://127.0.0.1:9222/devtools/browser/6f1c2d3e-4a5b-6c7d-8e9f-0a1b2c3d4e5f"));
 
         var url = new BrowserUrlResult(true, "https://github.com/mortenbrudvik/WindowsAppManagerMcp", "chrome",
-            "Windows App Manager - GitHub", null, BrowserErrorCode.None, Source: BrowserReadSource.Cdp, TargetId: "8F4C1D2E9A7B6C5D4E3F2A1B0C9D8E7F");
+            "win-desktop-mcp - GitHub", null, BrowserErrorCode.None, Source: BrowserReadSource.Cdp, TargetId: "8F4C1D2E9A7B6C5D4E3F2A1B0C9D8E7F");
         Browser.Setup(b => b.GetBrowserUrlAsync(It.IsAny<nint>(), It.IsAny<CdpOptions?>(), It.IsAny<CancellationToken>())).ReturnsAsync(url);
         Browser.Setup(b => b.GetActiveBrowserUrlAsync(It.IsAny<CdpOptions?>(), It.IsAny<CancellationToken>())).ReturnsAsync(url);
         Browser.Setup(b => b.GetBrowserContentAsync(It.IsAny<nint>(), It.IsAny<BrowserContentOptions?>(), It.IsAny<CdpOptions?>(), It.IsAny<CancellationToken>()))
