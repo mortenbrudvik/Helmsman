@@ -1,4 +1,4 @@
-# win-desktop-mcp - Backlog
+# Helmsman - Backlog
 
 ## Status Legend
 - ✅ **Complete** - Task is done
@@ -94,65 +94,65 @@
 ## Files Created
 
 ### ✅ Complete - Models
-- `src/win-desktop-mcp/Models/WindowRect.cs`
-- `src/win-desktop-mcp/Models/WindowState.cs`
-- `src/win-desktop-mcp/Models/WindowInfo.cs`
-- `src/win-desktop-mcp/Models/MonitorRect.cs`
-- `src/win-desktop-mcp/Models/MonitorInfo.cs`
-- `src/win-desktop-mcp/Models/SnapPosition.cs`
-- `src/win-desktop-mcp/Models/WindowMatcher.cs`
-- `src/win-desktop-mcp/Models/RelativePosition.cs`
-- `src/win-desktop-mcp/Models/WindowPlacement.cs`
-- `src/win-desktop-mcp/Models/LayoutPreset.cs`
-- `src/win-desktop-mcp/Models/ErrorCodes.cs`
-- `src/win-desktop-mcp/Models/ScreenshotModels.cs`
-- `src/win-desktop-mcp/Models/InputModels.cs`
-- `src/win-desktop-mcp/Models/Results/LaunchResult.cs`
-- `src/win-desktop-mcp/Models/Results/LayoutApplyResult.cs`
-- `src/win-desktop-mcp/Models/Results/KillResult.cs`
+- `src/Helmsman/Models/WindowRect.cs`
+- `src/Helmsman/Models/WindowState.cs`
+- `src/Helmsman/Models/WindowInfo.cs`
+- `src/Helmsman/Models/MonitorRect.cs`
+- `src/Helmsman/Models/MonitorInfo.cs`
+- `src/Helmsman/Models/SnapPosition.cs`
+- `src/Helmsman/Models/WindowMatcher.cs`
+- `src/Helmsman/Models/RelativePosition.cs`
+- `src/Helmsman/Models/WindowPlacement.cs`
+- `src/Helmsman/Models/LayoutPreset.cs`
+- `src/Helmsman/Models/ErrorCodes.cs`
+- `src/Helmsman/Models/ScreenshotModels.cs`
+- `src/Helmsman/Models/InputModels.cs`
+- `src/Helmsman/Models/Results/LaunchResult.cs`
+- `src/Helmsman/Models/Results/LayoutApplyResult.cs`
+- `src/Helmsman/Models/Results/KillResult.cs`
 
 ### ✅ Complete - Native Interop
-- `src/win-desktop-mcp/Native/NativeMethods.User32.cs`
-- `src/win-desktop-mcp/Native/NativeMethods.Kernel32.cs`
-- `src/win-desktop-mcp/Native/NativeMethods.Shcore.cs`
-- `src/win-desktop-mcp/Native/NativeMethods.Gdi32.cs`
-- `src/win-desktop-mcp/Native/NativeMethods.Input.cs`
-- `src/win-desktop-mcp/Native/NativeStructs.cs`
-- `src/win-desktop-mcp/Native/NativeEnums.cs`
-- `src/win-desktop-mcp/Native/ScreenCaptureWrapper.cs`
+- `src/Helmsman/Native/NativeMethods.User32.cs`
+- `src/Helmsman/Native/NativeMethods.Kernel32.cs`
+- `src/Helmsman/Native/NativeMethods.Shcore.cs`
+- `src/Helmsman/Native/NativeMethods.Gdi32.cs`
+- `src/Helmsman/Native/NativeMethods.Input.cs`
+- `src/Helmsman/Native/NativeStructs.cs`
+- `src/Helmsman/Native/NativeEnums.cs`
+- `src/Helmsman/Native/ScreenCaptureWrapper.cs`
 
 ### ✅ Complete - Services
-- `src/win-desktop-mcp/Services/Interfaces/IWindowService.cs`
-- `src/win-desktop-mcp/Services/Interfaces/IMonitorService.cs`
-- `src/win-desktop-mcp/Services/Interfaces/IProcessService.cs`
-- `src/win-desktop-mcp/Services/Interfaces/ILayoutService.cs`
-- `src/win-desktop-mcp/Services/Interfaces/IInputValidationService.cs`
-- `src/win-desktop-mcp/Services/Interfaces/IScreenCaptureWrapper.cs`
-- `src/win-desktop-mcp/Services/Interfaces/IScreenshotService.cs`
-- `src/win-desktop-mcp/Services/Interfaces/IInputSimulationService.cs`
-- `src/win-desktop-mcp/Services/WindowService.cs`
-- `src/win-desktop-mcp/Services/MonitorService.cs`
-- `src/win-desktop-mcp/Services/ProcessService.cs`
-- `src/win-desktop-mcp/Services/LayoutService.cs`
-- `src/win-desktop-mcp/Services/InputValidationService.cs`
-- `src/win-desktop-mcp/Services/ScreenshotService.cs`
-- `src/win-desktop-mcp/Services/InputSimulationService.cs`
-- `src/win-desktop-mcp/Services/Interfaces/INativeWindowWrapper.cs`
-- `src/win-desktop-mcp/Native/NativeWindowWrapper.cs`
+- `src/Helmsman/Services/Interfaces/IWindowService.cs`
+- `src/Helmsman/Services/Interfaces/IMonitorService.cs`
+- `src/Helmsman/Services/Interfaces/IProcessService.cs`
+- `src/Helmsman/Services/Interfaces/ILayoutService.cs`
+- `src/Helmsman/Services/Interfaces/IInputValidationService.cs`
+- `src/Helmsman/Services/Interfaces/IScreenCaptureWrapper.cs`
+- `src/Helmsman/Services/Interfaces/IScreenshotService.cs`
+- `src/Helmsman/Services/Interfaces/IInputSimulationService.cs`
+- `src/Helmsman/Services/WindowService.cs`
+- `src/Helmsman/Services/MonitorService.cs`
+- `src/Helmsman/Services/ProcessService.cs`
+- `src/Helmsman/Services/LayoutService.cs`
+- `src/Helmsman/Services/InputValidationService.cs`
+- `src/Helmsman/Services/ScreenshotService.cs`
+- `src/Helmsman/Services/InputSimulationService.cs`
+- `src/Helmsman/Services/Interfaces/INativeWindowWrapper.cs`
+- `src/Helmsman/Native/NativeWindowWrapper.cs`
 
 ### ✅ Complete - MCP Tools
-- `src/win-desktop-mcp/Tools/WindowFinderTools.cs`
-- `src/win-desktop-mcp/Tools/WindowManagerTools.cs`
-- `src/win-desktop-mcp/Tools/MonitorInfoTools.cs`
-- `src/win-desktop-mcp/Tools/AppLauncherTools.cs`
-- `src/win-desktop-mcp/Tools/LayoutPresetTools.cs`
-- `src/win-desktop-mcp/Tools/ScreenshotTools.cs`
-- `src/win-desktop-mcp/Tools/InputSimulationTools.cs`
+- `src/Helmsman/Tools/WindowFinderTools.cs`
+- `src/Helmsman/Tools/WindowManagerTools.cs`
+- `src/Helmsman/Tools/MonitorInfoTools.cs`
+- `src/Helmsman/Tools/AppLauncherTools.cs`
+- `src/Helmsman/Tools/LayoutPresetTools.cs`
+- `src/Helmsman/Tools/ScreenshotTools.cs`
+- `src/Helmsman/Tools/InputSimulationTools.cs`
 
 ### ✅ Complete - Configuration & Docs
-- `win-desktop-mcp.sln`
-- `src/win-desktop-mcp/win-desktop-mcp.csproj`
-- `src/win-desktop-mcp/Program.cs`
+- `Helmsman.sln`
+- `src/Helmsman/Helmsman.csproj`
+- `src/Helmsman/Program.cs`
 - `PLANNING.md`
 - `BACKLOG.md`
 - `config/layouts/work-setup.json`
@@ -268,29 +268,29 @@
 ## Test Files Created
 
 ### ✅ Complete - Test Infrastructure
-- `tests/win-desktop-mcp.Tests/win-desktop-mcp.Tests.csproj`
-- `tests/win-desktop-mcp.Tests/GlobalUsings.cs`
-- `tests/win-desktop-mcp.Tests/Fixtures/TestDataFactory.cs`
+- `tests/Helmsman.Tests/Helmsman.Tests.csproj`
+- `tests/Helmsman.Tests/GlobalUsings.cs`
+- `tests/Helmsman.Tests/Fixtures/TestDataFactory.cs`
 
 ### ✅ Complete - Unit Tests
-- `tests/win-desktop-mcp.Tests/Unit/Services/LayoutServiceTests.cs` (23 tests)
-- `tests/win-desktop-mcp.Tests/Unit/Services/WindowServiceTests.cs` (39 tests)
-- `tests/win-desktop-mcp.Tests/Unit/Services/MonitorServiceTests.cs` (20 tests)
-- `tests/win-desktop-mcp.Tests/Unit/Services/ProcessServiceTests.cs` (11 tests)
-- `tests/win-desktop-mcp.Tests/Unit/Services/InputValidationServiceTests.cs` (57 tests)
-- `tests/win-desktop-mcp.Tests/Unit/Models/ModelTests.cs` (29 tests)
-- `tests/win-desktop-mcp.Tests/Unit/Tools/WindowFinderToolsTests.cs` (14 tests)
-- `tests/win-desktop-mcp.Tests/Unit/Tools/WindowManagerToolsTests.cs` (26 tests)
-- `tests/win-desktop-mcp.Tests/Unit/Tools/MonitorInfoToolsTests.cs` (10 tests)
-- `tests/win-desktop-mcp.Tests/Unit/Tools/AppLauncherToolsTests.cs` (14 tests)
-- `tests/win-desktop-mcp.Tests/Unit/Tools/LayoutPresetToolsTests.cs` (23 tests)
-- `tests/win-desktop-mcp.Tests/Unit/Services/InputSimulationServiceTests.cs` (17 tests)
-- `tests/win-desktop-mcp.Tests/Unit/Tools/InputSimulationToolsTests.cs` (24 tests)
+- `tests/Helmsman.Tests/Unit/Services/LayoutServiceTests.cs` (23 tests)
+- `tests/Helmsman.Tests/Unit/Services/WindowServiceTests.cs` (39 tests)
+- `tests/Helmsman.Tests/Unit/Services/MonitorServiceTests.cs` (20 tests)
+- `tests/Helmsman.Tests/Unit/Services/ProcessServiceTests.cs` (11 tests)
+- `tests/Helmsman.Tests/Unit/Services/InputValidationServiceTests.cs` (57 tests)
+- `tests/Helmsman.Tests/Unit/Models/ModelTests.cs` (29 tests)
+- `tests/Helmsman.Tests/Unit/Tools/WindowFinderToolsTests.cs` (14 tests)
+- `tests/Helmsman.Tests/Unit/Tools/WindowManagerToolsTests.cs` (26 tests)
+- `tests/Helmsman.Tests/Unit/Tools/MonitorInfoToolsTests.cs` (10 tests)
+- `tests/Helmsman.Tests/Unit/Tools/AppLauncherToolsTests.cs` (14 tests)
+- `tests/Helmsman.Tests/Unit/Tools/LayoutPresetToolsTests.cs` (23 tests)
+- `tests/Helmsman.Tests/Unit/Services/InputSimulationServiceTests.cs` (17 tests)
+- `tests/Helmsman.Tests/Unit/Tools/InputSimulationToolsTests.cs` (24 tests)
 
 ### ✅ Complete - Integration Tests
-- `tests/win-desktop-mcp.Tests/Integration/LayoutServiceIntegrationTests.cs` (14 tests)
-- `tests/win-desktop-mcp.Tests/Integration/FilePersistenceTests.cs` (10 tests)
-- `tests/win-desktop-mcp.Tests/Integration/DependencyInjectionTests.cs` (13 tests)
+- `tests/Helmsman.Tests/Integration/LayoutServiceIntegrationTests.cs` (14 tests)
+- `tests/Helmsman.Tests/Integration/FilePersistenceTests.cs` (10 tests)
+- `tests/Helmsman.Tests/Integration/DependencyInjectionTests.cs` (13 tests)
 
 ---
 
@@ -325,13 +325,13 @@
    ```json
    {
      "mcpServers": {
-       "win-desktop-mcp": {
-         "command": "C:\\code\\projects\\win-desktop-mcp\\publish\\win-desktop-mcp.exe"
+       "helmsman": {
+         "command": "C:\\code\\projects\\Helmsman\\publish\\helmsman.exe"
        }
      }
    }
    ```
-   Build command: `dotnet publish src/win-desktop-mcp -c Release -o ./publish` (see README, "Option 3: Build from Source")
+   Build command: `dotnet publish src/Helmsman -c Release -o ./publish` (see README, "Option 3: Build from Source")
 
 2. **Optional Tasks:**
    - 6.4: Create appsettings.json for configuration
@@ -357,20 +357,20 @@
 | 8.4 | Create `skills/using-windows-app-manager/SKILL.md` | ✅ Complete | Skill file with trigger patterns |
 | 8.5 | Update README.md with plugin installation | ✅ Complete | Add Claude Code install instructions |
 | 8.6 | Test local plugin installation | ✅ Complete | `/plugin marketplace add`, `/plugin install` |
-| 8.7 | Test GitHub-based installation | ⏳ Pending | `mortenbrudvik/WindowsAppManagerMcp` |
+| 8.7 | Test GitHub-based installation | ⏳ Pending | `mortenbrudvik/Helmsman` |
 
 ### Plugin Structure
 
 ```
-win-desktop-mcp/
+Helmsman/
 ├── .claude-plugin/
 │   ├── plugin.json              # Plugin metadata + MCP server config
 │   └── marketplace.json         # For marketplace distribution
 ├── skills/
-│   └── using-win-desktop-mcp/
+│   └── using-helmsman/
 │       └── SKILL.md             # How to use the 21 tools effectively
 ├── bin/
-│   └── win-desktop-mcp.exe # Pre-built framework-dependent exe (needs .NET 8 Desktop Runtime)
+│   └── helmsman.exe # Pre-built framework-dependent exe (needs .NET 8 Desktop Runtime)
 ```
 
 ### Compatibility
@@ -837,7 +837,7 @@ Design notes: [docs/AUTOMATION-ROADMAP.md](docs/AUTOMATION-ROADMAP.md) (the "Rev
 | GI.F20 | Affinity read-back on Windows 10 before 2004; one z-order pass for the mask and the scan; a captureId click over an excluded overlay | ⏳ Pending | P3 | S | Before 2004 a window set to WDA_EXCLUDEFROMCAPTURE may read back as WDA_MONITOR (unverified). OCR reads and wait_for_visual frames make two mask passes and two scan passes (cheap, optional to merge). A click by a monitor or region captureId lands on an overlay the image does not show; only documented (TOOLS.md Screenshot). |
 | GI.F21 | Run the 3.2.0 release gate with both UI Automation engines | ✅ Complete | P1 | S | Done on 2026-10-20, run after the v3.2.0 tag was pushed (as 3.1.0's RF.F1), on the release commit: the no-input tier passed in both runs, uia3 (default) and `WAM_UIA_ENGINE=uia2`, 68 scenarios each, the same 4 skipped (FixtureOtherScaleMonitorTests and FixtureOcrTests' other-scale case: every monitor of the machine is at 100%). The engines agree, so uia3 stays the default. The input tier's FixtureWindowRowTests and FixtureWindowSetWaitTests did not run (GI.F1, GI.F2). |
 | GI.F22 | Name the display affinity when Windows.Graphics.Capture gets no frame of a window | ⏳ Pending | P3 | XS | Found in the 3.2.0 gate (GI.F18): capture_window with captureMethod wgc of a window that excludes itself from capture fails with "The compositor delivered no frame of the window within 1.5 seconds (a minimized or hidden window has none)" and no DisplayAffinity warning, since the call failed. The error should say the window declares a display affinity, as the warning does on the other methods. |
-| GI.F23 | Run the 4.0.0 release gate with both UI Automation engines | ⏳ Pending | P1 | S | Not run yet. The no-input tier with uia3 (default) and `WAM_UIA_ENGINE=uia2` (TESTING.md) on the release commit, which includes the win-desktop-mcp rename; 3.1.0's RF.F1 and 3.2.0's GI.F21 ran after their tags. 4.0.0 adds no desktop test: allowHostTarget's question to the user, the launch guard's lists with Windows' own consoles, and the Win+R and Win+X refusal are covered by unit and contract tests only. Also by hand: a 3.x plugin install upgraded with README's "Upgrading from 3.x" (the skill and the tool prefix under the new name, the presets copied). The input tier's FixtureWindowRowTests and FixtureWindowSetWaitTests are still GI.F1 and GI.F2. |
+| GI.F23 | Run the 4.0.0 release gate with both UI Automation engines | ⏳ Pending | P1 | S | Not run yet. The no-input tier with uia3 (default) and `WAM_UIA_ENGINE=uia2` (TESTING.md) on the release commit, which includes the Helmsman rename; 3.1.0's RF.F1 and 3.2.0's GI.F21 ran after their tags. 4.0.0 adds no desktop test: allowHostTarget's question to the user, the launch guard's lists with Windows' own consoles, and the Win+R and Win+X refusal are covered by unit and contract tests only. Also by hand: a 3.x plugin install upgraded with README's "Upgrading from 3.x" (the skill and the tool prefix under the new name, the presets copied). The input tier's FixtureWindowRowTests and FixtureWindowSetWaitTests are still GI.F1 and GI.F2. |
 
 ### Non-goals
 
