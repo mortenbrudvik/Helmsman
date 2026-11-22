@@ -55,7 +55,7 @@ public class TargetPolicyEnforcementTests
     {
         var monitors = TestDataFactory.CreateMockMonitorService();
         monitors.Setup(m => m.CalculateSnapBounds(It.IsAny<int>(), It.IsAny<SnapPosition>())).Returns(new MonitorRect(0, 0, 960, 1040));
-        return new(monitors.Object, _native.Object, Mock.Of<IHostGuard>(), policy);
+        return WiredWindowService.Create(monitors.Object, _native.Object, Mock.Of<IHostGuard>(), policy);
     }
 
     [Theory]

@@ -22,7 +22,7 @@ public class WindowServiceOwnedWindowsTests
     private readonly Mock<IHostGuard> _hostGuard = new();
 
     private WindowService CreateSut(ITargetPolicy? policy = null, INativeVirtualDesktopWrapper? virtualDesktops = null) =>
-        new(TestDataFactory.CreateMockMonitorService().Object, _desktop.Native.Object, _hostGuard.Object, policy ?? Permissive.TargetPolicy,
+        WiredWindowService.Create(TestDataFactory.CreateMockMonitorService().Object, _desktop.Native.Object, _hostGuard.Object, policy ?? Permissive.TargetPolicy,
             virtualDesktops: virtualDesktops);
 
     #region get_owned_windows

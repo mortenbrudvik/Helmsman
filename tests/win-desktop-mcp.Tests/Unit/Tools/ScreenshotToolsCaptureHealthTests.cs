@@ -412,7 +412,7 @@ public class ScreenshotToolsCaptureHealthTests
         native.Setup(n => n.IsWindow(window)).Returns(true);
         native.Setup(n => n.GetWindowThreadProcessId(window)).Returns(processId);
         native.Setup(n => n.GetProcessName(processId)).Returns((string?)null);
-        var windowService = new WindowService(
+        var windowService = WiredWindowService.Create(
             TestDataFactory.CreateMockMonitorService().Object, native.Object, Mock.Of<IHostGuard>(), new TargetPolicy(policy, Permissive.Windows));
         _windows.Setup(w => w.EvaluateTargetPolicy(window)).Returns(() => windowService.EvaluateTargetPolicy(window));
     }

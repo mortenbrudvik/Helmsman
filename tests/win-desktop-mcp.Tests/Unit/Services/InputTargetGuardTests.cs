@@ -660,7 +660,7 @@ public class InputTargetGuardTests
         _windows.Setup(w => w.EnumChildWindows(frame, It.IsAny<Func<nint, bool>>()))
             .Callback((nint _, Func<nint, bool> callback) => callback(content));
 
-        var reader = new WindowService(TestDataFactory.CreateMockMonitorService().Object, _windows.Object, _hostGuard.Object, Permissive.TargetPolicy);
+        var reader = WiredWindowService.Create(TestDataFactory.CreateMockMonitorService().Object, _windows.Object, _hostGuard.Object, Permissive.TargetPolicy);
         _windowService.Setup(s => s.GetWindowInfo(frame)).Returns(() => reader.GetWindowInfo(frame));
         return frame;
     }

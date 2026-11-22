@@ -24,7 +24,7 @@ public class WindowServiceListingTests
     private readonly FakeDesktop _desktop = new();
 
     private WindowService CreateSut() =>
-        new(TestDataFactory.CreateMockMonitorService().Object, _desktop.Native.Object, Mock.Of<IHostGuard>(), Permissive.TargetPolicy);
+        WiredWindowService.Create(TestDataFactory.CreateMockMonitorService().Object, _desktop.Native.Object, Mock.Of<IHostGuard>(), Permissive.TargetPolicy);
 
     #region The user-facing listing predicate
 

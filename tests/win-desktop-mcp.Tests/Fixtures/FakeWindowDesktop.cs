@@ -44,7 +44,7 @@ public sealed class FakeWindowDesktop
 
     /// <summary>A window service over this desktop.</summary>
     public WindowService CreateService() =>
-        new(TestDataFactory.CreateMockMonitorService().Object, Native.Object, HostGuard.Object, Permissive.TargetPolicy);
+        WiredWindowService.Create(TestDataFactory.CreateMockMonitorService().Object, Native.Object, HostGuard.Object, Permissive.TargetPolicy);
 
     /// <summary>Adds a window behind the ones added before.</summary>
     public nint Add(

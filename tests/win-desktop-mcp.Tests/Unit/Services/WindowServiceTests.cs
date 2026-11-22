@@ -30,7 +30,7 @@ public class WindowServiceTests
     /// A WindowService over the real windows of the desktop that can only read them: every window
     /// change throws (see <see cref="ReadOnlyNativeWindowWrapper"/>).
     /// </summary>
-    private WindowService CreateReadOnlySut() => new WindowService(_mockMonitorService.Object, new ReadOnlyNativeWindowWrapper(), NoHost, Permissive.TargetPolicy);
+    private WindowService CreateReadOnlySut() => WiredWindowService.Create(_mockMonitorService.Object, new ReadOnlyNativeWindowWrapper(), NoHost, Permissive.TargetPolicy);
 
     private const int InvalidHandleValue = 99999999;
 
@@ -42,7 +42,7 @@ public class WindowServiceTests
     {
         var native = new Mock<INativeWindowWrapper>();
         native.Setup(n => n.IsWindow(It.IsAny<nint>())).Returns(false);
-        return (new WindowService(_mockMonitorService.Object, native.Object, NoHost, Permissive.TargetPolicy), native);
+        return (WiredWindowService.Create(_mockMonitorService.Object, native.Object, NoHost, Permissive.TargetPolicy), native);
     }
 
     private static void VerifyNoWindowWasChanged(Mock<INativeWindowWrapper> native)
@@ -86,7 +86,7 @@ public class WindowServiceTests
             TestDataFactory.CreateWindowInfo(1003, "Maximized Window", "app3", 1003, state: WindowState.Maximized)
         };
         var mockNativeWrapper = TestDataFactory.CreateMockNativeWindowWrapper(testWindows);
-        var sut = new WindowService(_mockMonitorService.Object, mockNativeWrapper.Object, NoHost, Permissive.TargetPolicy);
+        var sut = WiredWindowService.Create(_mockMonitorService.Object, mockNativeWrapper.Object, NoHost, Permissive.TargetPolicy);
 
         // Act
         var result = sut.GetAllWindows(includeMinimized: false);
@@ -171,7 +171,7 @@ public class WindowServiceTests
             TestDataFactory.CreateWindowInfo(1004, "Terminal", "WindowsTerminal", 1004)
         };
         var mockNativeWrapper = TestDataFactory.CreateMockNativeWindowWrapper(testWindows);
-        var sut = new WindowService(_mockMonitorService.Object, mockNativeWrapper.Object, NoHost, Permissive.TargetPolicy);
+        var sut = WiredWindowService.Create(_mockMonitorService.Object, mockNativeWrapper.Object, NoHost, Permissive.TargetPolicy);
 
         // Act - Search for windows with "Document" in title
         var result = sut.FindWindows(titleContains: "Document");
@@ -194,7 +194,7 @@ public class WindowServiceTests
             TestDataFactory.CreateWindowInfo(1002, "Google Chrome - Search", "chrome", 5002)
         };
         var mockNativeWrapper = TestDataFactory.CreateMockNativeWindowWrapper(testWindows);
-        var sut = new WindowService(_mockMonitorService.Object, mockNativeWrapper.Object, NoHost, Permissive.TargetPolicy);
+        var sut = WiredWindowService.Create(_mockMonitorService.Object, mockNativeWrapper.Object, NoHost, Permissive.TargetPolicy);
 
         // Act
         var result = sut.FindWindows(processName: "notepad");
@@ -210,7 +210,7 @@ public class WindowServiceTests
         var window = TestDataFactory.CreateWindowInfo(1001, "Orphaned Window", "gone", 5001);
         var mockNativeWrapper = TestDataFactory.CreateMockNativeWindowWrapper([window]);
         mockNativeWrapper.Setup(n => n.GetProcessName(5001u)).Returns((string?)null);
-        var sut = new WindowService(_mockMonitorService.Object, mockNativeWrapper.Object, NoHost, Permissive.TargetPolicy);
+        var sut = WiredWindowService.Create(_mockMonitorService.Object, mockNativeWrapper.Object, NoHost, Permissive.TargetPolicy);
 
         // Act
         var result = sut.GetWindowInfo(window.Handle);
@@ -227,7 +227,7 @@ public class WindowServiceTests
         // in which a read-only test calling MoveWindow by mistake would move a real window
         var window = TestDataFactory.CreateWindowInfo(1001, "Some Window", "app", 5001);
         var inner = TestDataFactory.CreateMockNativeWindowWrapper([window]);
-        var sut = new WindowService(_mockMonitorService.Object, new ReadOnlyNativeWindowWrapper(inner.Object), NoHost, Permissive.TargetPolicy);
+        var sut = WiredWindowService.Create(_mockMonitorService.Object, new ReadOnlyNativeWindowWrapper(inner.Object), NoHost, Permissive.TargetPolicy);
 
         // Act
         var act = () => sut.MoveWindow(window.Handle, 10, 10);
@@ -272,7 +272,7 @@ public class WindowServiceTests
             TestDataFactory.CreateWindowInfo(1004, "Window 4", "app3", 5003)
         };
         var mockNativeWrapper = TestDataFactory.CreateMockNativeWindowWrapper(testWindows);
-        var sut = new WindowService(_mockMonitorService.Object, mockNativeWrapper.Object, NoHost, Permissive.TargetPolicy);
+        var sut = WiredWindowService.Create(_mockMonitorService.Object, mockNativeWrapper.Object, NoHost, Permissive.TargetPolicy);
 
         // Act - Search for windows with specific process ID
         var result = sut.FindWindows(processId: 5001);
@@ -313,7 +313,7 @@ public class WindowServiceTests
             TestDataFactory.CreateWindowInfo(1004, "Other Window", "other", 5003)             // Matches nothing
         };
         var mockNativeWrapper = TestDataFactory.CreateMockNativeWindowWrapper(testWindows);
-        var sut = new WindowService(_mockMonitorService.Object, mockNativeWrapper.Object, NoHost, Permissive.TargetPolicy);
+        var sut = WiredWindowService.Create(_mockMonitorService.Object, mockNativeWrapper.Object, NoHost, Permissive.TargetPolicy);
 
         // Act - Search with both title and processId filters
         var result = sut.FindWindows(titleContains: "Project", processId: 5001);
@@ -356,7 +356,7 @@ public class WindowServiceTests
             TestDataFactory.CreateWindowInfo(1003, "Visible Window 2", "app3", 5003, isVisible: true)
         };
         var mockNativeWrapper = TestDataFactory.CreateMockNativeWindowWrapper(testWindows);
-        var sut = new WindowService(_mockMonitorService.Object, mockNativeWrapper.Object, NoHost, Permissive.TargetPolicy);
+        var sut = WiredWindowService.Create(_mockMonitorService.Object, mockNativeWrapper.Object, NoHost, Permissive.TargetPolicy);
 
         // Act - Search with visibleOnly: false
         var result = sut.FindWindows(visibleOnly: false);
@@ -380,7 +380,7 @@ public class WindowServiceTests
             TestDataFactory.CreateWindowInfo(1003, "Visible Window 2", "app3", 5003, isVisible: true)
         };
         var mockNativeWrapper = TestDataFactory.CreateMockNativeWindowWrapper(testWindows);
-        var sut = new WindowService(_mockMonitorService.Object, mockNativeWrapper.Object, NoHost, Permissive.TargetPolicy);
+        var sut = WiredWindowService.Create(_mockMonitorService.Object, mockNativeWrapper.Object, NoHost, Permissive.TargetPolicy);
 
         // Act - Search with visibleOnly: true (default)
         var result = sut.FindWindows(visibleOnly: true);

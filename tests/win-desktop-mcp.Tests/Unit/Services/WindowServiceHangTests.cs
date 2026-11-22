@@ -40,7 +40,7 @@ public class WindowServiceHangTests
     }
 
     private WindowService CreateSut(TimeSpan? deadline = null) =>
-        new(TestDataFactory.CreateMockMonitorService().Object, _native.Object, Mock.Of<IHostGuard>(),
+        WiredWindowService.Create(TestDataFactory.CreateMockMonitorService().Object, _native.Object, Mock.Of<IHostGuard>(),
             Permissive.TargetPolicy,
             new WindowCallRunner(_native.Object, deadline ?? Deadline, maxStuckCallsPerProcess: 1, maxStuckCalls: 8));
 

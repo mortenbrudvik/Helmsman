@@ -92,7 +92,7 @@ Services.MonitorService -> Native.NativeMonitorWrapper
 Services.ProcessListingService -> Native.NativeProcessWrapper  # moved out of ProcessService when it was split; the same dependency it had
 Services.UIElementService -> Native.UiaControlTypes
 Services.UiaConditionEvaluator -> Native.UiaControlTypes
-Services.WindowService -> Native.NativeEnums
+Services.WindowZOrderService -> Native.NativeEnums  # moved out of WindowService when it was split; the same dependency it had
 
 ## Services -> Native (constant): move the Win32 constants the logic computes with (NativeEnums' VK_*, WS_*, WDA_* and the like) to a Models type that NativeEnums refers to
 src/win-desktop-mcp/Services/AppWindowProbe.cs -> Native.NativeEnums
@@ -130,6 +130,7 @@ src/win-desktop-mcp/Services/WindowInfoReader.cs -> Native.NativeEnums  # moved 
 src/win-desktop-mcp/Services/WindowOwnerChain.cs -> Native.NativeEnums
 src/win-desktop-mcp/Services/WindowReads.cs -> Native.NativeEnums  # moved out of WindowService when it was split; the same dependency it had
 src/win-desktop-mcp/Services/WindowService.cs -> Native.NativeEnums
+src/win-desktop-mcp/Services/WindowZOrderService.cs -> Native.NativeEnums  # moved out of WindowService when it was split; the same dependency it had
 
 ## Services -> Infrastructure: move ToolErrorException and AppText inward (Models), give services ports for what they take from the filters (InputGateToolFilter, AuditScope, ToolsetSelection, ToolJson, CommandLineRedactor), and pass them the version instead of ServerVersion
 Services.AppWindowProbe -> Infrastructure.AppText

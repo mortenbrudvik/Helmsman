@@ -47,7 +47,7 @@ public class WindowServiceMonitorFieldsTests
         _monitors.Setup(m => m.GetAllMonitors()).Returns([Primary, Right]);
     }
 
-    private WindowService CreateSut() => new(_monitors.Object, _native.Object, Mock.Of<IHostGuard>(), Permissive.TargetPolicy);
+    private WindowService CreateSut() => WiredWindowService.Create(_monitors.Object, _native.Object, Mock.Of<IHostGuard>(), Permissive.TargetPolicy);
 
     #region The monitor
 

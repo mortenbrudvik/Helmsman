@@ -131,7 +131,7 @@ public sealed class HungWindowContractTests : IDisposable
         // The server's calls run under this test's tag: the gate check sees this test's calls only
         _flow = InputGate.TagFlow();
         var runner = new WindowCallRunner(_native.Object, deadline ?? Deadline, maxStuckCallsPerProcess: 1, maxStuckCalls: 8);
-        var windows = new WindowService(TestDataFactory.CreateMockMonitorService().Object, _native.Object, Mock.Of<IHostGuard>(),
+        var windows = WiredWindowService.Create(TestDataFactory.CreateMockMonitorService().Object, _native.Object, Mock.Of<IHostGuard>(),
             Permissive.TargetPolicy, runner);
         return InProcessMcpServer.StartAsync(
             [],

@@ -45,7 +45,7 @@ public class WindowServiceRestoreRectTests
             });
     }
 
-    private WindowService CreateSut() => new(_monitors.Object, _native.Object, Mock.Of<IHostGuard>(), Permissive.TargetPolicy, stateChangeTimeout: TimeSpan.Zero);
+    private WindowService CreateSut() => WiredWindowService.Create(_monitors.Object, _native.Object, Mock.Of<IHostGuard>(), Permissive.TargetPolicy, stateChangeTimeout: TimeSpan.Zero);
 
     [Fact]
     public void GetNormalBounds_IsTheRestoreRectangle_InScreenCoordinates()

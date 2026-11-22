@@ -25,7 +25,7 @@ public class WindowServiceCloseTests
     }
 
     private WindowService CreateSut() =>
-        new(TestDataFactory.CreateMockMonitorService().Object, _native.Object, _hostGuard.Object, Permissive.TargetPolicy);
+        WiredWindowService.Create(TestDataFactory.CreateMockMonitorService().Object, _native.Object, _hostGuard.Object, Permissive.TargetPolicy);
 
     /// <summary>
     /// Adds a window. A top-level window is its own root and root owner; a child names its top-level
@@ -451,7 +451,7 @@ public class WindowServiceCloseTests
         processes.Setup(p => p.GetAncestorProcesses()).Returns([]);
         processes.Setup(p => p.GetConsoleWindow()).Returns(pseudoConsole);
         var hostGuard = new HostGuard(_native.Object, processes.Object);
-        var sut = new WindowService(TestDataFactory.CreateMockMonitorService().Object, _native.Object, hostGuard, Permissive.TargetPolicy);
+        var sut = WiredWindowService.Create(TestDataFactory.CreateMockMonitorService().Object, _native.Object, hostGuard, Permissive.TargetPolicy);
 
         // Act
         var dialogResult = sut.CloseWindow(terminalDialog, force: false);
@@ -479,7 +479,7 @@ public class WindowServiceCloseTests
         _native.Setup(n => n.GetForegroundWindow()).Returns(terminal);
         processes.Setup(p => p.GetAncestorProcesses()).Returns([]);
         var hostGuard = new HostGuard(_native.Object, processes.Object);
-        var sut = new WindowService(TestDataFactory.CreateMockMonitorService().Object, _native.Object, hostGuard, Permissive.TargetPolicy);
+        var sut = WiredWindowService.Create(TestDataFactory.CreateMockMonitorService().Object, _native.Object, hostGuard, Permissive.TargetPolicy);
 
         // Act
         var dialogResult = sut.CloseWindow(wpfDialog, force: false);
@@ -507,7 +507,7 @@ public class WindowServiceCloseTests
         processes.Setup(p => p.GetProcessStartTime(703)).Returns(serverStart.AddHours(-1));
         processes.Setup(p => p.GetProcessStartTime(807)).Returns(serverStart.AddMinutes(1));
         var hostGuard = new HostGuard(_native.Object, processes.Object);
-        var sut = new WindowService(TestDataFactory.CreateMockMonitorService().Object, _native.Object, hostGuard, Permissive.TargetPolicy);
+        var sut = WiredWindowService.Create(TestDataFactory.CreateMockMonitorService().Object, _native.Object, hostGuard, Permissive.TargetPolicy);
 
         // Act
         var olderResult = sut.CloseWindow(older, force: false);
