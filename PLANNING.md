@@ -1,5 +1,7 @@
 # Windows App Manager MCP Server - Implementation Plan
 
+This is the original implementation plan, kept as a historical record: it uses the names of the time (Windows App Manager MCP Server, `WindowsAppManagerMcp`). The product has since been renamed Helmsman (release 4.0.0), and its code is now under `src/Helmsman`.
+
 ## Project Overview
 
 Create a Claude Code MCP (Model Context Protocol) server that enables Claude to:
@@ -108,15 +110,15 @@ Create a Claude Code MCP (Model Context Protocol) server that enables Claude to:
 ## File Structure
 
 ```
-win-desktop-mcp/
-├── win-desktop-mcp.sln
+WindowsAppManagerMcp/
+├── WindowsAppManagerMcp.sln
 ├── README.md
 ├── PLANNING.md
 ├── .gitignore
 │
 ├── src/
-│   └── win-desktop-mcp/
-│       ├── win-desktop-mcp.csproj
+│   └── WindowsAppManagerMcp/
+│       ├── WindowsAppManagerMcp.csproj
 │       ├── Program.cs                       # Entry point, DI, MCP server setup
 │       │
 │       ├── Tools/                           # MCP Tool definitions
@@ -156,7 +158,7 @@ win-desktop-mcp/
 │           └── AppSettings.cs
 │
 ├── tests/
-│   └── win-desktop-mcp.Tests/
+│   └── WindowsAppManagerMcp.Tests/
 │       └── Services/
 │           ├── WindowServiceTests.cs
 │           └── LayoutServiceTests.cs
@@ -347,7 +349,7 @@ Add to Claude Desktop config (`claude_desktop_config.json`):
   "mcpServers": {
     "windows-app-manager": {
       "command": "dotnet",
-      "args": ["run", "--project", "C:\\path\\to\\win-desktop-mcp"]
+      "args": ["run", "--project", "C:\\path\\to\\WindowsAppManagerMcp"]
     }
   }
 }
@@ -358,7 +360,7 @@ Or for published executable:
 {
   "mcpServers": {
     "windows-app-manager": {
-      "command": "C:\\path\\to\\win-desktop-mcp.exe"
+      "command": "C:\\path\\to\\WindowsAppManagerMcp.exe"
     }
   }
 }
@@ -388,11 +390,11 @@ Or for published executable:
 
 ## Critical Files to Implement First
 
-1. **`src/win-desktop-mcp/Program.cs`** - Entry point with MCP server setup
-2. **`src/win-desktop-mcp/Native/NativeMethods.User32.cs`** - Core P/Invoke declarations
-3. **`src/win-desktop-mcp/Services/WindowService.cs`** - Window enumeration and manipulation
-4. **`src/win-desktop-mcp/Tools/WindowFinderTools.cs`** - Window discovery tools
-5. **`src/win-desktop-mcp/Tools/WindowManagerTools.cs`** - Window control tools
+1. **`src/WindowsAppManagerMcp/Program.cs`** - Entry point with MCP server setup
+2. **`src/WindowsAppManagerMcp/Native/NativeMethods.User32.cs`** - Core P/Invoke declarations
+3. **`src/WindowsAppManagerMcp/Services/WindowService.cs`** - Window enumeration and manipulation
+4. **`src/WindowsAppManagerMcp/Tools/WindowFinderTools.cs`** - Window discovery tools
+5. **`src/WindowsAppManagerMcp/Tools/WindowManagerTools.cs`** - Window control tools
 
 ---
 
