@@ -58,7 +58,7 @@ The server logs the deny list, the allow list and the chords in force to stderr 
 
 #### Process names
 
-A process name is read one way everywhere: in the two lists above, and in every argument that names a process (a [window selector](#window-selectors)'s `processName`, find_windows' `processName` also with `processNameContains`, get_window_events' `processName`, close_application's `processName`, kill_process' `expectedProcessName`, list_processes' `nameFilter`, launch_application's `expectWindow.processName`, a layout placement's `processName`, and save_layout's and save_workspace's `includeProcesses` and `excludeProcesses`). Case does not matter, nor do spaces and quotes around the name or one `.exe` at its end: `notepad`, `notepad.exe`, `NOTEPAD.EXE` and `"notepad.exe"` all name Notepad. Any other extension is part of the name (`notepad.com` is not Notepad), and so is every dot before it (`Microsoft.Photos`, `python3.12`; `python3` does not name `python3.12`). An argument may not be a path (a `\`, `/` or `:` in it): a process is matched by its name alone, so the folder of `C:\Tools\notepad.exe` could not be checked and every Notepad would match. Such an argument is refused with `InvalidArguments`, which names the process name to pass instead (`notepad`), and nothing is done; to tell programs apart by their folder, use list_processes' `pathContains` and then the process's `processId`. The two lists do take a path: its folder is dropped, so the entry `C:\Tools\notepad.exe` denies (or allows) every Notepad, wherever it runs from.
+A process name is read one way everywhere: in the two lists above, and in every argument that names a process (a [window selector](#window-selectors)'s `processName`, find_windows' `processName` also with `processNameContains`, get_window_events' `processName`, close_application's `processName`, kill_process' `expectedProcessName`, list_processes' `nameFilter`, launch_application's `expectWindow.processName`, a layout placement's `processName`, and save_layout's and save_workspace's `includeProcesses` and `excludeProcesses`). Case does not matter, nor do spaces and quotes around the name or one `.exe` at its end: `notepad`, `notepad.exe`, `NOTEPAD.EXE` and `"notepad.exe"` all name Notepad. Any other extension is part of the name (`notepad.com` is not Notepad), and so is every dot before it (`Microsoft.Photos`, `python3.12`; `python3` does not name `python3.12`). An argument may not be a path or another location (a `\`, `/` or `:` in it): a process is matched by its name alone, so the folder of `C:\Tools\notepad.exe` could not be checked and every Notepad would match. Such an argument is refused and nothing is done: with `InvalidArguments` by the tools, with `InvalidPlacement` by save_layout's `placements`, and apply_layout skips a placement read from a file that has one (`notApplicable`, `NoMatchCriterion`). The error names the process name to pass (`notepad`) when the argument is a plain file path that ends in a file name; for anything else (`shell:AppsFolder\...`, `ms-settings:display`, `C:notepad.exe`) it says only that a process name is expected. An argument that is blank once read (only spaces, quotes or `.exe`) names no process: a window selector's `processName`, a layout placement's `processName`, list_processes' `nameFilter` and an entry of save_layout's or save_workspace's filters are refused, close_application's `processName` is refused as empty, and elsewhere such a name matches nothing (find_windows lists no window, `expectWindow.processName` matches no window, kill_process' `expectedProcessName` fails with `ProcessNameMismatch`). To tell programs apart by their folder, use list_processes' `pathContains` and then the process's `processId`. The two lists do take a path: its folder is dropped, so the entry `C:\Tools\notepad.exe` denies (or allows) every Notepad, wherever it runs from.
 
 The policy applies to:
 
@@ -547,7 +547,7 @@ Find windows matching specific criteria.
 
 `includeMinimized: false` leaves minimized windows out (issue #16): on a desktop where most windows are minimized, the listing of what can be on screen is a fraction of the full one. Like `sort` and `limit`, it is not a [selector](#window-selectors) field.
 
-`processName` is read as [Process names](#process-names) says: `"notepad.exe"` finds Notepad, and a path such as `C:\Windows\System32\notepad.exe` is refused with `InvalidArguments`, which names the process name to pass, rather than returning an empty list.
+`processName` is read as [Process names](#process-names) says: `"notepad.exe"` finds Notepad, and a path such as `C:\Windows\System32\notepad.exe` is refused with `InvalidArguments`, which names the process name to pass (`notepad`), rather than returning an empty list.
 
 The [target policy](#target-policy) does not filter the list: a denied app's windows are returned with their titles, although no tool reads or acts on them.
 
@@ -956,7 +956,7 @@ What happened to the desktop's windows since an earlier call (roadmap M7.2): whi
 |-----------|------|----------|---------|-------------|
 | sinceSeq | integer | No | - | nextSeq of an earlier call: only the events after it. Leave out for the latest events |
 | types | string (one of: `"shown"`, `"hidden"`, `"destroyed"`, `"foreground"`, `"titleChanged"`, `"minimized"`, `"restored"`)[] | No | - | Only these event types (default: all) |
-| processName | string | No | - | Only events of this process: the whole name, case-insensitive, with or without .exe |
+| processName | string | No | - | Only events of this process: the whole name, read as [Process names](#process-names) says (case-insensitive, with or without .exe; a path is `InvalidArguments`) |
 | handle | integer | No | - | Only events of this window (handle as integer) |
 | limit | integer | No | 50 | At most this many events, 1-200 (default 50); more: true when there are more |
 <!-- tools:end params:get_window_events -->
@@ -5975,7 +5975,7 @@ The [target policy](#target-policy) does not decide what may be started: a denie
 | workingDirectory | string | No | - | Working directory for the app |
 | waitForWindow | boolean | No | false | Wait for window to appear |
 | waitTimeoutMs | integer | No | 5000 | How long to wait for the window, in ms (clamped to 0-30000) |
-| expectWindow | object | No | - | With `waitForWindow` (or `placement`): `processName` and/or `titleContains` of the window to expect, for Store apps, URIs and documents whose app the server cannot tell from what was started. `reuseExisting` checks an open window against it too (see [Reusing an open window](#reusing-an-open-window)) |
+| expectWindow | object | No | - | With `waitForWindow` (or `placement`): `processName` and/or `titleContains` of the window to expect, for Store apps, URIs and documents whose app the server cannot tell from what was started. `reuseExisting` checks an open window against it too (see [Reusing an open window](#reusing-an-open-window)). `processName` is part of a process name, read as [Process names](#process-names) says: a path is `InvalidArguments` and nothing is started, and one blank once read (`.exe`) matches no window |
 | placement | object | No | - | Where to put the window once it is found: `snap` or `bounds`, `monitor`, `state`, `focus` (see [Launch and arrange](#launch-and-arrange)); implies waiting for the window |
 | reuseExisting | boolean | No | false | Use an open window of the app instead of starting another copy (`launchStatus` `alreadyOpen`; see [Reusing an open window](#reusing-an-open-window)) |
 | forceAccessibility | boolean | No | false | Start a Chromium browser, an Electron or a CEF app with `--force-renderer-accessibility`, so its pages are readable from the first UI Automation read (see [Web content accessibility](#web-content-accessibility)) |
@@ -6167,7 +6167,7 @@ The server never turns on the system-wide screen reader flag (`SPI_SETSCREENREAD
 With `reuseExisting: true`, a valid request first looks for an open window of the same app. When one counts, nothing is started, `launchStatus` is `alreadyOpen`, `window` is that window and `processId` is absent; a `placement` then arranges that window. Otherwise the app is launched as usual. A window counts when all of these hold:
 
 - It is an application window the user can switch to (Alt+Tab): visible, on the current virtual desktop, not owned, not a tool or shell window, not the server's own. A minimized window counts. The agent's own terminal or editor window never counts (nor, while the server cannot read its ancestor processes, any window that counts as the host's for that, see [Input guard](#input-guard): the app is launched instead), nor does a window the user's target policy denies (or, while the policy denies anything, one whose process cannot be named), nor (in launch_applications_batch) a window that was not open before the batch started its first item.
-- Its process is the same app: the program's full path, or its name, or the name of the same app a launcher hands off to (`calc`: `CalculatorApp`, `wt`: `WindowsTerminal`, `ms-settings:`: `SystemSettings`). A console program (`cmd`, `powershell`, `pwsh`, `wsl`) never reuses a Windows Terminal window, and a web address launched directly reuses a browser window only when `expectWindow.processName` names the browser (a browser launched by its program with the address as an argument is matched by that program). A packaged app's open window is one of a process of its package. With `expectWindow.processName`, the process must also match it (part of the name). A target whose app the server cannot tell (a document, a desktop app's `shell:AppsFolder` entry, a web address) is reused only with `expectWindow.processName`; without it, it is launched and `warning` says so.
+- Its process is the same app: the program's full path, or its name, or the name of the same app a launcher hands off to (`calc`: `CalculatorApp`, `wt`: `WindowsTerminal`, `ms-settings:`: `SystemSettings`). A console program (`cmd`, `powershell`, `pwsh`, `wsl`) never reuses a Windows Terminal window, and a web address launched directly reuses a browser window only when `expectWindow.processName` names the browser (a browser launched by its program with the address as an argument is matched by that program). A packaged app's open window is one of a process of its package. With `expectWindow.processName`, the process must also match it (part of the name, read as [Process names](#process-names) says; one blank once read, such as `.exe`, matches no window, so nothing is reused). A target whose app the server cannot tell (a document, a desktop app's `shell:AppsFolder` entry, a web address) is reused only with `expectWindow.processName`; without it, it is launched and `warning` says so.
 - Its title shows what the launch opens: when `expectWindow.titleContains` is set, the title contains it (anywhere); otherwise, when the launch opens a file or folder (an argument that is not an option, or a document), the title shows every file and folder name the launch names, each as a whole name: next to it is the start or end of the title, or a character that cannot continue a name (a path separator, `*`, `(`, `:`, ...), or a space that is not followed by a letter or digit. A name shown after a path counts only when that path is the launched one (ignoring case; a relative argument is taken in the working directory), so `notepad++ C:\notes\todo.txt` reuses `C:\notes\todo.txt - Notepad++`, `todo.txt - Notepad++` or `*todo.txt - Notepad++`, but not `C:\other\todo.txt - Notepad++`, `old-todo.txt`, `todo.txt.bak` or `my todo.txt`, and `code.exe C:\Projects\MyApp` does not reuse a `MyApp2`, `MyApp.Tests` or `MyApp Tests` window. Starting a Store app (`shell:AppsFolder\<AUMID>`) or a bare scheme (`ms-settings:`) opens nothing, so any window of that app counts. A web address (`https://...`, as an argument or launched directly) is reused only with `expectWindow.titleContains`: a web page sets its own title, so a title that shows the host proves nothing, and without it the address is launched and `warning` says to pass `expectWindow.titleContains`. A launch that opens something whose name a title would not show (an `ms-settings:` page such as `ms-settings:display`, a `mailto:` address, an argument that names no file or folder) is launched too, and `warning` says the same. When windows of the app are open but none shows the names, the app is launched and `warning` says how many were passed over.
 
 #### Packaged apps
@@ -6278,7 +6278,7 @@ List running processes with optional filtering: which process an app runs as, wh
 **Parameters:**
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| nameFilter | string | No | - | Filter by process name (partial match, case-insensitive) |
+| nameFilter | string | No | - | Filter by process name (partial match, read as [Process names](#process-names) says, so `notepad.exe` finds `notepad`). A path, or a filter blank once read (spaces, `.exe`), is `InvalidArguments`; `pathContains` filters by folder |
 | includeWindowless | boolean | No | false | Also list processes without a visible, titled window |
 | processId | integer | No | - | Only the process with this ID |
 | pathContains | string | No | - | Only processes whose executable path contains this text (case-insensitive); a process whose path cannot be read (another account's, a system process) is left out |
@@ -6364,7 +6364,7 @@ Close or terminate a process by ID (requires confirmation). When the MCP client 
 | confirm | boolean | Yes | - | Must be true to confirm termination when the client cannot ask the user; when it can, the user's answer decides |
 | forceKill | boolean | No | false | `false`: graceful close only. `true`: terminate the process **and all of its child processes** immediately |
 | gracefulTimeoutMs | integer | No | 5000 | Graceful mode: how long to wait for the process to exit after the close request (0-60000). A value outside that range fails with `InvalidTimeout`, even with `forceKill: true` |
-| expectedProcessName | string | No | - | PID-reuse guard: expected name as shown by `list_processes` (`notepad` or `notepad.exe`, case-insensitive) |
+| expectedProcessName | string | No | - | PID-reuse guard: expected name as shown by `list_processes` (`notepad` or `notepad.exe`, case-insensitive; read as [Process names](#process-names) says, and a path is `InvalidArguments`) |
 <!-- tools:end params:kill_process -->
 
 **Graceful mode (default) never escalates.** It sends `WM_CLOSE` to the process's main window and waits up to `gracefulTimeoutMs`:
@@ -6445,7 +6445,7 @@ To end the process anyway, call again with `forceKill: true`. This ends the proc
 | `ConfirmationRequired` | `confirm` was not true, and the client cannot ask the user |
 | `ConfirmationDeclined` | The client asked the user, who declined, dismissed or did not confirm the question, or did not answer within 2 minutes; nothing was done |
 | `InvalidProcessId` / `InvalidTimeout` | Parameter out of range |
-| `InvalidArguments` | An argument kill_process does not declare (a tool error, before anything is asked or done; see [Undeclared arguments](#undeclared-arguments)) |
+| `InvalidArguments` | An `expectedProcessName` that is a path (see [Process names](#process-names)), or an argument kill_process does not declare (a tool error, before anything is asked or done; see [Undeclared arguments](#undeclared-arguments)) |
 | `ProcessNotFound` | No such process (it may have exited) |
 | `ProtectedProcess` | Protected system or shell process (see below), or, with `forceKill: true`, one of its child processes is (the error names it) |
 | `CannotTerminateSelf` | The PID is this server |
@@ -6482,12 +6482,12 @@ Close an application gracefully, without ever forcing it: send WM_CLOSE to each 
 | handle | integer | No | - | A window of the application (as integer); its process is closed |
 | window | object | No | - | Alternative to handle: a window of the application as a selector, resolved to exactly one window (WindowNotFound; AmbiguousWindow with candidates); its process is closed. Its [fields](#window-selectors) filter as find_windows' do. |
 | processId | integer | No | - | The application's process ID |
-| processName | string | No | - | The application's process name, with or without .exe (e.g. 'notepad'); matched exactly, ignoring case |
+| processName | string | No | - | The application's process name, with or without .exe (e.g. 'notepad'); matched exactly, ignoring case, as [Process names](#process-names) says (a path is `InvalidArguments`) |
 | timeoutMs | integer | No | 5000 | How long to wait for the windows to close and the processes to exit, in milliseconds (0-30000, default 5000). 0 only sends the close messages (status requested) |
 | confirm | boolean | No | false | Must be true to close more than 3 windows when the client cannot ask the user. Check the windows (find_windows) first. |
 <!-- tools:end params:close_application -->
 
-Name the application by exactly one of `handle` (any of its windows, a dialog too), `window` (a [window selector](#window-selectors) for one of its windows), `processId` or `processName` (with or without `.exe`, matched exactly and ignoring case; every process with that name that has such a window). Anything else is a tool error with `InvalidArguments`; a `handle` that is no window is `InvalidHandle`.
+Name the application by exactly one of `handle` (any of its windows, a dialog too), `window` (a [window selector](#window-selectors) for one of its windows), `processId` or `processName` (with or without `.exe`, matched exactly and ignoring case, as [Process names](#process-names) says; every process with that name that has such a window). Anything else, and a `processName` that is a path, is a tool error with `InvalidArguments`; a `handle` that is no window is `InvalidHandle`.
 
 **Which windows.** Only the Alt+Tab set of the target processes: visible, not cloaked, top-level and unowned (or marked WS_EX_APPWINDOW), not tool windows, not WS_EX_NOACTIVATE windows (overlays) unless marked WS_EX_APPWINDOW, not the desktop shell. Hidden windows are never sent anything, so the text-input windows every GUI thread has (Default IME, MSCTFIME UI), the GDI+ hook window and the hidden main window of an app that lives in the notification area are left alone; those classes are also excluded by name. Of the shell's own process (normally explorer.exe, which also draws the desktop, the taskbars and their flyouts) only File Explorer windows (`CabinetWClass`) count; that process never exits, so it is reported in `runningProcessIds`. Windows on another virtual desktop are cloaked, so they are not closed and not reported as remaining: they are listed in `otherDesktopWindows` (each with `handle`, `title`, `processId` and `processName`; left out when there are none), and their processes are not waited for and are reported in `runningProcessIds`. The shell cloaks suspended or prelaunched Store app frames the same way, so the server asks Windows' virtual desktop manager about each window the shell cloaks: one it puts on no virtual desktop (such a frame) or on the current one is left out, and one it cannot place (the manager is not available or does not answer within a second) is listed, so a window with unsaved work is never left out.
 
@@ -6559,7 +6559,7 @@ The close messages are sent inside the input gate, which is released before the 
 | `ProtectedWindow` | One of its windows is the agent's host or the desktop shell; nothing was sent |
 | `TargetDeniedByPolicy` | The user's [target policy](#target-policy) refuses the application, or one of its windows' processes cannot be named while the policy denies anything; nothing was sent |
 | `InvalidHandle` | `handle` is not a window (tool error) |
-| `InvalidArguments` | Not exactly one of `handle`, `window`, `processId` and `processName`, a `processId` below 1, an empty `processName`, `timeoutMs` outside 0-30000, or an argument close_application does not declare ([Undeclared arguments](#undeclared-arguments)) (tool error) |
+| `InvalidArguments` | Not exactly one of `handle`, `window`, `processId` and `processName`, a `processId` below 1, an empty `processName` or one that is a path ([Process names](#process-names)), `timeoutMs` outside 0-30000, or an argument close_application does not declare ([Undeclared arguments](#undeclared-arguments)) (tool error) |
 | `WindowNotFound` / `AmbiguousWindow` / `HandleMismatch` | `window` named no single window (tool error, with `candidates` when ambiguous); nothing was sent. See [Window selectors](#window-selectors) |
 | `ConfirmationRequired` / `ConfirmationDeclined` | More than 3 windows and no confirmation (tool error); nothing was sent |
 | `HandleMismatch` | In a window's item: the window changed hands while the user was asked or the call waited for the input gate; it was not closed |
@@ -6702,10 +6702,10 @@ If the folder cannot be created or used (for example, `HELMSMAN_LAYOUTS_PATH` po
 | `SaveFailed` | save_layout | The preset file could not be written |
 | `DeleteFailed` | delete_layout | The preset file could not be deleted |
 | `WindowNotFound` | apply_layout | No open window matched a placement (or every match was given to another placement) |
-| `NoMatchCriterion` | apply_layout | A placement has no criterion the `matchBy` used can match on, or one that is blank once normalized (a `processName` of only `.exe`), so it was skipped |
+| `NoMatchCriterion` | apply_layout | A placement has no criterion the `matchBy` used can match on, or one that is blank once normalized (a `processName` of only `.exe`), or a `processName` that is a path ([Process names](#process-names)), so it was skipped |
 | `InvalidMonitorIndex` | apply_layout | A placement's monitor does not exist (for example, after undocking) |
 | `MonitorNotFound` | apply_layout, save_layout | apply_layout: a placement saved its monitor by identity, that monitor is not connected, and neither its name nor its monitor index fits one. save_layout: no monitor, or the monitor of a window it was saving, could be read (the displays may be changing), so nothing was saved; try again |
-| `InvalidPlacement` | save_layout, apply_layout | save_layout: a placement of `placements` is not valid; nothing was saved. apply_layout: a placement's rectangle is less than one pixel on its monitor; it was not arranged |
+| `InvalidPlacement` | save_layout, apply_layout | save_layout: a placement of `placements` is not valid (a `processName` that is a path or blank among others); nothing was saved. apply_layout: a placement's rectangle is less than one pixel on its monitor; it was not arranged |
 | `InvalidPresetFile` | list_layouts | A file in the layouts folder is not a valid preset; it is listed with `file` and `error`, and cannot be applied until it is fixed or deleted |
 | `LaunchNotConfirmed` | apply_layout | An AI agent wrote the layout and the user has not confirmed that it may start programs; nothing was started for that placement |
 | `LaunchFailed` | apply_layout | A missing app could not be launched, or its window did not appear |
@@ -6850,8 +6850,8 @@ If no visible window matches the filters, nothing is saved (an existing preset w
 |-----------|------|----------|---------|-------------|
 | name | string | Yes | - | Name for the preset |
 | description | string | No | - | Description of the layout |
-| includeProcesses | string | No | - | Only save these processes (comma-separated) |
-| excludeProcesses | string | No | - | Exclude these processes (comma-separated) |
+| includeProcesses | string | No | - | Only save these processes (comma-separated; each part of a process name, read as [Process names](#process-names) says: an entry that is a path, or blank once read such as `.exe`, is `InvalidArguments` and nothing is saved) |
+| excludeProcesses | string | No | - | Exclude these processes (comma-separated; read as `includeProcesses`) |
 | includeMinimized | boolean | No | false | Also save minimized windows (default false) |
 | placements | object[] | No | - | The placements to save instead of capturing windows, in order; not with the capture filters |
 
@@ -6932,7 +6932,7 @@ Minimized windows are saved only with `includeMinimized: true`, at their restore
 
 #### Agent-written layouts
 
-With `placements`, save_layout saves the placements you write and captures no window (roadmap M6.8, owner decision D15), so `includeProcesses`, `excludeProcesses` and `includeMinimized` are refused with `InvalidArguments`. Each placement names its window (`processName` or `titleContains`, at least one; text of only whitespace counts as left out, and one that is blank once normalized, a `processName` of only `.exe` or a `titleContains` of only invisible characters, is refused, since it would match every window, as the window selectors refuse it), and where it goes: `snap` (a [snap_window](#snap_window) position, resolved on its monitor when the layout is applied) or `position` (fractions of the work area), not both; `state: "maximized"` needs neither. `monitor` defaults to `primary`; `left` and `right` are resolved when the layout is applied, an id or device name is kept even when that monitor is not connected now, and `current` and `all` are refused. `launch` takes `executable` or `appId`, never arguments: an executable is a program's name (no spaces, no folder), a full path on a local drive, or a URI, never a network path, a relative path or a command line (`cmd.exe /c x`), and an appId is an AppUserModelID; each at most 260 characters. A layout may start at most 8 different programs or apps, as many as the user is shown when asked. `position` and `normalPosition` must lie inside the work area (`x + width` and `y + height` at most 1, give or take a window's invisible border). Texts are at most 260 characters (`exePath` 1,024, a description 1,000) and `ordinal` 0 to 999. A field save_layout does not take (`launch.arguments`, `workspace`, ...) fails the placement rather than be ignored, except inside `position` and `normalPosition`, which ignore a member they do not take (such as `unit`); get_layout's own `order`, `monitorIndex` and `launchCommand` pass only when they agree with the placement (`order` its place in the array, `launchCommand` what its `launch` starts, `monitorIndex` beside `monitor`). Everything is checked before anything is written: one bad placement fails the call with `InvalidPlacement`, an `error` that starts with its index (`placements[2].snap: ...`), and the preset that was there is kept. At most 50 placements.
+With `placements`, save_layout saves the placements you write and captures no window (roadmap M6.8, owner decision D15), so `includeProcesses`, `excludeProcesses` and `includeMinimized` are refused with `InvalidArguments`. Each placement names its window (`processName` or `titleContains`, at least one; text of only whitespace counts as left out, and one that is blank once normalized, a `processName` of only `.exe` or quotes or a `titleContains` of only invisible characters, is refused, since it would match every window, as the window selectors refuse it; so is a `processName` that is a path, which the window selectors refuse too, see [Process names](#process-names)), and where it goes: `snap` (a [snap_window](#snap_window) position, resolved on its monitor when the layout is applied) or `position` (fractions of the work area), not both; `state: "maximized"` needs neither. `monitor` defaults to `primary`; `left` and `right` are resolved when the layout is applied, an id or device name is kept even when that monitor is not connected now, and `current` and `all` are refused. `launch` takes `executable` or `appId`, never arguments: an executable is a program's name (no spaces, no folder), a full path on a local drive, or a URI, never a network path, a relative path or a command line (`cmd.exe /c x`), and an appId is an AppUserModelID; each at most 260 characters. A layout may start at most 8 different programs or apps, as many as the user is shown when asked. `position` and `normalPosition` must lie inside the work area (`x + width` and `y + height` at most 1, give or take a window's invisible border). Texts are at most 260 characters (`exePath` 1,024, a description 1,000) and `ordinal` 0 to 999. A field save_layout does not take (`launch.arguments`, `workspace`, ...) fails the placement rather than be ignored, except inside `position` and `normalPosition`, which ignore a member they do not take (such as `unit`); get_layout's own `order`, `monitorIndex` and `launchCommand` pass only when they agree with the placement (`order` its place in the array, `launchCommand` what its `launch` starts, `monitorIndex` beside `monitor`). Everything is checked before anything is written: one bad placement fails the call with `InvalidPlacement`, an `error` that starts with its index (`placements[2].snap: ...`), and the preset that was there is kept. At most 50 placements.
 
 get_layout's `placements` go back into save_layout unchanged, so editing a layout is get_layout, change, save_layout with the same name. The preset is marked `authoredBy: "agent"`: apply_layout asks the user before it starts anything for it (see [apply_layout](#apply_layout)).
 
@@ -6998,7 +6998,7 @@ Apply a saved layout preset.
 
 Any other `matchBy` fails with `InvalidMatchBy` (a [tool error](#tool-errors) that lists the methods) and arranges nothing; it used to fall back to `process_and_title`.
 
-A placement with no criterion the method can use (`title_only` without `titleContains`, `process_only` without a process name, or neither) is skipped: its status is `notApplicable` with `NoMatchCriterion`, and no window is moved for it. An empty criterion used to match every window, so `title_only` on a saved layout moved whatever windows were on top. Text of only whitespace counts as no criterion. A criterion that is blank once normalized but not empty (a `processName` of only `.exe`, a `titleContains` of only invisible characters such as a zero-width space, in a file edited by hand) would match every window too, so its placement is skipped the same way, whatever `matchBy` is and whatever else it has, and nothing is launched for it; save_layout refuses such a placement (`InvalidPlacement`).
+A placement with no criterion the method can use (`title_only` without `titleContains`, `process_only` without a process name, or neither) is skipped: its status is `notApplicable` with `NoMatchCriterion`, and no window is moved for it. An empty criterion used to match every window, so `title_only` on a saved layout moved whatever windows were on top. Text of only whitespace counts as no criterion. A criterion that is blank once normalized but not empty (a `processName` of only `.exe`, a `titleContains` of only invisible characters such as a zero-width space, in a file edited by hand) would match every window too, so its placement is skipped the same way, whatever `matchBy` is and whatever else it has, and nothing is launched for it; save_layout refuses such a placement (`InvalidPlacement`). A `processName` that is a path (see [Process names](#process-names)) is skipped the same way, `title_only` included, and its `error` says that a process name is expected.
 
 A placement's process name matches part of the window's process name, case-insensitive; a Store (UWP) app's window also matches `ApplicationFrameHost`, which is what presets saved by earlier versions stored for UWP windows. A process name that [save_layout](#save_layout) recorded (`exactProcessName: true`) must match the whole name instead, so `Code` does not match `Code - Insiders`.
 
@@ -8993,18 +8993,35 @@ sizes are those of 4.0.0.
   list. Every such argument is now read as [Process names](#process-names) says, by the same code as the policy's lists:
   window selectors (and so wait_for_window, the batches and every tool that takes `window`), find_windows,
   get_window_events, close_application, kill_process' `expectedProcessName`, list_processes' `nameFilter`,
-  launch_application's `expectWindow.processName`, layout placements and save_layout's and save_workspace's process
-  filters. **Changed:** an argument that is a path (a `\`, `/` or `:` in it) is refused with `InvalidArguments`, which
-  names the process name to pass, and nothing is done: a process is matched by its name alone, so the folder could not be
-  checked. With 4.0.0 find_windows returned an empty list, a selector failed with `WindowNotFound` (`HandleMismatch` beside
-  a handle), close_application with `NoClosableWindow`, kill_process with `ProcessNameMismatch`, list_processes listed
-  nothing, save_layout's filter matched no window (an app it excluded was saved), launch_application's `reuseExisting`
-  reused no window and started the program again, and get_window_events filtered by the path's file name. save_layout refuses such a placement
-  (`InvalidPlacement`), and apply_layout skips one read from a file (`notApplicable`, saying why), where it found no
-  window. **Changed:** a selector's `processName` of only quotes is blank (`InvalidArguments`), as one of only `.exe`
-  was; list_processes refuses a `nameFilter` that is blank once read (`.exe`, spaces), which listed nothing; and
-  find_windows' `processName` of only `.exe` with `processNameContains: true` lists no window, where it listed every one.
-  The target policy is unchanged: it reads its lists and the processes' names as before, and no verdict changed.
+  launch_application's `expectWindow.processName`, layout placements, save_layout's and save_workspace's process filters,
+  and the browser name restore_workspace looks for (a workspace edited by hand to say `msedge.exe` found no open window
+  and its pages were `unsupported`). **Changed:** these now find what they name in the forms above, so a quoted name or
+  `notepad .exe` closes, kills, waits for or lists that process where 4.0.0 found none. **Changed:** an argument that is a
+  path or another location (a `\`, `/` or `:` in it) is refused and nothing is done, since a process is matched by its
+  name alone and the folder could not be checked: with `InvalidArguments`, which names the process name to pass when the
+  argument is a plain file path. With 4.0.0 find_windows returned an empty list; a selector failed with `WindowNotFound`
+  (`HandleMismatch` beside a handle), except in wait_for_window, which waited until `timeoutMs` (`WaitTimedOut`), and with
+  `condition: "gone"` succeeded at once with a warning that nothing matched, a success that proved nothing;
+  close_application failed with `NoClosableWindow` and kill_process with `ProcessNameMismatch`; list_processes listed
+  nothing; get_window_events filtered by the path's file name; a save_layout or save_workspace filter entry matched no
+  window, so an app it excluded was saved; and launch_application started the program anyway (its `expectWindow`
+  matched no window, and with `reuseExisting` no open window was reused), where it now starts nothing.
+  save_layout's `placements` refuse such a `processName` (`InvalidPlacement`; 4.0.0 saved it), and apply_layout skips a
+  placement read from a file that has one (`notApplicable`, `NoMatchCriterion`): with `matchBy: "title_only"` 4.0.0
+  ignored the `processName` and arranged the window its `titleContains` named, and otherwise it found no window
+  (`notFound`; with `launchMissing`, it started the program the placement names). **Changed:** a name that is blank once read
+  (only spaces, quotes or `.exe`) names no process. An entry of save_layout's or save_workspace's `includeProcesses` or
+  `excludeProcesses` such as `.exe` (or, in save_workspace's array, `" "`) is refused with `InvalidArguments`; 4.0.0
+  read it as part of every name, so an exclude entry left out every window and the save failed (`NoWindowsCaptured`),
+  and an include entry kept every window. An `expectWindow.processName` of `.exe` matches no window: 4.0.0 matched every
+  new window, so a launch could take another process's window for its own, and with `reuseExisting` it reused any open
+  window of the app whose title fit (of any app, when the app was not known); now such a launch reuses nothing and starts
+  the program. A
+  selector's `processName` of only quotes is blank (`InvalidArguments`), as one of only `.exe` was. list_processes
+  refuses a `nameFilter` that is blank once read (`InvalidArguments`): 4.0.0 listed the processes whose names contain the
+  spaces given (`" "`: every name with a space) and nothing for `.exe`. find_windows' `processName` of only `.exe` with
+  `processNameContains: true` lists no window, where it listed every one. The target policy is unchanged: it reads its
+  lists and the processes' names as before, and no verdict changed.
 
 ## Error Codes
 
