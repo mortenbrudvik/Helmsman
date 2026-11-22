@@ -10,19 +10,16 @@ namespace WinDesktopMcp.Tests.Fixtures;
 public sealed class WiredLayoutService : LayoutService
 {
     private WiredLayoutService(
-        IWindowService windowService,
-        IMonitorService monitorService,
-        IProcessService processService,
-        IForegroundService foregroundService,
         LayoutPresetStore store,
         LaunchConfirmationStore confirmations,
-        ILaunchPlacementService launchPlacement,
-        LayoutCapturer capturer)
-        : base(windowService, monitorService, processService, foregroundService, store, confirmations, launchPlacement, capturer)
+        LayoutCapturer capturer,
+        LayoutApplier applier)
+        : base(store, confirmations, capturer, applier)
     {
         Store = store;
         Confirmations = confirmations;
         Capturer = capturer;
+        Applier = applier;
     }
 
     /// <summary>Stores the presets.</summary>
@@ -33,6 +30,9 @@ public sealed class WiredLayoutService : LayoutService
 
     /// <summary>save_layout's presets: captured, or from an agent's placements.</summary>
     public LayoutCapturer Capturer { get; }
+
+    /// <summary>apply_layout.</summary>
+    public LayoutApplier Applier { get; }
 
     /// <summary>
     /// The parts wired over the presets in <paramref name="layoutsPath"/>, without migrating or seeding anything; when it is
@@ -69,7 +69,8 @@ public sealed class WiredLayoutService : LayoutService
         var store = new LayoutPresetStore(options, folderAccess, logger);
         var confirmations = new LaunchConfirmationStore(store.LayoutsPath);
         var capturer = new LayoutCapturer(windowService, monitorService, processService, store, apps, installedApps);
-        return new WiredLayoutService(windowService, monitorService, processService, foregroundService, store, confirmations,
-            launchPlacement, capturer);
+        var applier = new LayoutApplier(windowService, monitorService, processService, foregroundService, store, confirmations,
+            launchPlacement);
+        return new WiredLayoutService(store, confirmations, capturer, applier);
     }
 }

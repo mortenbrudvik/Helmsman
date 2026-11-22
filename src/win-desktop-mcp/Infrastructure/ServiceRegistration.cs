@@ -228,7 +228,9 @@ public static class ServiceRegistration
         // save_layout's presets, from the open windows or an agent's placements: a packaged app's window is recorded by its
         // appId (roadmap M6.8)
         services.AddSingleton<ILayoutCapturer, LayoutCapturer>();
-        // launchMissing's windows are placed as the launch tools place theirs (roadmap M3.F27)
+        // apply_layout: launchMissing's windows are placed as the launch tools place theirs (roadmap M3.F27)
+        services.AddSingleton<ILayoutApplier, LayoutApplier>();
+        // The layout tools' one entry to the parts above; it only hands each call on
         services.AddSingleton<ILayoutService, LayoutService>();
 
         // Verified window activation (focus_window, apply_layout, and the input guard): all attach and

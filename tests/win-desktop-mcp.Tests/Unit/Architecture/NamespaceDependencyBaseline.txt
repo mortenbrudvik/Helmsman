@@ -182,8 +182,8 @@ src/win-desktop-mcp/Services/ElementRefs.Arguments.cs -> Infrastructure.ToolErro
 src/win-desktop-mcp/Services/FileDialogPaths.cs -> Infrastructure.ToolErrorReporting
 src/win-desktop-mcp/Services/FileDialogService.cs -> Infrastructure.ToolErrorReporting
 src/win-desktop-mcp/Services/LaunchPlanner.cs -> Infrastructure.ToolErrorReporting  # moved out of ProcessService when it was split; the same dependency it had
+src/win-desktop-mcp/Services/LayoutApplier.cs -> Infrastructure.ToolErrorReporting  # moved out of LayoutService when it was split; the same dependency it had
 src/win-desktop-mcp/Services/LayoutCapturer.cs -> Infrastructure.ToolErrorReporting  # moved out of LayoutService when it was split; the same dependency it had
-src/win-desktop-mcp/Services/LayoutService.cs -> Infrastructure.ToolErrorReporting
 src/win-desktop-mcp/Services/MenuPathService.cs -> Infrastructure.ToolErrorReporting
 src/win-desktop-mcp/Services/ServerInfoService.cs -> Infrastructure.ServerIdentity
 src/win-desktop-mcp/Services/ServerStartupLog.cs -> Infrastructure.ToolsetSelection
