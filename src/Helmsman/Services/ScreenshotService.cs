@@ -623,6 +623,59 @@ public class ScreenshotService : IScreenshotService
     }
 
     /// <inheritdoc />
+    public CaptureRefusal? CheckImageSize(nint windowHandle, bool includeFrame, CaptureOptions options, BoundsDto? area = null)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        if (!includeFrame || CheckWindow(windowHandle) != null || _windows.GetWindowRect(windowHandle) is not { } rect)
+        {
+            return null;
+        }
+
+        CaptureRequest request;
+        try
+        {
+            request = CaptureRequest.Resolve(options);
+        }
+        catch (CaptureException)
+        {
+            // The capture refuses the options with their own code
+            return null;
+        }
+
+        // The visible frame within the window rectangle, as CropToVisibleFrame cuts the pixels, then the ref's area
+        var shown = Rectangle.FromLTRB(rect.Left, rect.Top, rect.Right, rect.Bottom);
+        if (_windows.GetExtendedFrameBounds(windowHandle) is { } frame)
+        {
+            var visible = Rectangle.Intersect(Rectangle.FromLTRB(frame.Left, frame.Top, frame.Right, frame.Bottom), shown);
+            if (visible.Width > 0 && visible.Height > 0)
+            {
+                shown = visible;
+            }
+        }
+
+        if (area != null)
+        {
+            shown = Rectangle.Intersect(new Rectangle(area.X, area.Y, area.Width, area.Height), shown);
+        }
+
+        if (shown.Width <= 0 || shown.Height <= 0)
+        {
+            return null;
+        }
+
+        try
+        {
+            ThrowIfOverBudget(shown.Width, shown.Height);
+            request.ThrowIfOutputTooLarge(shown.Width, shown.Height);
+            return null;
+        }
+        catch (CaptureException ex)
+        {
+            return new CaptureRefusal(ex.Code, ex.Message);
+        }
+    }
+
+    /// <inheritdoc />
     public nint? FindMinimizedWindow(nint windowHandle)
     {
         // A control inside a minimized window is offscreen with it, though it is not iconic itself
@@ -849,6 +902,17 @@ public class ScreenshotService : IScreenshotService
         }
     }
 
+    /// <summary>CaptureFailed for pixels over the pixel budget of one capture (<see cref="CaptureLimits"/>).</summary>
+    private static void ThrowIfOverBudget(int width, int height)
+    {
+        if (!CaptureLimits.WithinCaptureBudget(width, height))
+        {
+            throw new CaptureException(ScreenshotErrorCode.CaptureFailed,
+                $"The capture is {width}x{height} pixels, more than one capture may hold ({CaptureLimits.CaptureBudgetText}). " +
+                "No image was made. Capture a smaller window, or part of it with capture_region.");
+        }
+    }
+
     /// <summary>
     /// Refuses a capture over the pixel budget (<see cref="CaptureLimits"/>), before a bitmap, a crop or an image is made of it,
     /// whatever read it: GDI refuses such a size before it reads, but the compositor's frame of a window
@@ -857,12 +921,7 @@ public class ScreenshotService : IScreenshotService
     /// </summary>
     private static void ThrowIfIncomplete(CaptureResult capture)
     {
-        if (!CaptureLimits.WithinCaptureBudget(capture.Width, capture.Height))
-        {
-            throw new CaptureException(ScreenshotErrorCode.CaptureFailed,
-                $"The capture is {capture.Width}x{capture.Height} pixels, more than one capture may hold ({CaptureLimits.CaptureBudgetText}). " +
-                "No image was made. Capture a smaller window, or part of it with capture_region.");
-        }
+        ThrowIfOverBudget(capture.Width, capture.Height);
 
         if (capture.Bgra.LongLength < (long)capture.Width * capture.Height * 4)
         {

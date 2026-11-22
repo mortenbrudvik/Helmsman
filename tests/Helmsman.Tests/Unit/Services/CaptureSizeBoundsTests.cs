@@ -485,6 +485,100 @@ public sealed class CaptureSizeBoundsTests : IDisposable
 
     #endregion
 
+    #region A window's size before its pixels are read
+
+    [Theory]
+    [InlineData(8001, 2, CaptureOutputMode.Image, nameof(ScreenshotErrorCode.InvalidImageSize))]
+    [InlineData(8000, 2, CaptureOutputMode.Image, null)]
+    [InlineData(6000, 6000, CaptureOutputMode.Image, nameof(ScreenshotErrorCode.InvalidImageSize))] // 36 megapixels
+    [InlineData(8001, 2, CaptureOutputMode.File, null)]
+    [InlineData(16384, 4097, CaptureOutputMode.File, nameof(ScreenshotErrorCode.CaptureFailed))] // over the pixel budget
+    public void CheckImageSize_TellsFromTheVisibleFrame_WhatTheCaptureWouldRefuse(int width, int height, CaptureOutputMode output, string? code)
+    {
+        // Arrange - the window rectangle has 7 invisible pixels of border on each side, which the capture cuts off
+        var windows = Window_(width, height, border: 7);
+
+        // Act
+        var refusal = Sut(windows).CheckImageSize(Window, includeFrame: true, FullResolution(output));
+
+        // Assert
+        refusal?.Code.ToString().Should().Be(code);
+        if (code == null)
+        {
+            refusal.Should().BeNull();
+        }
+        else
+        {
+            refusal!.Message.Should().Contain($"{width}x{height}");
+        }
+
+        _capture.Verify(c => c.CaptureWindow(It.IsAny<nint>(), It.IsAny<bool>()), Times.Never);
+    }
+
+    [Fact]
+    public void CheckImageSize_AgreesWithTheCapture_AtTheDefaultSizeAndOverTheBound()
+    {
+        // Arrange - the window as the capture reads it, its visible frame 8001 x 2
+        var windows = Window_(8001, 2, border: 0);
+        UseWindow(8001, 2, 0, 0);
+        var sut = Sut(windows);
+
+        // Act
+        var before = sut.CheckImageSize(Window, includeFrame: true, FullResolution());
+        var captured = sut.CaptureWindow(Window, includeFrame: true, FullResolution()).Metadata;
+
+        // Assert - the same code and message
+        before!.Code.ToString().Should().Be(captured.ErrorCode);
+        before.Message.Should().Be(captured.Error);
+        sut.CheckImageSize(Window, includeFrame: true, new CaptureOptions()).Should().BeNull("the default size scales it down");
+    }
+
+    [Fact]
+    public void CheckImageSize_OfARefCrop_LooksAtTheAreaOnly()
+    {
+        // Arrange - a window far over the bound, and a small element in it
+        var windows = Window_(16000, 4000, border: 0);
+        var sut = Sut(windows);
+
+        // Act + Assert
+        sut.CheckImageSize(Window, includeFrame: true, FullResolution(), new BoundsDto(100, 100, 300, 200)).Should().BeNull();
+        sut.CheckImageSize(Window, includeFrame: true, FullResolution(), new BoundsDto(0, 0, 9000, 20))!.Code
+            .Should().Be(ScreenshotErrorCode.InvalidImageSize);
+    }
+
+    [Fact]
+    public void CheckImageSize_LeavesToTheCapture_WhatItCannotKnowExactly()
+    {
+        // Arrange - a window far over the bound
+        var windows = Window_(16000, 4000, border: 0);
+        var sut = Sut(windows);
+
+        // Act + Assert - the client area is not read before the pixels
+        sut.CheckImageSize(Window, includeFrame: false, FullResolution()).Should().BeNull();
+
+        // A window the capture refuses anyway keeps that refusal: a minimized one is the size of its icon
+        windows.Setup(w => w.IsIconic(Window)).Returns(true);
+        sut.CheckImageSize(Window, includeFrame: true, FullResolution()).Should().BeNull();
+        windows.Setup(w => w.IsIconic(Window)).Returns(false);
+        windows.Setup(w => w.IsWindowVisible(Window)).Returns(false);
+        sut.CheckImageSize(Window, includeFrame: true, FullResolution()).Should().BeNull();
+    }
+
+    private ScreenshotService Sut(Mock<INativeWindowWrapper> windows) =>
+        new(_capture.Object, _monitors.Object, windows.Object, Permissive.CapturePolicy, Permissive.TargetPolicy, Permissive.SecurityProbe);
+
+    /// <summary>A window at (0, 0) whose visible frame is <paramref name="width"/> x <paramref name="height"/>.</summary>
+    private static Mock<INativeWindowWrapper> Window_(int width, int height, int border)
+    {
+        var windows = new Mock<INativeWindowWrapper>();
+        windows.Setup(w => w.IsWindowVisible(It.IsAny<nint>())).Returns(true);
+        windows.Setup(w => w.GetWindowRect(Window)).Returns((-border, -border, width + border, height + border));
+        windows.Setup(w => w.GetExtendedFrameBounds(Window)).Returns((0, 0, width, height));
+        return windows;
+    }
+
+    #endregion
+
     #region The target policy comes first
 
     [Fact]

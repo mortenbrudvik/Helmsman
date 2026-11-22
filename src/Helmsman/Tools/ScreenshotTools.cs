@@ -299,6 +299,12 @@ public class ScreenshotTools
         {
             if (element == null)
             {
+                // A window whose image would be too large is refused from its frame before its pixels are read
+                if (_screenshotService.CheckImageSize(windowHandle, includeFrame, options) is { } tooLarge)
+                {
+                    return WindowFailure(tooLarge.Code.ToString(), tooLarge.Message);
+                }
+
                 capture = _screenshotService.CaptureWindow(windowHandle, includeFrame, options);
             }
             else
@@ -313,6 +319,11 @@ public class ScreenshotTools
                 if (area.Failure is { } failure)
                 {
                     return failure;
+                }
+
+                if (_screenshotService.CheckImageSize(windowHandle, includeFrame, options, area.Bounds) is { } tooLarge)
+                {
+                    return WindowFailure(tooLarge.Code.ToString(), tooLarge.Message);
                 }
 
                 capture = _screenshotService.CaptureWindowArea(windowHandle, includeFrame, area.Bounds!, options);
@@ -460,6 +471,12 @@ public class ScreenshotTools
             if (_screenshotService.CheckWindow(windowHandle) is { } unavailable)
             {
                 return AnnotatedFailure(reported, windowTitle, unavailable.Code.ToString(), unavailable.Message);
+            }
+
+            // Nor walk a window whose image would be too large: its frame says so before the walk, which can take seconds
+            if (_screenshotService.CheckImageSize(windowHandle, includeFrame, options) is { } tooLarge)
+            {
+                return AnnotatedFailure(reported, windowTitle, tooLarge.Code.ToString(), tooLarge.Message);
             }
 
             // Where the window is while its elements are read: the capture compares it with where the window is when its

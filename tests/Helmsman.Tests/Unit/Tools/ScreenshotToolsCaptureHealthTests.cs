@@ -215,6 +215,79 @@ public class ScreenshotToolsCaptureHealthTests
     }
 
     [Fact]
+    public async Task CaptureWithElements_OfAWindowWhoseImageWouldBeTooLarge_IsRefusedBeforeTheWalk()
+    {
+        // Arrange - the window's frame says its image would be over the inline bound
+        _screenshots.Setup(s => s.CheckImageSize(Window, true, It.IsAny<CaptureOptions>(), null))
+            .Returns(new CaptureRefusal(ScreenshotErrorCode.InvalidImageSize, "too large"));
+
+        // Act
+        var result = await CreateSut().CaptureWithElements(handle: (long)Window, maxDimension: 0);
+
+        // Assert
+        result.IsError.Should().BeTrue();
+        Metadata(result).GetProperty("errorCode").GetString().Should().Be(nameof(ScreenshotErrorCode.InvalidImageSize));
+        _elements.Verify(e => e.GetUIElementsAsync(It.IsAny<nint>(), It.IsAny<int>(), It.IsAny<UIElementFilter?>(),
+            It.IsAny<IProgress<OperationProgress>?>(), It.IsAny<CancellationToken>()), Times.Never);
+        VerifyNotCaptured();
+    }
+
+    [Fact]
+    public async Task CaptureWithElements_WithRestoreIfMinimized_OfAWindowWhoseImageWouldBeTooLarge_IsRefusedBeforeTheWalk_AndMinimizedAgain()
+    {
+        // Arrange - a minimized window's size is known only once it is restored: then it is checked before the walk
+        Minimized();
+        _screenshots.Setup(s => s.CheckImageSize(Window, true, It.IsAny<CaptureOptions>(), null))
+            .Returns(() => _events.Contains("restore") ? new CaptureRefusal(ScreenshotErrorCode.InvalidImageSize, "too large") : null);
+        _elements.Setup(e => e.GetUIElementsAsync(Window, It.IsAny<int>(), It.IsAny<UIElementFilter?>(),
+                It.IsAny<IProgress<OperationProgress>?>(), It.IsAny<CancellationToken>()))
+            .Callback(() => _events.Add("walk"))
+            .ReturnsAsync(TestDataFactory.CreateUIElementResult(elements: [TestDataFactory.CreateUIElementInfo()]));
+
+        // Act
+        var result = await CreateSut().CaptureWithElements(handle: (long)Window, restoreIfMinimized: true, maxDimension: 0);
+
+        // Assert
+        Metadata(result).GetProperty("errorCode").GetString().Should().Be(nameof(ScreenshotErrorCode.InvalidImageSize));
+        _events.Should().Equal("restore", "minimize");
+        VerifyNotCaptured();
+    }
+
+    [Fact]
+    public async Task CaptureWindow_OfAWindowWhoseImageWouldBeTooLarge_IsRefusedBeforeItsPixelsAreRead()
+    {
+        // Arrange
+        _screenshots.Setup(s => s.CheckImageSize(Window, true, It.IsAny<CaptureOptions>(), null))
+            .Returns(new CaptureRefusal(ScreenshotErrorCode.InvalidImageSize, "too large"));
+
+        // Act
+        var result = await CreateSut().CaptureWindow(handle: (long)Window, maxDimension: 0);
+
+        // Assert
+        Metadata(result).GetProperty("errorCode").GetString().Should().Be(nameof(ScreenshotErrorCode.InvalidImageSize));
+        _screenshots.Verify(s => s.CaptureWindow(It.IsAny<nint>(), It.IsAny<bool>(), It.IsAny<CaptureOptions>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CaptureWindowAndCaptureWithElements_OfADeniedWindow_NeverAskItsImageSize()
+    {
+        // Arrange - the policy refuses first, so a denied window's size is never told
+        var policy = new Mock<ICaptureTargetPolicy>();
+        policy.Setup(p => p.Check(It.IsAny<nint>())).Returns(new CaptureRefusal(ScreenshotErrorCode.TargetDeniedByPolicy, "denied"));
+        policy.Setup(p => p.Verdict(It.IsAny<WindowInfo?>())).Returns(TargetPolicyVerdict.Deny("vault", "denied"));
+        var sut = new ScreenshotTools(_screenshots.Object, _elements.Object, _windows.Object, policy.Object, _session.Object);
+
+        // Act
+        var window = await sut.CaptureWindow(handle: (long)Window, maxDimension: 0);
+        var marked = await sut.CaptureWithElements(handle: (long)Window, maxDimension: 0);
+
+        // Assert
+        Metadata(window).GetProperty("errorCode").GetString().Should().Be(nameof(ScreenshotErrorCode.TargetDeniedByPolicy));
+        Metadata(marked).GetProperty("errorCode").GetString().Should().Be(nameof(ScreenshotErrorCode.TargetDeniedByPolicy));
+        _screenshots.Verify(s => s.CheckImageSize(It.IsAny<nint>(), It.IsAny<bool>(), It.IsAny<CaptureOptions>(), It.IsAny<BoundsDto?>()), Times.Never);
+    }
+
+    [Fact]
     public async Task CaptureWindow_WithRestoreIfMinimized_WhilePaused_IsPausedByUser_AndRestoresNothing()
     {
         // Arrange
