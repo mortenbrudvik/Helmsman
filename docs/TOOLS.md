@@ -9031,9 +9031,8 @@ tools' `outputPath`, at the same size), so the tools/list sizes are those of 4.0
   sub-folder, no file marked read-only, hidden or system (one in use is tried again at the next sweep), nothing at an
   `outputPath` outside that folder, nothing in the `%TEMP%` folders of the server's earlier names (delete those by
   hand), and nothing at all while the folder or `%TEMP%\Helmsman` is a junction or symbolic link. To keep a capture,
-  pass `outputPath` or copy the file. The capture
-  tools' `outputPath` description says `kept for 24 hours` in place of `it is not created`; a folder named by
-  `outputPath` must still exist, as before.
+  pass `outputPath` or copy the file. The capture tools' `outputPath` description says `kept for 24 hours` in place of
+  `it is not created`; a folder named by `outputPath` must still exist, as before.
 
 ## Error Codes
 
