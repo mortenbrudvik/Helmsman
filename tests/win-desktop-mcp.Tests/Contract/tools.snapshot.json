@@ -4596,7 +4596,7 @@
             "type": "string"
           },
           "arguments": {
-            "description": "Command line arguments, one array element per argument (quoting is handled for you; do not add quotes). No commands or scripts are run: an interpreter (cmd, powershell, python, ...) or a system tool that changes the system, runs commands or transfers data (taskkill, reg, control, curl, git, ...) with arguments fails with InterpreterWithArguments; a script, installer, shortcut or console file as the target (.bat, .ps1, .msi, .lnk, .msc, ...; for code use code.exe) with ScriptFile. For a target that is not an .exe, arguments with & | < > ^ % ! or \" fail with UnsafeBatchArguments. Chromium/Electron switches that run commands or allow remote control (--gpu-launcher, --*-cmd-prefix, --remote-debugging-*, --inspect, ...) fail with UnsafeChromiumSwitch.",
+            "description": "Command line arguments, one array element per argument (quoting is handled for you; do not add quotes). No commands or scripts are run: an interpreter (cmd, powershell, python, ...) or a system tool that changes the system, runs commands or transfers data (taskkill, reg, control, curl, git, ...) with arguments fails with InterpreterWithArguments; a script, installer, shortcut or console file as the target (.bat, .ps1, .msi, .lnk, .msc outside System32, ...; for code use code.exe) with ScriptFile. For a target that is not an .exe, arguments with & | < > ^ % ! or \" fail with UnsafeBatchArguments. Chromium/Electron switches that run commands or allow remote control (--gpu-launcher, --*-cmd-prefix, --remote-debugging-*, --inspect, ...) fail with UnsafeChromiumSwitch.",
             "type": [
               "array",
               "null"
