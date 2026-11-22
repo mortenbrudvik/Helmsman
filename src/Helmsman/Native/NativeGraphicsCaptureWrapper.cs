@@ -257,7 +257,8 @@ public sealed unsafe class NativeGraphicsCaptureWrapper : IGraphicsCaptureWrappe
                 throw new GraphicsCaptureException("The window has no size to capture (it may be minimized).");
             }
 
-            // Before the frame pool allocates a frame of this size, and the copy below as much again
+            // Before the frame pool allocates a frame of this size. The pool's buffers keep it, so the frame read below, cut to
+            // its content and to its texture, is never larger, and nor is the copy of it
             ThrowIfOverBudget(size.Width, size.Height);
 
             statics = Factory(FramePoolClass, IidFramePoolStatics2);
@@ -310,9 +311,6 @@ public sealed unsafe class NativeGraphicsCaptureWrapper : IGraphicsCaptureWrappe
             {
                 throw new GraphicsCaptureException("The captured frame is empty.");
             }
-
-            // The window can grow between the size read above and its frame
-            ThrowIfOverBudget(width, height);
 
             desc.MipLevels = 1;
             desc.ArraySize = 1;
