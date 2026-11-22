@@ -3,20 +3,24 @@ using System.Text.RegularExpressions;
 namespace Helmsman.Tests.Unit;
 
 /// <summary>
-/// Release 4.0.0 renamed the product from Windows App Manager (windows-app-manager, WindowsAppManager) to
-/// win-desktop-mcp. This keeps the old name from creeping back into what ships or what a user copies: the server's
-/// source, the plugin manifests, the skill, the scripts, the workflows, the Claude Code commands, the sample presets
-/// (config), Directory.Build.props, README.md, and docs/TOOLS.md above its changelog. The text files are read from
-/// disk (bin and obj folders left out) as a whole, so a name broken over two lines is found too, and every occurrence
-/// of an old name must be excused by an entry of the allow-list below, each with its reason. History documents
-/// (PLANNING.md, docs/AUTOMATION-ROADMAP.md, the changelog of docs/TOOLS.md) and the tests are not checked. These tests
-/// only read files in the repository.
+/// The product is Helmsman. It was called Windows App Manager (windows-app-manager, WindowsAppManager) up to release
+/// 3.2.0, and win-desktop-mcp (WinDesktopMcp) on main after that. This keeps both old names from creeping back into
+/// what ships or what a user copies: the server's source, the plugin manifests, the skill, the scripts, the workflows,
+/// the Claude Code commands, the sample presets (config), Directory.Build.props, README.md, and docs/TOOLS.md above its
+/// changelog. The text files are read from disk (bin and obj folders left out) as a whole, so a name broken over two
+/// lines is found too, and every occurrence of an old name must be excused by an entry of that name's allow-list below,
+/// each with its reason. History documents (PLANNING.md, docs/AUTOMATION-ROADMAP.md, the changelog of docs/TOOLS.md)
+/// and the tests are not checked. These tests only read files in the repository.
 /// </summary>
 public partial class OldProductNameTests
 {
-    /// <summary>Any spelling of the old name: Windows App Manager, windows-app-manager, WindowsAppManager, windows_app_manager, across a line break.</summary>
+    /// <summary>Any spelling of the first name: Windows App Manager, windows-app-manager, WindowsAppManager, windows_app_manager, across a line break.</summary>
     [GeneratedRegex(@"windows[\s_-]*app[\s_-]*manager", RegexOptions.IgnoreCase)]
-    private static partial Regex OldName();
+    private static partial Regex WindowsAppManager();
+
+    /// <summary>Any spelling of the second name: win-desktop-mcp, WinDesktopMcp, win_desktop_mcp, Win Desktop MCP, across a line break.</summary>
+    [GeneratedRegex(@"win[\s_-]*desktop[\s_-]*mcp", RegexOptions.IgnoreCase)]
+    private static partial Regex WinDesktopMcp();
 
     /// <summary>The folders whose text files are checked, relative to the repository root.</summary>
     private static readonly string[] CheckedFolders =
@@ -38,34 +42,36 @@ public partial class OldProductNameTests
 
     private static readonly HashSet<string> SkippedFolders = new(StringComparer.OrdinalIgnoreCase) { "bin", "obj" };
 
+    private const string LayoutStorageOptionsFile = "src/Helmsman/Services/LayoutStorageOptions.cs";
+
     /// <summary>
-    /// Text that may keep an old name, by file (a path relative to the repository root, '/' separated; null for every
+    /// Text that may keep the first name, by file (a path relative to the repository root, '/' separated; null for every
     /// checked file) and pattern. An occurrence is excused when it lies inside a match of an entry for its file. The
     /// entries name the old forms with the words around them, so the same old id written where the new one belongs
     /// still fails.
     /// </summary>
-    private static readonly AllowedOldName[] AllowList =
+    private static readonly AllowedOldName[] WindowsAppManagerAllowList =
     [
-        // The GitHub repository keeps its name, and its URLs and the owner/repo form must keep working.
-        new(null, @"(https://github\.com/)?mortenbrudvik/WindowsAppManagerMcp",
-            "the repository: its URLs and its owner/repo form (/plugin marketplace add)"),
-
         // Migration sources: 3.x kept presets in %LOCALAPPDATA%\WindowsAppManagerMcp\layouts and installed the plugin
         // as windows-app-manager@windows-app-manager-marketplace; the server copies presets from both.
-        new(LayoutStorageOptionsFile, @"PreviousAppDataFolderName = ""WindowsAppManagerMcp""",
-            "the previous AppData folder, a migration source"),
+        new(LayoutStorageOptionsFile, @"OriginalAppDataFolderName = ""WindowsAppManagerMcp""",
+            "the 3.x AppData folder, a migration source"),
         new(LayoutStorageOptionsFile, @"PreviousPluginFolderName = ""windows-app-manager""",
-            "the previous plugin cache folder, a migration source"),
+            "the 3.x plugin cache folder, a migration source"),
         new(LayoutStorageOptionsFile, @"PreviousMarketplaceFolderName = ""windows-app-manager-marketplace""",
-            "the previous marketplace cache folder, a migration source"),
-        new(LayoutStorageOptionsFile, @"%LOCALAPPDATA%\\WindowsAppManagerMcp\\layouts",
-            "the comment on the previous AppData folder"),
+            "the 3.x marketplace cache folder, a migration source"),
+        new(LayoutStorageOptionsFile, @"<c>%LOCALAPPDATA%\\WindowsAppManagerMcp\\layouts</c>, are copied once",
+            "the comment on the earlier AppData folders"),
+        new(LayoutStorageOptionsFile, @"of release 3\.2\.0 and older \(WindowsAppManagerMcp\.exe\)",
+            "the comment on the 3.x AppData folder"),
+        new(LayoutStorageOptionsFile, @"windows-app-manager 3\.2\.0 plugin whose exe was",
+            "the comment on the AppData folder of the build published on main, which was still the 3.x plugin"),
         new(LayoutStorageOptionsFile, @"\\cache\\windows-app-manager-marketplace\\windows-app-manager\\",
-            "the comment on the previous plugin cache folder"),
+            "the comment on the 3.x plugin cache folder"),
 
         // README's "Upgrading from 3.x" must name the old ids a 3.x user has to remove or replace, and the layout
         // section names the old AppData folder presets are copied from.
-        new("README.md", @"renamed the product from Windows App Manager to win-desktop-mcp", "the upgrade notes' first line"),
+        new("README.md", @"renamed the product from Windows App Manager to Helmsman", "the upgrade notes' first line"),
         new("README.md", @"plugin uninstall windows-app-manager@windows-app-manager-marketplace`",
             "the upgrade notes: uninstall the 3.x plugin (in a session and from the shell)"),
         new("README.md", @"`/plugin marketplace remove windows-app-manager-marketplace`", "the upgrade notes: remove the 3.x marketplace"),
@@ -74,7 +80,7 @@ public partial class OldProductNameTests
         new("README.md", @"names a\s+`mcp__plugin_windows-app-manager_windows-app-manager__\.\.\.` tool",
             "the upgrade notes: the saved references to update"),
         new("README.md", @"not `using-windows-app-manager`", "the upgrade notes: the 3.x skill name"),
-        new("README.md", @"as `win-desktop-mcp` instead of `windows-app-manager`", "the upgrade notes: the 3.x serverInfo.name"),
+        new("README.md", @"as `helmsman` instead of `windows-app-manager`", "the upgrade notes: the 3.x serverInfo.name"),
         new("README.md", @"3\.x shipped `WindowsAppManagerMcp\.exe`", "the upgrade notes: the 3.x exe name"),
         new("README.md", @"%LOCALAPPDATA%\\WindowsAppManagerMcp\\(layouts|audit)",
             "the 3.x AppData folders presets are copied from and old audit files stay in"),
@@ -90,7 +96,33 @@ public partial class OldProductNameTests
             "the 3.x plugin id"),
     ];
 
-    private const string LayoutStorageOptionsFile = "src/Helmsman/Services/LayoutStorageOptions.cs";
+    /// <summary>
+    /// Text that may keep the second name, as <see cref="WindowsAppManagerAllowList"/>. The plugin was never published
+    /// as win-desktop-mcp@win-desktop-mcp-marketplace, so only the AppData folder of the build published on main is left.
+    /// </summary>
+    private static readonly AllowedOldName[] WinDesktopMcpAllowList =
+    [
+        // Migration source: the build published on main kept presets in %LOCALAPPDATA%\win-desktop-mcp\layouts.
+        new(LayoutStorageOptionsFile, @"PreviousAppDataFolderName = ""win-desktop-mcp""",
+            "the AppData folder of the build published on main, a migration source"),
+        new(LayoutStorageOptionsFile, @"<c>%LOCALAPPDATA%\\win-desktop-mcp\\layouts</c> and",
+            "the comment on the earlier AppData folders"),
+        new(LayoutStorageOptionsFile, @"plugin whose exe was win-desktop-mcp\.exe\.",
+            "the comment on the AppData folder of the build published on main"),
+
+        // The layout section names the earlier AppData folders presets are copied from.
+        new("README.md", @"or in `%LOCALAPPDATA%\\win-desktop-mcp\\layouts` or `%LOCALAPPDATA%\\WindowsAppManagerMcp\\layouts`\)",
+            "the layout presets: the AppData folder of the build published on main, which presets are copied from"),
+    ];
+
+    /// <summary>Each old name: its pattern and its allow-list.</summary>
+    private static readonly Dictionary<string, (Regex Pattern, AllowedOldName[] AllowList)> OldNames = new(StringComparer.Ordinal)
+    {
+        ["windows-app-manager"] = (WindowsAppManager(), WindowsAppManagerAllowList),
+        ["win-desktop-mcp"] = (WinDesktopMcp(), WinDesktopMcpAllowList),
+    };
+
+    public static TheoryData<string> OldNameKeys() => new(OldNames.Keys);
 
     [Fact]
     public void CheckedFiles_AreFound()
@@ -99,7 +131,7 @@ public partial class OldProductNameTests
         CheckedFiles().Keys.Should().Contain(new[]
         {
             "README.md", "Directory.Build.props", ToolsReference, ".claude-plugin/plugin.json",
-            "src/Helmsman/Infrastructure/ServerIdentity.cs", "skills/using-win-desktop-mcp/SKILL.md",
+            "src/Helmsman/Infrastructure/ServerIdentity.cs", "skills/using-helmsman/SKILL.md",
             "scripts/ReleaseCommon.ps1", ".claude/commands/update-plugin.md", "config/layouts/work-setup.json",
         });
         CheckedFiles().Keys.Should().Contain(f => f.StartsWith(".github/", StringComparison.Ordinal));
@@ -115,38 +147,56 @@ public partial class OldProductNameTests
         full[checkedPart.Length..].Should().StartWith(ToolsChangelogHeading);
     }
 
-    [Fact]
-    public void ShippedAndCopiedText_DoesNotUseTheOldProductName()
+    [Theory]
+    [InlineData("windows-app-manager", "Windows App Manager")]
+    [InlineData("windows-app-manager", "windows_app_manager-marketplace")]
+    [InlineData("windows-app-manager", "WindowsAppManagerMcp")]
+    [InlineData("win-desktop-mcp", "win-desktop-mcp")]
+    [InlineData("win-desktop-mcp", "WinDesktopMcp.Services")]
+    [InlineData("win-desktop-mcp", "win_desktop_mcp")]
+    [InlineData("win-desktop-mcp", "Win Desktop\r\nMCP")]
+    public void OldNamePatterns_FindEverySpelling(string oldName, string text)
     {
-        var unexcused = Hits().Where(hit => hit.ExcusedBy.Count == 0).Select(hit => hit.ToString());
-
-        unexcused.Should().BeEmpty(
-            "the product is called win-desktop-mcp; keep an old name only where OldProductNameTests.AllowList says why");
+        OldNames[oldName].Pattern.IsMatch(text).Should().BeTrue();
     }
 
-    [Fact]
-    public void EveryAllowListEntry_ExcusesAnOldNameHit()
+    [Theory]
+    [MemberData(nameof(OldNameKeys))]
+    public void ShippedAndCopiedText_DoesNotUseTheOldProductName(string oldName)
+    {
+        var unexcused = Hits(oldName).Where(hit => hit.ExcusedBy.Count == 0).Select(hit => hit.ToString());
+
+        unexcused.Should().BeEmpty(
+            "the product is called Helmsman; keep the old name {0} only where its allow-list in OldProductNameTests says why",
+            oldName);
+    }
+
+    [Theory]
+    [MemberData(nameof(OldNameKeys))]
+    public void EveryAllowListEntry_ExcusesAnOldNameHit(string oldName)
     {
         // An entry that excuses no hit is dead: it would hide a typo, a file that moved, or text that changed.
-        var used = Hits().SelectMany(hit => hit.ExcusedBy).ToHashSet();
-        var unused = AllowList.Where(entry => !used.Contains(entry)).Select(entry => $"{entry.File ?? "*"}: {entry.Pattern} ({entry.Reason})");
+        var used = Hits(oldName).SelectMany(hit => hit.ExcusedBy).ToHashSet();
+        var unused = OldNames[oldName].AllowList.Where(entry => !used.Contains(entry))
+            .Select(entry => $"{entry.File ?? "*"}: {entry.Pattern} ({entry.Reason})");
 
         unused.Should().BeEmpty();
     }
 
-    /// <summary>Every old-name occurrence in the checked text, with the allow-list entries that excuse it.</summary>
-    private static List<OldNameHit> Hits()
+    /// <summary>Every occurrence of an old name in the checked text, with the entries of its allow-list that excuse it.</summary>
+    private static List<OldNameHit> Hits(string oldName)
     {
+        var (pattern, allowList) = OldNames[oldName];
         var hits = new List<OldNameHit>();
         foreach (var (file, text) in CheckedFiles())
         {
-            var allowed = AllowList
+            var allowed = allowList
                 .Where(entry => entry.File == null || entry.File == file)
                 .SelectMany(entry => Regex.Matches(text, entry.Pattern, RegexOptions.IgnoreCase)
                     .Select(match => (Entry: entry, Start: match.Index, End: match.Index + match.Length)))
                 .ToList();
 
-            foreach (var hit in OldName().Matches(text).AsEnumerable())
+            foreach (var hit in pattern.Matches(text).AsEnumerable())
             {
                 var excusedBy = allowed
                     .Where(range => hit.Index >= range.Start && hit.Index + hit.Length <= range.End)
