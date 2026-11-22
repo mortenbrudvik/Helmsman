@@ -150,8 +150,19 @@ public static class ShownInput
     public static string HostAllowlistRefusal(string what, string window) =>
         $"The input contains {what}, which never goes to {window}, the agent's own host: the question to the user can only " +
         "promise what text, Enter, Tab, Backspace, the arrows, Home, End, Page Up and Page Down (also with Shift or Ctrl), " +
-        "Delete, Esc and Ctrl with A, C, D, J, M, U or Z do there. A key it can only name (a menu key, a function key, an Alt, " +
-        "Win or other chord, a modifier held around mouse input) could do anything, such as paste through a menu or open a link.";
+        "Delete, Esc and Ctrl with A, C, D, J, M, U or Z do there; of the mouse, only a primary click, a pointer move or a wheel " +
+        "scroll without modifier keys can be sent there. A key it can only name (a menu key, a function key, an Alt, Win or " +
+        "other chord, a modifier held around mouse input) or another mouse button (x1, x2) could do anything, such as paste " +
+        "through a menu, open a link or go back a page.";
+
+    /// <summary>
+    /// The mouse button a click to the agent's host may use: the primary one, the only one whose click the question can state
+    /// (a secondary or middle click pastes in a terminal, and any other, such as x1 or x2, does whatever the host makes of
+    /// it). Null for the primary button; otherwise the click, described for <see cref="HostAllowlistRefusal"/>. Checked before
+    /// the question; Services.HostInputRules.MouseRefusal checks the events again right before they are sent.
+    /// </summary>
+    public static string? HostButtonRefusal(MouseButton button) =>
+        button == MouseButton.Primary ? null : $"a click of the {ToolEnum<MouseButton>.Name(button)} mouse button";
 
     /// <summary>⟨U+XXXX⟩.</summary>
     public static string CodePoint(int codePoint)

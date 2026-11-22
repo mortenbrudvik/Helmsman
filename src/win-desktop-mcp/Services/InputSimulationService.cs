@@ -214,9 +214,9 @@ public partial class InputSimulationService : IInputSimulationService
                 // An injected move, as a click's (roadmap M4.2): applications that watch raw input or a low-level hook see it,
                 // which they do not for SetCursorPos
                 var moveBatch = NewBatch().MoveTo(x, y).Build();
-                if (HostMouseRefusal(moveBatch.Events, approved.Target) is { } hostRefused)
+                if (HostMouseRefusal(moveBatch, approved.Target) is { } hostRefused)
                 {
-                    return held.Apply(Finish(new MouseMoveResult(false, x, y, hostRefused, InputErrorCode.InvalidArguments), approved));
+                    return held.Apply(Finish(new MouseMoveResult(false, x, y, hostRefused.Error, hostRefused.Code), approved));
                 }
 
                 var sent = Send(moveBatch, approved);
@@ -434,9 +434,9 @@ public partial class InputSimulationService : IInputSimulationService
                 // The modifiers take the scan codes of the target's layout, as mouse_click's do; a plain scroll reads no layout
                 var batch = NewBatch(modifiers.Count > 0 ? LayoutFor(target) : null)
                     .ModifiersDown(modifiers).MoveTo(x, y).Wheel(deltaY, deltaX).ModifiersUp(modifiers).Build();
-                if (HostMouseRefusal(batch.Events, approved.Target) is { } hostRefused)
+                if (HostMouseRefusal(batch, approved.Target) is { } hostRefused)
                 {
-                    return held.Apply(Finish(new ScrollResult(false, x, y, deltaY, deltaX, hostRefused, InputErrorCode.InvalidArguments), approved));
+                    return held.Apply(Finish(new ScrollResult(false, x, y, deltaY, deltaX, hostRefused.Error, hostRefused.Code), approved));
                 }
 
                 var sent = Send(batch, approved);
@@ -961,26 +961,40 @@ public partial class InputSimulationService : IInputSimulationService
             : null;
 
     /// <summary>
-    /// Why mouse input must not go to a host window the user confirmed for this call, or null: a modifier key goes down around
-    /// it, or the server holds one down from earlier in the call, which would make it a chord the question could not explain
-    /// (Ctrl+click opens the link under the pointer in a terminal). Read inside the input gate right before the batch.
+    /// Why mouse input must not go to a host window the user confirmed for this call, or null. Read inside the input gate
+    /// right before the batch, whatever the tool checked before its question: a press of the right or middle button, which
+    /// pastes in a terminal (PasteNotAllowed); a modifier key going down around it, or one the server holds down from earlier
+    /// in the call, which would make it a chord the question could not explain (Ctrl+click opens the link under the pointer in
+    /// a terminal; InvalidArguments); or any other mouse event than a primary click, a pointer move or a wheel scroll
+    /// (<see cref="HostInputRules.MouseRefusal"/>: an x1 or x2 button; InvalidArguments).
     /// </summary>
-    private string? HostMouseRefusal(IReadOnlyList<InputEvent> batch, InputTarget target)
+    private (InputErrorCode Code, string Error)? HostMouseRefusal(MouseBatch batch, InputTarget target)
     {
         if (target.ConfirmedHost == null)
         {
             return null;
         }
 
-        var modifiers = batch.Where(e => e.Kind == InputEventKind.VirtualKey && SendKeysParser.ModifierOf(e.Code) != KeyModifiers.None)
+        // The buttons as the user knows them: with swapped buttons a primary click goes out as the right button's events
+        if (HostPasteRefusal(batch.AsUnswapped, target) is { } paste)
+        {
+            return (InputErrorCode.PasteNotAllowed, paste);
+        }
+
+        var modifiers = batch.Events.Where(e => e.Kind == InputEventKind.VirtualKey && SendKeysParser.ModifierOf(e.Code) != KeyModifiers.None)
             .Select(e => e.Code)
             .Concat(_session.ServerHeld.Where(h => h.IsModifier).Select(h => h.Code))
             .Distinct()
             .ToList();
-        return modifiers.Count == 0
-            ? null
-            : ShownInput.HostAllowlistRefusal($"the modifier key {string.Join(", ", modifiers.Select(KeyNames.Of))} held around mouse input",
-                "this window") + " Nothing was sent.";
+        if (modifiers.Count > 0)
+        {
+            return (InputErrorCode.InvalidArguments, ShownInput.HostAllowlistRefusal(
+                $"the modifier key {string.Join(", ", modifiers.Select(KeyNames.Of))} held around mouse input", "this window") + " Nothing was sent.");
+        }
+
+        return HostInputRules.MouseRefusal(batch.AsUnswapped) is { } refused
+            ? (InputErrorCode.InvalidArguments, HostInputRules.Message(refused, "this window") + " Nothing was sent.")
+            : null;
     }
 
     /// <summary>The refusal of input that pastes, or of a drag, to a host window the user confirmed (PasteNotAllowed).</summary>
@@ -1572,10 +1586,11 @@ public partial class InputSimulationService : IInputSimulationService
                 var batch = NewBatch(modifiers.Count > 0 ? LayoutFor(target) : null)
                     .ModifiersDown(modifiers).MoveTo(x, y).Click(button, clicks).ModifiersUp(modifiers).Build();
 
-                // To the agent's host: no modifier around the click (Ctrl+click opens the link under the pointer in a terminal)
-                if (HostMouseRefusal(batch.Events, approved.Target) is { } hostRefused)
+                // To the agent's host: only a primary click, and no modifier around it (Ctrl+click opens the link under the
+                // pointer in a terminal)
+                if (HostMouseRefusal(batch, approved.Target) is { } hostRefused)
                 {
-                    return held.Apply(Finish(new ClickResult(false, x, y, clickType, NothingClicked + hostRefused, InputErrorCode.InvalidArguments), approved));
+                    return held.Apply(Finish(new ClickResult(false, x, y, clickType, NothingClicked + hostRefused.Error, hostRefused.Code), approved));
                 }
 
                 // A right or middle click in a terminal pastes

@@ -303,4 +303,22 @@ public sealed class HostTargetConfirmationUiaContractTests : IDisposable
         Passed("element_action", out var called);
         called.Should().BeFalse();
     }
+
+    [Fact]
+    public async Task ElementAction_RightClick_OnTheHost_IsPasteNotAllowed_WithoutAQuestion()
+    {
+        // right_click is always a secondary-button click, which pastes in a terminal: the send-time check would refuse it
+        // after the user's yes, so the user is not asked
+        await using var server = await StartAsync(confirm: true);
+
+        var result = await server.CallToolAsync("element_action", new Dictionary<string, object?>
+        {
+            ["action"] = "right_click", ["ref"] = AllowButton, ["allowHostTarget"] = true
+        });
+
+        Payload(result).GetProperty("errorCode").GetString().Should().Be(nameof(InputErrorCode.PasteNotAllowed));
+        Questions().Should().BeEmpty();
+        Passed("element_action", out var called);
+        called.Should().BeFalse();
+    }
 }

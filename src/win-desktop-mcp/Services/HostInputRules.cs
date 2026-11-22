@@ -22,8 +22,9 @@ namespace WinDesktopMcp.Services;
 /// Everything else is refused: a modifier pressed alone (Alt opens the menu bar), Alt or Win with anything, Ctrl with Alt
 /// (on a layout with AltGr an explicit Ctrl+Alt chord types a character), any other Ctrl chord, the Apps key, the function
 /// keys, the numeric keypad (whose keys depend on Num Lock), and every key without a name or that types nothing the question
-/// can show. Mouse events are left to the mouse rules: a right or middle click and a drag are refused as pastes, and a modifier
-/// held around mouse input as a chord (InputSimulationService).
+/// can show. Mouse events are left to <see cref="MouseRefusal"/>: a primary click, a pointer move and a wheel scroll go there,
+/// and nothing else (InputSimulationService refuses a right or middle click and a drag as pastes first, and a modifier held
+/// around mouse input as a chord).
 /// </summary>
 public static class HostInputRules
 {
@@ -37,6 +38,11 @@ public static class HostInputRules
         internal const ushort VK_BACK = 0x08, VK_TAB = 0x09, VK_RETURN = 0x0D, VK_ESCAPE = 0x1B, VK_PRIOR = 0x21, VK_NEXT = 0x22,
             VK_END = 0x23, VK_HOME = 0x24, VK_LEFT = 0x25, VK_UP = 0x26, VK_RIGHT = 0x27, VK_DOWN = 0x28, VK_DELETE = 0x2E,
             VK_NUMPAD0 = 0x60, VK_DIVIDE = 0x6F, VK_LCONTROL = 0xA2, VK_RMENU = 0xA5;
+        internal const uint MOUSEEVENTF_MOVE = 0x0001, MOUSEEVENTF_LEFTDOWN = 0x0002, MOUSEEVENTF_LEFTUP = 0x0004,
+            MOUSEEVENTF_RIGHTDOWN = 0x0008, MOUSEEVENTF_RIGHTUP = 0x0010, MOUSEEVENTF_MIDDLEDOWN = 0x0020, MOUSEEVENTF_MIDDLEUP = 0x0040,
+            MOUSEEVENTF_XDOWN = 0x0080, MOUSEEVENTF_XUP = 0x0100, MOUSEEVENTF_WHEEL = 0x0800, MOUSEEVENTF_HWHEEL = 0x1000,
+            MOUSEEVENTF_VIRTUALDESK = 0x4000, MOUSEEVENTF_ABSOLUTE = 0x8000;
+        internal const uint XBUTTON1 = 0x0001, XBUTTON2 = 0x0002;
     }
 
     internal const uint KeyUp = Win32.KEYEVENTF_KEYUP;
@@ -156,6 +162,57 @@ public static class HostInputRules
         }
 
         return highSurrogate is { } last ? $"the character {ShownInput.CodePoint(last)}" : null;
+    }
+
+    /// <summary>
+    /// The first mouse event in <paramref name="asUnswapped"/> that may not go to the agent's host, described for the refusal;
+    /// null when every one may. Only these go there: a pointer move (MOUSEEVENTF_MOVE, absolute or not), a press or release of
+    /// the left button, and one vertical or horizontal wheel event. Anything else is refused, whatever it is: the right,
+    /// middle or an X button (x1, x2) going down or up, and an event that does two things at once. The events must name the
+    /// buttons as the user knows them (MouseBatch.AsUnswapped: the primary one as the left), not as SendInput gets them with
+    /// swapped buttons. Keyboard events are left to <see cref="Refusal"/>. The tools check the button before the question
+    /// (<see cref="ShownInput.HostButtonRefusal"/>); this is the check right before the batch.
+    /// </summary>
+    public static string? MouseRefusal(IReadOnlyList<InputEvent> asUnswapped)
+    {
+        ArgumentNullException.ThrowIfNull(asUnswapped);
+        const uint Move = Win32.MOUSEEVENTF_MOVE | Win32.MOUSEEVENTF_ABSOLUTE | Win32.MOUSEEVENTF_VIRTUALDESK;
+        foreach (var e in asUnswapped)
+        {
+            if (e.Kind != InputEventKind.Mouse)
+            {
+                continue;
+            }
+
+            var allowed = e.Flags switch
+            {
+                Win32.MOUSEEVENTF_LEFTDOWN or Win32.MOUSEEVENTF_LEFTUP => e.MouseData == 0,
+                Win32.MOUSEEVENTF_WHEEL or Win32.MOUSEEVENTF_HWHEEL => true,
+                var flags => (flags & Win32.MOUSEEVENTF_MOVE) != 0 && (flags & ~Move) == 0
+            };
+            if (!allowed)
+            {
+                return MouseEventName(e);
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>A mouse event as the refusal names it: its button by name ("the x1 mouse button going down"), else its flags.</summary>
+    private static string MouseEventName(InputEvent e)
+    {
+        var x = e.MouseData switch { Win32.XBUTTON1 => "the x1", Win32.XBUTTON2 => "the x2", _ => "an X" };
+        return e.Flags switch
+        {
+            Win32.MOUSEEVENTF_RIGHTDOWN => "the secondary mouse button going down",
+            Win32.MOUSEEVENTF_RIGHTUP => "the secondary mouse button going up",
+            Win32.MOUSEEVENTF_MIDDLEDOWN => "the middle mouse button going down",
+            Win32.MOUSEEVENTF_MIDDLEUP => "the middle mouse button going up",
+            Win32.MOUSEEVENTF_XDOWN => $"{x} mouse button going down",
+            Win32.MOUSEEVENTF_XUP => $"{x} mouse button going up",
+            var flags => $"a mouse event with the flags 0x{flags:X4}"
+        };
     }
 
     private static bool Allowed(ushort code, KeyModifiers held, bool altGr, KeyboardLayout layout)

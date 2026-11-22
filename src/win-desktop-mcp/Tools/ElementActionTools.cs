@@ -374,7 +374,9 @@ public partial class ElementActionTools
         var input = new HostInput("element_action",
             $"{ToolEnum<ElementActionKind>.Name(action)}{(element == null ? string.Empty : $" on {element}")}",
             value == null ? null : () => InputPreview.OfText(value, $"{how} these {value.Length} characters"),
-            Pastes: mode == ElementValueMode.Paste && action is ElementActionKind.SetValue or ElementActionKind.AppendText);
+            // right_click is always a secondary-button click, which pastes in a terminal
+            Pastes: action == ElementActionKind.RightClick ||
+                    (mode == ElementValueMode.Paste && action is ElementActionKind.SetValue or ElementActionKind.AppendText));
         var confirmed = await _hostConfirmation.ConfirmAsync(server, [InputTarget.Window(window, allowHostTarget: true)], input, cancellationToken)
             .ConfigureAwait(false);
         return confirmed.For(window);

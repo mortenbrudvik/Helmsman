@@ -168,7 +168,8 @@ public class InputSimulationTools
             new HostInput("mouse_click",
                 $"{ClickName(button, clickCount)} at ({point.X}, {point.Y}) on the window{With(modifiers)}; a click presses whatever is at that " +
                 "point, which can be a button or menu item such as Allow or Paste",
-                Pastes: button is MouseButton.Secondary or MouseButton.Middle, NotAllowed: HeldAround(modifiers, "the click")), cancellationToken).ConfigureAwait(false);
+                Pastes: button is MouseButton.Secondary or MouseButton.Middle,
+                NotAllowed: HeldAround(modifiers, "the click") ?? ShownInput.HostButtonRefusal(button)), cancellationToken).ConfigureAwait(false);
         var target = confirmed.Apply(point.Target);
         return await ObserveAsync(Echo(_inputService.MouseClick(point.X, point.Y, button, clickCount, modifiers ?? [], target,
             releaseHeldModifiers, cancellationToken), point.Requested), target, observe, cancellationToken).ConfigureAwait(false);

@@ -484,6 +484,82 @@ public sealed class HostTargetConfirmationContractTests : IDisposable
         AssertRefused(result, nameof(InputErrorCode.PasteNotAllowed), questions: 0);
     }
 
+    [Theory]
+    [InlineData("x1", 1)]
+    [InlineData("x2", 1)]
+    [InlineData("x1", 2)]
+    public async Task ClicksOfAnExtraButtonOnTheHost_AreInvalidArguments_WithoutAQuestion(string button, int clicks)
+    {
+        // x1 and x2 (Back, Forward) do whatever the host makes of them, which the question cannot state: only the primary
+        // button clicks there
+        At(Terminal);
+        await using var server = await StartAsync(Answer.Yes);
+        var arguments = Call("mouse_click", Terminal);
+        arguments["button"] = button;
+        arguments["clickCount"] = clicks;
+
+        var result = await server.CallToolAsync("mouse_click", arguments);
+
+        AssertRefused(result, ToolErrorReporting.InvalidArgumentsErrorCode, questions: 0);
+        Payload(result).GetProperty("error").GetString().Should().Contain(button).And.Contain("primary click");
+    }
+
+    [Theory]
+    [InlineData("x1")]
+    [InlineData("x2")]
+    public async Task ClicksOfAnExtraButtonOnAnOrdinaryWindow_AsksNothing_AndSends(string button)
+    {
+        At(Notepad);
+        await using var server = await StartAsync(Answer.Decline);
+        var arguments = Call("mouse_click", Notepad);
+        arguments["button"] = button;
+
+        var result = await server.CallToolAsync("mouse_click", arguments);
+
+        AssertSent("mouse_click", result);
+        Questions().Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData(1, false)]
+    [InlineData(2, false)]
+    [InlineData(3, false)]
+    [InlineData(1, true)] // swapped buttons: the primary click goes out as the right button's events
+    public async Task PrimaryClicksOnTheHost_AreAsked_AndSent(int clicks, bool buttonsSwapped)
+    {
+        At(Terminal);
+        _systemInfo.Setup(s => s.AreMouseButtonsSwapped()).Returns(buttonsSwapped);
+        await using var server = await StartAsync(Answer.Yes);
+        var arguments = Call("mouse_click", Terminal);
+        arguments["clickCount"] = clicks;
+
+        var result = await server.CallToolAsync("mouse_click", arguments);
+
+        AssertSent("mouse_click", result);
+        Questions().Should().ContainSingle();
+        var press = buttonsSwapped ? 0x0008u : 0x0002u; // MOUSEEVENTF_RIGHTDOWN : MOUSEEVENTF_LEFTDOWN
+        _input.Invocations.Where(i => i.Method.Name == nameof(INativeInputWrapper.SendInput))
+            .SelectMany(i => (IReadOnlyList<InputEvent>)i.Arguments[0])
+            .Count(e => e.Kind == InputEventKind.Mouse && e.Flags == press).Should().Be(clicks);
+    }
+
+    [Theory]
+    [InlineData(2, 0, "down")]
+    [InlineData(0, -3, "left")] // the horizontal wheel: the question says which way
+    public async Task WheelScrollsOnTheHost_AreAsked_AndSent(int deltaY, int deltaX, string shown)
+    {
+        At(Terminal);
+        await using var server = await StartAsync(Answer.Yes);
+        var arguments = Call("scroll", Terminal);
+        arguments["deltaY"] = deltaY;
+        arguments["deltaX"] = deltaX;
+
+        var result = await server.CallToolAsync("scroll", arguments);
+
+        AssertSent("scroll", result);
+        Questions().Should().ContainSingle().Which.Should().Contain(shown);
+    }
+
     [Fact]
     public async Task TypeText_WithMethodPaste_ToTheHost_IsPasteNotAllowed_WithoutAQuestion()
     {
