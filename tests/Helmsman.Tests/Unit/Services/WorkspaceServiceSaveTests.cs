@@ -105,6 +105,29 @@ public class WorkspaceServiceSaveTests : IDisposable
         return File.ReadAllText(PresetFile());
     }
 
+    [Theory]
+    [InlineData(true, " ")]
+    [InlineData(true, ".exe")]
+    [InlineData(true, "\"\"")]
+    [InlineData(false, " ")]
+    [InlineData(false, ".exe")]
+    [InlineData(false, "\" .EXE \"")]
+    public async Task AProcessFilterEntryThatIsBlank_IsInvalidArguments_AndNothingIsSaved(bool exclude, string entry)
+    {
+        // Such an entry names no process: an exclude filter would exclude nothing and save every window, an include filter
+        // include nothing (4.0.0 read it as part of every name: it excluded, or included, every window)
+        string[] filter = ["notepad", entry];
+
+        var result = exclude
+            ? await CreateSut().SaveAsync(Name, null, null, filter, includeMinimized: false)
+            : await CreateSut().SaveAsync(Name, null, filter, null, includeMinimized: false);
+
+        result.Success.Should().BeFalse();
+        result.ErrorCode.Should().Be("InvalidArguments");
+        result.Error.Should().Contain(exclude ? "excludeProcesses" : "includeProcesses").And.Contain($"'{entry}'").And.Contain("blank");
+        (Directory.Exists(_layoutsPath) ? Directory.GetFiles(_layoutsPath, "*.json") : []).Should().BeEmpty("nothing was written");
+    }
+
     [Fact]
     public async Task ASaveWhoseWriteFails_ReportsIt_AndLeavesTheWorkspaceSavedBefore_AsItWas()
     {

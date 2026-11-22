@@ -388,6 +388,50 @@ public class LayoutServiceTests : IDisposable
     }
 
     [Theory]
+    [InlineData(true, " ")]
+    [InlineData(true, ".exe")]
+    [InlineData(true, "\"\"")]
+    [InlineData(false, "  ")]
+    [InlineData(false, ".EXE")]
+    [InlineData(false, "\" .exe \"")]
+    public async Task CaptureCurrentLayoutAsync_AProcessFilterEntryThatIsBlank_IsInvalidArguments_AndKeepsExistingPreset(bool exclude, string entry)
+    {
+        // Such an entry names no process, so an exclude filter would save every window (4.0.0 read it as part of every name,
+        // so it excluded every window and saved nothing)
+        _mockWindowService.Setup(w => w.GetAllWindows(false)).Returns([TestDataFactory.CreateWindowInfo(1, "Notepad", "notepad")]);
+        var sut = CreateSut();
+        await sut.SavePresetAsync(TestDataFactory.CreateLayoutPreset("keep-me", "Good layout"));
+        string[] filter = ["chrome", entry];
+
+        var result = exclude
+            ? await sut.CaptureCurrentLayoutAsync("keep-me", excludeProcesses: filter)
+            : await sut.CaptureCurrentLayoutAsync("keep-me", includeProcesses: filter);
+
+        result.Success.Should().BeFalse();
+        result.ErrorCode.Should().Be("InvalidArguments");
+        result.ErrorMessage.Should().Contain(exclude ? "excludeProcesses" : "includeProcesses").And.Contain($"'{entry}'")
+            .And.Contain("blank").And.Contain("Nothing was saved");
+        sut.GetPreset("keep-me")!.Description.Should().Be("Good layout");
+    }
+
+    [Theory]
+    [InlineData(null, "chrome,.exe")]
+    [InlineData(null, "chrome, \"\" ")]
+    [InlineData(".exe", null)]
+    public async Task SaveLayoutTool_AProcessFilterEntryThatIsBlank_IsInvalidArguments(string? includeProcesses, string? excludeProcesses)
+    {
+        // The tool splits the comma-separated list and drops empty entries; '.exe' and quotes are left for the capture to refuse
+        _mockWindowService.Setup(w => w.GetAllWindows(false)).Returns([TestDataFactory.CreateWindowInfo(1, "Notepad", "notepad")]);
+        var tools = new Helmsman.Tools.LayoutPresetTools(CreateSut(), Permissive.Session);
+
+        var result = await tools.SaveLayout("blank-filter", includeProcesses: includeProcesses, excludeProcesses: excludeProcesses);
+
+        result.Success.Should().BeFalse();
+        result.ErrorCode.Should().Be("InvalidArguments");
+        result.Error.Should().Contain("blank");
+    }
+
+    [Theory]
     [InlineData("\"notepad.exe\"")]
     [InlineData(" NOTEPAD.EXE ")]
     public async Task CaptureCurrentLayoutAsync_ProcessFilters_ReadTheNameAsTheWindowSelectorsDo(string name)

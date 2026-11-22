@@ -278,11 +278,28 @@ public class LayoutCapturer : ILayoutCapturer
             ? $"description is longer than {LayoutPresetSchema.MaxDescriptionLength} characters. Nothing was saved."
             : null;
 
-    /// <summary>Why a capture filter's entry cannot be used: it is a path (<see cref="ProcessNames.PathRefusal"/>); null when none is.</summary>
-    private static string? ProcessFilterError(string parameter, string[]? names) =>
-        names?.Select(name => ProcessNames.PathRefusal(parameter, name)).FirstOrDefault(error => error != null) is { } error
-            ? $"{error} Nothing was saved."
-            : null;
+    /// <summary>
+    /// Why a capture filter's entry cannot be used, or null when every entry can: it is a path
+    /// (<see cref="ProcessNames.PathRefusal"/>), or it is blank once read (spaces, quotes, '.exe'), which would match no
+    /// window, so an exclude filter would exclude nothing and an include filter include nothing (in 4.0.0 such an entry was
+    /// part of every name and matched every window).
+    /// </summary>
+    private static string? ProcessFilterError(string parameter, string[]? names)
+    {
+        foreach (var name in names ?? [])
+        {
+            if (ProcessNames.PathRefusal(parameter, name) is { } path)
+                return $"{path} Nothing was saved.";
+
+            if (name == null || ProcessNames.Normalize(name).Length == 0)
+            {
+                return $"{parameter} has the entry '{name}', which is blank once spaces, quotes and '.exe' are taken off, so it " +
+                       "names no process; give (part of) a process name, or leave the entry out. Nothing was saved.";
+            }
+        }
+
+        return null;
+    }
 
     #region Capture helpers
 
