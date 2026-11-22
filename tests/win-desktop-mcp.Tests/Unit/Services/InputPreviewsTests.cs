@@ -131,6 +131,7 @@ public class InputPreviewsTests
         Render([InputEvent.Unicode('a', 0), InputEvent.Unicode('\uD800', 0)]).Shown.Should().Be("a⟨U+D800⟩");
     }
 
+    [Fact]
     public void ARepeatCount_IsInsideTheKeysMarker()
     {
         Render(SendKeysParser.Parse("{ENTER}{ENTER}2")).Shown.Should().Be("⟨ENTER ×2⟩2");
