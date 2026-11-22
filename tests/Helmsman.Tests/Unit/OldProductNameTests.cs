@@ -10,7 +10,10 @@ namespace Helmsman.Tests.Unit;
 /// changelog. The text files are read from disk (bin and obj folders left out) as a whole, so a name broken over two
 /// lines is found too, and every occurrence of an old name must be excused by an entry of that name's allow-list below,
 /// each with its reason. History documents (PLANNING.md, docs/AUTOMATION-ROADMAP.md, the changelog of docs/TOOLS.md)
-/// and the tests are not checked. These tests only read files in the repository.
+/// and the tests are not checked. The same holds for the names that came with the first one and went in release 4.0.0:
+/// the settings' <c>WAM_</c> prefix (now <c>HELMSMAN_</c>; the server still reads an old name when the new one is not set,
+/// SettingNames) and the resources' <c>wam://</c> scheme (now <c>helmsman://</c>). Those two are also kept out of
+/// TESTING.md and the Error Codes section of docs/TOOLS.md. These tests only read files in the repository.
 /// </summary>
 public partial class OldProductNameTests
 {
@@ -21,6 +24,14 @@ public partial class OldProductNameTests
     /// <summary>Any spelling of the second name: win-desktop-mcp, WinDesktopMcp, win_desktop_mcp, Win Desktop MCP, across a line break.</summary>
     [GeneratedRegex(@"win[\s_-]*desktop[\s_-]*mcp", RegexOptions.IgnoreCase)]
     private static partial Regex WinDesktopMcp();
+
+    /// <summary>A setting's name before 4.0.0: WAM_ and an upper-case letter (WAM_TOOLSETS), not the WamFixtureApp test names.</summary>
+    [GeneratedRegex(@"WAM_[A-Z]")]
+    private static partial Regex OldSettingName();
+
+    /// <summary>The resources' scheme before 4.0.0.</summary>
+    [GeneratedRegex(@"wam://", RegexOptions.IgnoreCase)]
+    private static partial Regex OldResourceScheme();
 
     /// <summary>The folders whose text files are checked, relative to the repository root.</summary>
     private static readonly string[] CheckedFolders =
@@ -33,6 +44,15 @@ public partial class OldProductNameTests
     private const string ToolsReference = "docs/TOOLS.md";
 
     private const string ToolsChangelogHeading = "## Changes for existing clients";
+
+    /// <summary>The section of docs/TOOLS.md after its changelog that is current text; checked for the 4.0.0 names only.</summary>
+    private const string ToolsErrorCodesHeading = "## Error Codes";
+
+    /// <summary>The key of the Error Codes section of docs/TOOLS.md among the checked texts.</summary>
+    private const string ToolsErrorCodes = "docs/TOOLS.md#error-codes";
+
+    /// <summary>The test guide, checked whole for the 4.0.0 names only (it still tells of the product's earlier names).</summary>
+    private const string TestingGuide = "TESTING.md";
 
     private static readonly HashSet<string> TextExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -115,12 +135,53 @@ public partial class OldProductNameTests
             "the layout presets: the AppData folder of the build published on main, which presets are copied from"),
     ];
 
-    /// <summary>Each old name: its pattern and its allow-list.</summary>
-    private static readonly Dictionary<string, (Regex Pattern, AllowedOldName[] AllowList)> OldNames = new(StringComparer.Ordinal)
-    {
-        ["windows-app-manager"] = (WindowsAppManager(), WindowsAppManagerAllowList),
-        ["win-desktop-mcp"] = (WinDesktopMcp(), WinDesktopMcpAllowList),
-    };
+    private const string ReadmeUpgradeNotes = "the README's upgrade notes, which task the release notes of 4.0.0 own: still true, since the " +
+                                              "server reads the old name when the new one is not set";
+
+    /// <summary>
+    /// Text that may keep a setting's name from before 4.0.0, as <see cref="WindowsAppManagerAllowList"/>. The server's source
+    /// needs none: SettingNames builds each old name from its prefix.
+    /// </summary>
+    private static readonly AllowedOldName[] OldSettingNameAllowList =
+    [
+        // What a 3.x user reads: the rule, and the upgrade notes
+        new("README.md", @"`WAM_` and the same suffix \(such as `WAM_DENY_PROCESSES`\)",
+            "the configuration section's paragraph on the names from before 4.0.0"),
+        new("README.md", @"with `WAM_LAYOUTS_PATH` set, that folder is used", ReadmeUpgradeNotes),
+        new("README.md", @"\(`WAM_AUDIT_PATH` still\s+overrides it\)", ReadmeUpgradeNotes),
+
+        // Clearing a variable must clear its old name too, which would be read in its place
+        new("scripts/Test-ToolsSnapshot.ps1", @"'WAM_EXCLUDE_TOOLS', 'WAM_READ_ONLY'",
+            "the exe that lists its tools must serve every tool, whatever the caller's settings under either name"),
+        new(".github/workflows/test.yml", @"'WAM_ALLOW_DESKTOP_TESTS', 'WAM_ALLOW_DESKTOP_NOINPUT_TESTS'",
+            "the check that desktop tests are skipped unsets the gate's opt-ins under both names"),
+        new(TestingGuide, @"`WAM_ALLOW_DESKTOP_TESTS` or `WAM_ALLOW_DESKTOP_NOINPUT_TESTS` in its place",
+            "the desktop test gate still reads its opt-ins' names from before 4.0.0"),
+        new(TestingGuide, @"`WAM_UIA_ENGINE`, its name before 4\.0\.0, unset too",
+            "the release gate's default-engine run unsets the engine under both names"),
+        new(TestingGuide, @"-u WAM_UIA_ENGINE HELMSMAN_ALLOW_DESKTOP_NOINPUT_TESTS=1",
+            "the release gate's default-engine run unsets the engine under both names (Git Bash)"),
+        new(TestingGuide, @"WAM_UIA_ENGINE, its name before 4\.0\.0, is read when the new one is not set",
+            "the release gate's default-engine run unsets the engine under both names (PowerShell comment)"),
+        new(TestingGuide, @"Env:WAM_UIA_ENGINE -ErrorAction SilentlyContinue",
+            "the release gate's default-engine run unsets the engine under both names (PowerShell)"),
+    ];
+
+    /// <summary>Text that may keep the resources' scheme from before 4.0.0.</summary>
+    private static readonly AllowedOldName[] OldResourceSchemeAllowList =
+    [
+        new("README.md", @"and `wam://` URIs are no longer served", "the README's upgrade notes, for a 3.x user's saved resource URIs"),
+    ];
+
+    /// <summary>Each old name: its pattern, its allow-list, and whether TESTING.md and the Error Codes of docs/TOOLS.md are checked too.</summary>
+    private static readonly Dictionary<string, (Regex Pattern, AllowedOldName[] AllowList, bool AlsoCurrentGuides)> OldNames =
+        new(StringComparer.Ordinal)
+        {
+            ["windows-app-manager"] = (WindowsAppManager(), WindowsAppManagerAllowList, false),
+            ["win-desktop-mcp"] = (WinDesktopMcp(), WinDesktopMcpAllowList, false),
+            ["WAM_"] = (OldSettingName(), OldSettingNameAllowList, true),
+            ["wam://"] = (OldResourceScheme(), OldResourceSchemeAllowList, true),
+        };
 
     public static TheoryData<string> OldNameKeys() => new(OldNames.Keys);
 
@@ -135,6 +196,27 @@ public partial class OldProductNameTests
             "scripts/ReleaseCommon.ps1", ".claude/commands/update-plugin.md", "config/layouts/work-setup.json",
         });
         CheckedFiles().Keys.Should().Contain(f => f.StartsWith(".github/", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void TheCurrentGuides_AreFound_ForTheNamesOf4_0_0()
+    {
+        var guides = CurrentGuides();
+
+        guides.Keys.Should().BeEquivalentTo(TestingGuide, ToolsErrorCodes);
+        guides[ToolsErrorCodes].Should().StartWith(ToolsErrorCodesHeading).And.Contain("TargetDeniedByPolicy");
+        guides[TestingGuide].Should().Contain("[DesktopNoInputFact]");
+    }
+
+    [Theory]
+    [InlineData("WamFixtureApp")]
+    [InlineData("WAM Fixture Main")]
+    [InlineData(@"Local\WamTests.Gate")]
+    [InlineData("WAM_ and the same suffix")]
+    [InlineData("HELMSMAN_TOOLSETS")]
+    public void TheOldSettingPattern_LeavesOtherNamesAlone(string text)
+    {
+        OldNames["WAM_"].Pattern.IsMatch(text).Should().BeFalse();
     }
 
     [Fact]
@@ -155,6 +237,10 @@ public partial class OldProductNameTests
     [InlineData("win-desktop-mcp", "WinDesktopMcp.Services")]
     [InlineData("win-desktop-mcp", "win_desktop_mcp")]
     [InlineData("win-desktop-mcp", "Win Desktop\r\nMCP")]
+    [InlineData("WAM_", "WAM_TOOLSETS")]
+    [InlineData("WAM_", "$env:WAM_ALLOW_DESKTOP_TESTS")]
+    [InlineData("wam://", "wam://monitors")]
+    [InlineData("wam://", "WAM://layouts/{name}")]
     public void OldNamePatterns_FindEverySpelling(string oldName, string text)
     {
         OldNames[oldName].Pattern.IsMatch(text).Should().BeTrue();
@@ -186,9 +272,10 @@ public partial class OldProductNameTests
     /// <summary>Every occurrence of an old name in the checked text, with the entries of its allow-list that excuse it.</summary>
     private static List<OldNameHit> Hits(string oldName)
     {
-        var (pattern, allowList) = OldNames[oldName];
+        var (pattern, allowList, alsoCurrentGuides) = OldNames[oldName];
         var hits = new List<OldNameHit>();
-        foreach (var (file, text) in CheckedFiles())
+        var texts = alsoCurrentGuides ? CheckedFiles().Concat(CurrentGuides()) : CheckedFiles();
+        foreach (var (file, text) in texts)
         {
             var allowed = allowList
                 .Where(entry => entry.File == null || entry.File == file)
@@ -225,6 +312,19 @@ public partial class OldProductNameTests
             .ToDictionary(path => path, path => File.ReadAllText(RepositoryFiles.PathOf(path.Split('/'))), StringComparer.Ordinal);
         files[ToolsReference] = ToolsReferenceAboveChangelog();
         return files;
+    }
+
+    /// <summary>TESTING.md and the Error Codes section of docs/TOOLS.md (from its heading to the end), checked for the 4.0.0 names.</summary>
+    private static Dictionary<string, string> CurrentGuides()
+    {
+        var tools = File.ReadAllText(RepositoryFiles.PathOf(ToolsReference.Split('/')));
+        var heading = Regex.Match(tools, "^" + Regex.Escape(ToolsErrorCodesHeading) + @"\r?$", RegexOptions.Multiline);
+        heading.Success.Should().BeTrue($"{ToolsReference} must have the heading '{ToolsErrorCodesHeading}'");
+        return new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [TestingGuide] = File.ReadAllText(RepositoryFiles.PathOf(TestingGuide)),
+            [ToolsErrorCodes] = tools[heading.Index..],
+        };
     }
 
     private static string ToolsReferenceAboveChangelog()
