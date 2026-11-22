@@ -205,4 +205,33 @@ public sealed class HostTargetConfirmationUiaContractTests : IDisposable
         Passed("element_action", out var called);
         called.Should().BeFalse();
     }
+
+    [Fact]
+    public async Task RespondToDialog_ThatOnlyReads_AsksNothing_AndReadsAsBefore()
+    {
+        // A read sends nothing to the host: allowHostTarget lifts it as it did before the question existed
+        await using var server = await StartAsync(confirm: false, action: "decline");
+
+        await server.CallToolAsync("respond_to_dialog", new Dictionary<string, object?> { ["handle"] = (long)Host, ["allowHostTarget"] = true });
+
+        Questions().Should().BeEmpty();
+        Passed("respond_to_dialog", out var called).Should().Be(Terminal.Approval);
+        called.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ElementAction_ModePaste_OnTheHost_IsPasteNotAllowed_WithoutAQuestion()
+    {
+        await using var server = await StartAsync(confirm: true);
+
+        var result = await server.CallToolAsync("element_action", new Dictionary<string, object?>
+        {
+            ["action"] = "set_value", ["ref"] = AllowButton, ["value"] = "y", ["mode"] = "paste", ["allowHostTarget"] = true
+        });
+
+        Payload(result).GetProperty("errorCode").GetString().Should().Be(nameof(InputErrorCode.PasteNotAllowed));
+        Questions().Should().BeEmpty();
+        Passed("element_action", out var called);
+        called.Should().BeFalse();
+    }
 }

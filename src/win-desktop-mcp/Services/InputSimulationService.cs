@@ -787,7 +787,12 @@ public partial class InputSimulationService : IInputSimulationService
         }
 
         var mode = controlChars ?? TextControlChars.Unicode;
-        var layout = mode == TextControlChars.Unicode && !viaLayout ? KeyboardLayout.Invariant : LayoutFor(target);
+        var layout = TypingLayout(mode, viaLayout, target);
+        if (LayoutChangedSinceConfirmed(target, layout) is { } layoutChanged)
+        {
+            return (null, InputErrorCode.HandleMismatch, layoutChanged);
+        }
+
         var characters = CharacterInputs(typed, mode, layout, viaLayout);
 
         var events = characters.SelectMany(c => c).ToList();
@@ -820,21 +825,22 @@ public partial class InputSimulationService : IInputSimulationService
          (controlChars is null or TextControlChars.Unicode || typed.AsSpan().IndexOfAny('\n', '\t') < 0) &&
          pasteIsPauseChord == null);
 
-    public InputPreview? PreviewText(string text, int delayBetweenKeysMs, TextControlChars? controlChars, TextInputMethod method)
+    public InputPreview? PreviewText(string text, int delayBetweenKeysMs, TextControlChars? controlChars, TextInputMethod method,
+        InputTarget target)
     {
         if (string.IsNullOrEmpty(text))
         {
             return null;
         }
 
-        // As TypeTextAsync reads the text: its line breaks normalized, its method decided, its characters made events
+        // As TypeTextAsync reads the text: its line breaks normalized, its method decided, its characters made events on the
+        // layout PrepareTyping picks
         var typed = NormalizeLineBreaks(text);
         var length = CountCharacters(typed);
         delayBetweenKeysMs = Math.Clamp(delayBetweenKeysMs, 0, 100);
         if (WouldPaste(method, typed, length, delayBetweenKeysMs, controlChars, _session.FindPauseChord(PasteKeys(KeyboardLayout.Invariant))))
         {
-            return InputPreview.OfText(typed, $"paste these {length} characters (Ctrl+V)" +
-                                              (method == TextInputMethod.Auto ? ", or type them when the clipboard cannot be lent," : string.Empty));
+            return InputPreview.OfText(typed, $"paste these {length} characters (Ctrl+V)") with { Pastes = true };
         }
 
         if (controlChars == null && typed.AsSpan().IndexOfAny('\n', '\t') >= 0)
@@ -843,19 +849,21 @@ public partial class InputSimulationService : IInputSimulationService
         }
 
         var viaLayout = method == TextInputMethod.Keys;
-        var events = CharacterInputs(typed, controlChars ?? TextControlChars.Unicode, KeyboardLayout.Invariant, viaLayout)
-            .SelectMany(c => c).ToList();
-        var (shown, enter, lineBreak) = InputPreviews.Render(events);
-        return new InputPreview(shown, $"type these {length} characters" + (viaLayout ? " with the keys of the window's keyboard layout" : string.Empty),
-            enter, lineBreak);
+        var mode = controlChars ?? TextControlChars.Unicode;
+        var layout = TypingLayout(mode, viaLayout, target);
+        var events = CharacterInputs(typed, mode, layout, viaLayout).SelectMany(c => c).ToList();
+        return InputPreviews.Render(events, layout) with
+        {
+            How = $"type these {length} characters" + (viaLayout ? " with the keys of the window's keyboard layout" : string.Empty)
+        };
     }
 
-    public InputPreview? PreviewSendKeys(string keys)
+    public InputPreview? PreviewSendKeys(string keys, InputTarget target)
     {
         try
         {
-            var (shown, enter, lineBreak) = InputPreviews.Render(KeySpecParser.Parse(keys, KeyboardLayout.Invariant).Events);
-            return new InputPreview(shown, "press these keys", enter, lineBreak);
+            var layout = LayoutFor(target);
+            return InputPreviews.Render(KeySpecParser.Parse(keys, layout).Events, layout) with { How = "press these keys" };
         }
         catch (ArgumentException)
         {
@@ -863,12 +871,12 @@ public partial class InputSimulationService : IInputSimulationService
         }
     }
 
-    public InputPreview? PreviewPressKeys(KeyList keys, int repeat)
+    public InputPreview? PreviewPressKeys(KeyList keys, int repeat, InputTarget target)
     {
         try
         {
-            var (shown, enter, lineBreak) = InputPreviews.Render(PressKeysParser.Parse(keys, repeat, KeyboardLayout.Invariant).Events);
-            return new InputPreview(shown, "press these keys", enter, lineBreak);
+            var layout = LayoutFor(target);
+            return InputPreviews.Render(PressKeysParser.Parse(keys, repeat, layout).Events, layout) with { How = "press these keys" };
         }
         catch (ArgumentException)
         {
@@ -876,6 +884,38 @@ public partial class InputSimulationService : IInputSimulationService
         }
     }
 
+    /// <summary>The layout type_text types on: the invariant one for characters sent as themselves, else the target window's.</summary>
+    private KeyboardLayout TypingLayout(TextControlChars mode, bool viaLayout, InputTarget target) =>
+        mode == TextControlChars.Unicode && !viaLayout ? KeyboardLayout.Invariant : LayoutFor(target);
+
+    /// <summary>
+    /// Why keys read on <paramref name="layout"/> must not go to a host window the user confirmed for this call, or null: the
+    /// question read them on another layout (the window's changed while the user answered), so they would type other
+    /// characters than the user was shown (HandleMismatch).
+    /// </summary>
+    private static string? LayoutChangedSinceConfirmed(InputTarget target, KeyboardLayout layout) =>
+        target.ConfirmedHost is { } approved && approved.KeyboardLayout != layout.Handle
+            ? "The keyboard layout of the agent's host window changed after the user confirmed this input, so the keys would type " +
+              "other characters than the user was shown. Nothing was sent. Call again: the user is asked again."
+            : null;
+
+    /// <summary>
+    /// Why <paramref name="batch"/> must not be sent to a host window the user confirmed for this call, or null: it can paste
+    /// (<see cref="ClipboardOrigin.PasteTrigger"/>: Ctrl+V with any other modifiers, Shift+Insert, Win+V, the SYN character),
+    /// or presses the right or middle mouse button, which pastes in a terminal, whatever window class the host has. What a paste
+    /// puts in cannot be shown in the question, and set_clipboard could change it after the user's yes.
+    /// </summary>
+    internal static string? HostPasteRefusal(IReadOnlyList<InputEvent> batch, InputTarget target) =>
+        target.ConfirmedHost != null && (ClipboardOrigin.PasteTrigger(batch) != null || batch.Any(ClipboardOrigin.PressesAPastingButton))
+            ? HostPasteMessage
+            : null;
+
+    /// <summary>The refusal of input that pastes, or of a drag, to a host window the user confirmed (PasteNotAllowed).</summary>
+    internal const string HostPasteMessage =
+        "The input can paste or drop content (Ctrl+V, Shift+Insert, Win+V, the SYN character, a right or middle click, or a " +
+        "drag) into the agent's own host window. That is never allowed: the user is shown every character sent there, and " +
+        "what a paste or drop puts in cannot be shown and can change after their yes. Nothing was sent. Type the text with " +
+        "type_text (method unicode) instead.";
     /// <summary>type_text's refusal of text with a line break or a tab and no controlChars (InvalidArguments).</summary>
     public const string ControlCharsNeededMessage =
         "The text contains a line break or a tab: pass controlChars to say what they do. 'unicode' types them as characters " +
@@ -897,6 +937,11 @@ public partial class InputSimulationService : IInputSimulationService
 
         KeySpec spec;
         var layout = LayoutFor(target);
+        if (LayoutChangedSinceConfirmed(target, layout) is { } layoutChanged)
+        {
+            return new SendKeysResult(false, keys, layoutChanged, InputErrorCode.HandleMismatch);
+        }
+
         try
         {
             spec = KeySpecParser.Parse(keys, layout);
@@ -1201,6 +1246,11 @@ public partial class InputSimulationService : IInputSimulationService
 
         KeySpec spec;
         var layout = LayoutFor(target);
+        if (LayoutChangedSinceConfirmed(target, layout) is { } layoutChanged)
+        {
+            return new SendKeysResult(false, keys.Text, layoutChanged, InputErrorCode.HandleMismatch);
+        }
+
         try
         {
             spec = PressKeysParser.Parse(keys, repeat, layout);
@@ -1547,7 +1597,7 @@ public partial class InputSimulationService : IInputSimulationService
     /// <see cref="IClipboardPasteGuard"/>); null when it may be sent.
     /// </summary>
     private string? PasteRefusal(IReadOnlyList<InputEvent> batch, InputGuardResult approved) =>
-        _pasteGuard.Check(batch, approved.Receiving);
+        HostPasteRefusal(batch, approved.Target) ?? _pasteGuard.Check(batch, approved.Receiving);
 
     /// <summary>
     /// <paramref name="batch"/> with a key-down in front of it for every modifier the server holds down now: what the

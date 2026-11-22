@@ -114,7 +114,7 @@ public partial class ElementActionTools
         ElementActionFallback fallback = ElementActionFallback.None,
         [Description("Allow acting on the agent's own host window (its terminal, editor or chat app). Works only with ref or " +
                      "handle (or window.handle); the server asks the user first, showing value whole (ConfirmationDeclined, " +
-                     "ConfirmationRequired; over 300 characters: TextTooLong). Use only when the user asked for it. Default: false")]
+                     "ConfirmationRequired; over 300 characters: TextTooLong; mode paste: PasteNotAllowed). Use only when the user asked for it. Default: false")]
         bool allowHostTarget = false,
         [Description(MaxScrollsDescription)]
         int maxScrolls = 0,
@@ -363,7 +363,8 @@ public partial class ElementActionTools
         };
         var input = new HostInput("element_action",
             $"{ToolEnum<ElementActionKind>.Name(action)}{(element == null ? string.Empty : $" on {element}")}",
-            value == null ? null : () => InputPreview.OfText(value, $"{how} these {value.Length} characters"));
+            value == null ? null : () => InputPreview.OfText(value, $"{how} these {value.Length} characters"),
+            Pastes: mode == ElementValueMode.Paste && action is ElementActionKind.SetValue or ElementActionKind.AppendText);
         var confirmed = await _hostConfirmation.ConfirmAsync(server, [InputTarget.Window(window, allowHostTarget: true)], input, cancellationToken)
             .ConfigureAwait(false);
         return confirmed.For(window);

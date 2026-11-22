@@ -5,21 +5,28 @@ namespace WinDesktopMcp.Services;
 
 /// <summary>
 /// Key and character events as the user's confirmation question shows them (<see cref="ShownInput"/>), before allowHostTarget
-/// sends them to the agent's own host window: a character typed (as a character, or by its letter or digit key with no
-/// modifier but Shift) is shown as that character, every other key press as ⟨Mods+NAME⟩, a modifier pressed and released
-/// alone as ⟨NAME⟩, and a run of the same key as ⟨NAME⟩×n. The same events go out after the user's yes, so the question
-/// shows what is sent; a test renders the events that were sent and compares.
+/// sends them to the agent's own host window. A character sent as itself is shown as that character. A key pressed with no
+/// modifier but Shift (or a parser's AltGr) is shown as what it types on the keyboard layout the keys were read on, the
+/// window's own (<see cref="KeyboardLayout.TextOf"/>), or as ⟨NAME⟩ when it types nothing there; every other key press as
+/// ⟨Mods+NAME⟩, a modifier pressed and released alone as ⟨NAME⟩, and a run of the same key as ⟨NAME ×n⟩. The same events, read
+/// on the same layout, go out after the user's yes, and the service refuses them when the window's layout changed meanwhile
+/// (<see cref="HostTargetApproval.KeyboardLayout"/>); a test renders the events that were sent and compares.
 /// </summary>
 public static class InputPreviews
 {
     // Win32 values, as NativeEnums has them (Services computes with no Native type)
     private const uint KeyUp = 0x0002;
-    private const ushort VkReturn = 0x0D, VkSpace = 0x20, VkLeftControl = 0xA2, VkRightAlt = 0xA5;
+    private const ushort VkReturn = 0x0D, VkLeftControl = 0xA2, VkRightAlt = 0xA5, VkNumpad0 = 0x60, VkNumpad9 = 0x69;
 
-    /// <summary>The events' key presses and characters, with whether one presses Enter or types a line break.</summary>
-    public static (string Shown, bool PressesEnter, bool TypesLineBreak) Render(IReadOnlyList<InputEvent> events)
+    /// <summary>
+    /// The events' key presses and characters, read on <paramref name="layout"/> (How is left empty): whether one presses
+    /// Enter or a key or character a terminal takes as Enter (Ctrl+M, Ctrl+J, CR, LF), types a line break, can paste
+    /// (<see cref="ClipboardOrigin.PasteTrigger"/>), or types a character by its code with Alt and the numeric keypad.
+    /// </summary>
+    public static InputPreview Render(IReadOnlyList<InputEvent> events, KeyboardLayout layout)
     {
         ArgumentNullException.ThrowIfNull(events);
+        ArgumentNullException.ThrowIfNull(layout);
 
         var shown = new StringBuilder();
         var down = new List<(ushort Key, bool AltGr)>();
@@ -27,17 +34,19 @@ public static class InputPreviews
         var repeat = 0;
         ushort tapCandidate = 0;
         char? highSurrogate = null;
-        bool enter = false, lineBreak = false;
+        bool enter = false, lineBreak = false, byCode = false;
 
         void Flush()
         {
             if (lastKey != null)
             {
-                shown.Append(lastKey);
+                shown.Append(ShownInput.KeyOpen).Append(lastKey);
                 if (repeat > 1)
                 {
-                    shown.Append('×').Append(repeat);
+                    shown.Append(' ').Append(ShownInput.Times).Append(repeat);
                 }
+
+                shown.Append(ShownInput.KeyClose);
             }
 
             lastKey = null;
@@ -46,7 +55,7 @@ public static class InputPreviews
 
         void Key(KeyModifiers held, string name)
         {
-            var token = $"{ShownInput.KeyOpen}{Modifiers(held)}{name}{ShownInput.KeyClose}";
+            var token = Modifiers(held) + name;
             if (token == lastKey)
             {
                 repeat++;
@@ -58,10 +67,10 @@ public static class InputPreviews
             repeat = 1;
         }
 
-        void Character(Rune rune)
+        void Text(string text)
         {
             Flush();
-            ShownInput.Append(shown, rune);
+            shown.Append(ShownInput.Escape(text));
         }
 
         foreach (var e in events)
@@ -84,7 +93,7 @@ public static class InputPreviews
                 down.RemoveAll(d => d.Key == e.Code);
                 if (tapCandidate == e.Code)
                 {
-                    Key(Held(down), KeyTable.NameOf(e.Code) ?? KeyNames.Of(e.Code));
+                    Key(Held(down, out _), KeyTable.NameOf(e.Code) ?? KeyNames.Of(e.Code));
                 }
 
                 tapCandidate = 0;
@@ -97,55 +106,40 @@ public static class InputPreviews
             }
 
             tapCandidate = 0;
-            var held = Held(down);
+            var held = Held(down, out var altGr);
+            var ctrl = (held & KeyModifiers.Control) != 0;
             if (e.Kind == InputEventKind.Unicode)
             {
                 var c = (char)e.Code;
-                Rune rune;
                 if (char.IsHighSurrogate(c))
                 {
                     highSurrogate = c;
                     continue;
                 }
 
-                if (char.IsLowSurrogate(c) && highSurrogate is { } high)
-                {
-                    rune = new Rune(high, c);
-                }
-                else if (!Rune.TryCreate(c, out rune))
-                {
-                    // A lone surrogate: its code unit
-                    Flush();
-                    ShownInput.AppendCodePoint(shown, c);
-                    highSurrogate = null;
-                    continue;
-                }
-
+                var character = char.IsLowSurrogate(c) && highSurrogate is { } high ? new string([high, c]) : c.ToString();
                 highSurrogate = null;
                 lineBreak |= c is '\n' or '\r';
+                enter |= c is '\n' or '\r' || (ctrl && c is 'm' or 'M' or 'j' or 'J');
                 if ((held & ~KeyModifiers.Shift) != KeyModifiers.None)
                 {
-                    var name = new StringBuilder();
-                    ShownInput.Append(name, rune);
-                    Key(held, name.ToString());
+                    Key(held, ShownInput.Escape(character));
                 }
                 else
                 {
-                    Character(rune);
+                    Text(character);
                 }
 
                 continue;
             }
 
             var code = e.Code;
-            enter |= code == VkReturn;
-            if (code is >= 'A' and <= 'Z' && (held & ~KeyModifiers.Shift) == KeyModifiers.None)
+            enter |= code == VkReturn || (ctrl && code is 'M' or 'J');
+            byCode |= (held & KeyModifiers.Alt) != 0 && code is >= VkNumpad0 and <= VkNumpad9;
+            if ((held & ~KeyModifiers.Shift) == KeyModifiers.None &&
+                layout.TextOf(code, (held & KeyModifiers.Shift) != 0, altGr) is { Length: > 0 } typed && !typed.Any(char.IsControl))
             {
-                Character(new Rune(held == KeyModifiers.Shift ? (char)code : char.ToLowerInvariant((char)code)));
-            }
-            else if ((code is >= '0' and <= '9' || code == VkSpace) && held == KeyModifiers.None)
-            {
-                Character(new Rune((char)code));
+                Text(typed);
             }
             else
             {
@@ -154,13 +148,21 @@ public static class InputPreviews
         }
 
         Flush();
-        return (shown.ToString(), enter, lineBreak);
+        return new InputPreview(shown.ToString(), string.Empty, enter, lineBreak)
+        {
+            Pastes = ClipboardOrigin.PasteTrigger(events) != null,
+            TypesByCode = byCode,
+            Layout = layout.Handle
+        };
     }
 
-    /// <summary>The modifiers <paramref name="down"/> holds; the left Ctrl and right Alt a parser pressed as AltGr for a character hold nothing.</summary>
-    private static KeyModifiers Held(List<(ushort Key, bool AltGr)> down)
+    /// <summary>
+    /// The modifiers <paramref name="down"/> holds; the left Ctrl and right Alt a parser pressed as AltGr for a character hold
+    /// nothing, and set <paramref name="altGr"/>.
+    /// </summary>
+    private static KeyModifiers Held(List<(ushort Key, bool AltGr)> down, out bool altGr)
     {
-        var altGr = down.Contains((VkLeftControl, true)) && down.Contains((VkRightAlt, true));
+        altGr = down.Contains((VkLeftControl, true)) && down.Contains((VkRightAlt, true));
         var held = KeyModifiers.None;
         foreach (var (key, isAltGr) in down)
         {

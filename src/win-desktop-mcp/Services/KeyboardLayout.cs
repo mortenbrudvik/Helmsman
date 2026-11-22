@@ -180,6 +180,27 @@ public sealed class KeyboardLayout
     }
 
     /// <summary>
+    /// What <paramref name="virtualKey"/> types on this layout with Shift and AltGr as given and Caps Lock as at the start of
+    /// the call, for allowHostTarget's question (InputPreviews): null when it types nothing, or is a dead key. The invariant
+    /// layout types a letter (Shift for its capital), a digit without Shift, and the space.
+    /// </summary>
+    public string? TextOf(ushort virtualKey, bool shift, bool altGr)
+    {
+        if (_native == null)
+        {
+            return virtualKey switch
+            {
+                >= 'A' and <= 'Z' when !altGr => shift ? ((char)virtualKey).ToString() : char.ToLowerInvariant((char)virtualKey).ToString(),
+                (>= '0' and <= '9') or ' ' when !shift && !altGr => ((char)virtualKey).ToString(),
+                _ => null
+            };
+        }
+
+        var state = (byte)((shift ? ShiftState : 0) | (altGr ? CtrlState | AltState : 0));
+        return _native.KeyText(virtualKey, RawScanCode(virtualKey), state, CapsLock, _layout);
+    }
+
+    /// <summary>
     /// The scan code to send with <paramref name="virtualKey"/> (without the 0xE0 prefix), and whether it is an extended
     /// key. The invariant layout has no scan codes.
     /// </summary>

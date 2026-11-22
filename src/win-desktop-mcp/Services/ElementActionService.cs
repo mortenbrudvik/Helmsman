@@ -216,6 +216,12 @@ public sealed partial class ElementActionService : IElementActionService
             return call.Fail(ToolErrorReporting.InvalidArgumentsErrorCode, argumentError + " Nothing was done.");
         }
 
+        // Never a paste into the agent's host: the user's yes could not show what it puts in
+        if (request.Mode == ElementValueMode.Paste && request.ConfirmedHost != null)
+        {
+            return call.Fail(nameof(InputErrorCode.PasteNotAllowed), InputSimulationService.HostPasteMessage);
+        }
+
         if (PasteRefusal(request) is { } pasteError)
         {
             return call.Fail(ToolErrorReporting.InvalidArgumentsErrorCode, pasteError + " Nothing was done.");

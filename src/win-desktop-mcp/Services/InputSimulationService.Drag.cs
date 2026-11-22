@@ -30,6 +30,12 @@ public partial class InputSimulationService
                 Pressed = pressed
             };
 
+        // A drop inserts what is dragged, which the user's yes to input into the agent's host could not show
+        if (target.ConfirmedHost != null || dropTarget.ConfirmedHost != null)
+        {
+            return Result(HostPasteMessage, InputErrorCode.PasteNotAllowed);
+        }
+
         if (!IsValidScreenCoordinate(r.FromX, r.FromY) || !IsValidScreenCoordinate(r.ToX, r.ToY))
         {
             return Result($"The {(IsValidScreenCoordinate(r.FromX, r.FromY) ? "to" : "from")} point is outside every monitor. {NothingDragged}",

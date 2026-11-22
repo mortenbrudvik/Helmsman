@@ -18,7 +18,8 @@ namespace WinDesktopMcp.Tests.Contract;
 public sealed class HostTargetConfirmationContractTests : IDisposable
 {
     /// <summary>The input tools, as the gate filter lists them: a new input tool is checked here without being added by hand.</summary>
-    public static TheoryData<string> InputTools() => new(InputGateToolFilter.InputTools.Order(StringComparer.Ordinal));
+    /// <remarks>drag is left out: a drop onto the host is refused outright (see its own tests).</remarks>
+    public static TheoryData<string> InputTools() => new(InputGateToolFilter.InputTools.Where(t => t != "drag").Order(StringComparer.Ordinal));
 
     private static readonly TimeSpan AnswerTimeout = TimeSpan.FromMilliseconds(300);
 
@@ -38,6 +39,8 @@ public sealed class HostTargetConfirmationContractTests : IDisposable
     private readonly Mock<INativeSystemInfoWrapper> _systemInfo = new();
     private readonly InputSession _session;
     private readonly List<string> _questions = [];
+    private readonly FakeKeyboardLayoutWrapper _layouts = new() { Layout = FakeKeyboardLayoutWrapper.Us };
+    private readonly Mock<IPasteClipboard> _pasteClipboard = new();
     private nint _inFront;
 
     public HostTargetConfirmationContractTests()
@@ -119,7 +122,8 @@ public sealed class HostTargetConfirmationContractTests : IDisposable
         var monitors = TestDataFactory.CreateMockMonitorService(
             [TestDataFactory.CreateMonitorInfo(boundsX: 0, boundsY: 0, boundsWidth: 1920, boundsHeight: 1080)]);
         var service = new InputSimulationService(monitors.Object, _input.Object, guard, _session, Permissive.PasteGuard,
-            Permissive.Takeover, hitTest: _hitTest.Object, systemInfo: _systemInfo.Object);
+            Permissive.Takeover, hitTest: _hitTest.Object, systemInfo: _systemInfo.Object, keyboardLayout: _layouts,
+            pasteClipboard: _pasteClipboard.Object);
         var tools = new InputSimulationTools(service, Mock.Of<ICoordinateSpaceResolver>(),
             new HostTargetConfirmation(guard, _session, AnswerTimeout));
 
@@ -396,7 +400,7 @@ public sealed class HostTargetConfirmationContractTests : IDisposable
     }
 
     [Fact]
-    public async Task Drag_OntoTheHostAsToWindowHandle_AsksOnce_NamingTheHost_AndDropsThere()
+    public async Task Drag_OntoTheHostAsToWindowHandle_IsPasteNotAllowed_WithoutAQuestion_AndNothingIsSent()
     {
         // Arrange - from Notepad onto the terminal
         _inFront = Notepad;
@@ -412,9 +416,200 @@ public sealed class HostTargetConfirmationContractTests : IDisposable
         arguments["toWindowHandle"] = (long)Terminal;
         var result = await server.CallToolAsync("drag", arguments);
 
-        // Assert
-        AssertSent("drag", result);
-        Questions().Should().ContainSingle().Which.Should().Contain("'pwsh'").And.NotContain("Notepad");
+        // Assert - a drop inserts what is dragged, which the user cannot be shown
+        AssertRefused(result, nameof(InputErrorCode.PasteNotAllowed), questions: 0);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Drag_OnTheHost_IsRefusedOutright_AndOnAnOrdinaryWindowAsksNothing(bool onTheHost)
+    {
+        At(onTheHost ? Terminal : Notepad);
+        await using var server = await StartAsync(Answer.Yes);
+
+        var result = await server.CallToolAsync("drag", Call("drag", onTheHost ? Terminal : Notepad));
+
+        Questions().Should().BeEmpty();
+        if (onTheHost)
+        {
+            AssertRefused(result, nameof(InputErrorCode.PasteNotAllowed), questions: 0);
+        }
+        else
+        {
+            AssertSent("drag", result);
+        }
+    }
+
+    // ---- Nothing that pastes ever reaches the host: what it pastes cannot be shown, and can change after the yes ----
+
+    [Theory]
+    [InlineData("send_keys", "^v")]
+    [InlineData("send_keys", "+{INSERT}")]
+    [InlineData("send_keys", "^+v")] // the terminal paste chord
+    [InlineData("send_keys", "^%v")]
+    [InlineData("send_keys", "#v")] // clipboard history
+    [InlineData("send_keys", "echo {CTRL down}v{CTRL up}")]
+    [InlineData("press_keys", "ctrl+v")]
+    [InlineData("press_keys", "shift+insert")]
+    [InlineData("press_keys", "ctrl+shift+v")]
+    public async Task KeysThatPaste_ToTheHost_ArePasteNotAllowed_WithoutAQuestion_AndNothingIsSent(string tool, string keys)
+    {
+        At(Terminal);
+        await using var server = await StartAsync(Answer.Yes);
+        var arguments = Call(tool, Terminal);
+        arguments["keys"] = keys;
+
+        var result = await server.CallToolAsync(tool, arguments);
+
+        AssertRefused(result, nameof(InputErrorCode.PasteNotAllowed), questions: 0);
+        Payload(result).GetProperty("error").GetString().Should().Contain("never").And.Contain("shown");
+    }
+
+    [Theory]
+    [InlineData("secondary", 1)]
+    [InlineData("middle", 1)]
+    [InlineData("secondary", 2)]
+    public async Task RightOrMiddleClicksOnTheHost_ArePasteNotAllowed_WithoutAQuestion(string button, int clicks)
+    {
+        // A right or middle click pastes in a terminal (conhost, Windows Terminal, VS Code): refused on any host window
+        At(Terminal);
+        await using var server = await StartAsync(Answer.Yes);
+        var arguments = Call("mouse_click", Terminal);
+        arguments["button"] = button;
+        arguments["clickCount"] = clicks;
+
+        var result = await server.CallToolAsync("mouse_click", arguments);
+
+        AssertRefused(result, nameof(InputErrorCode.PasteNotAllowed), questions: 0);
+    }
+
+    [Fact]
+    public async Task TypeText_WithMethodPaste_ToTheHost_IsPasteNotAllowed_WithoutAQuestion()
+    {
+        At(Terminal);
+        await using var server = await StartAsync(Answer.Yes);
+
+        var result = await TypeAsync(server, "git status", controlChars: "keys", method: "paste");
+
+        AssertRefused(result, nameof(InputErrorCode.PasteNotAllowed), questions: 0);
+        _pasteClipboard.Invocations.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task TypeText_TheSynCharacter_ToTheHost_IsPasteNotAllowed_WithoutAQuestion()
+    {
+        At(Terminal);
+        await using var server = await StartAsync(Answer.Yes);
+
+        var result = await TypeAsync(server, "a\u0016b", controlChars: "unicode");
+
+        AssertRefused(result, nameof(InputErrorCode.PasteNotAllowed), questions: 0);
+    }
+
+    [Theory]
+    [InlineData(200)]
+    [InlineData(201)] // over the auto-paste threshold: auto would paste to an ordinary window
+    [InlineData(HostTargetConfirmation.MaxShownLength)]
+    public async Task TypeText_Auto_ToTheHost_AlwaysTypes_NeverPastes(int length)
+    {
+        // Arrange
+        At(Terminal);
+        var text = new string('a', length);
+        await using var server = await StartAsync(Answer.Yes);
+
+        // Act
+        var result = await server.CallToolAsync("type_text", new Dictionary<string, object?>
+        {
+            ["text"] = text, ["method"] = "auto", ["windowHandle"] = (long)Terminal, ["allowHostTarget"] = true
+        });
+
+        // Assert - asked, typed character by character, and the clipboard never lent
+        var payload = Payload(result);
+        payload.GetProperty("success").GetBoolean().Should().BeTrue(payload.ToString());
+        payload.GetProperty("method").GetString().Should().Be("unicode");
+        Questions().Should().ContainSingle().Which.Should().Contain($"type these {length} characters").And.NotContain("paste");
+        _pasteClipboard.Invocations.Should().BeEmpty();
+    }
+
+    // ---- Keys that act as Enter, or type a character by its code ----
+
+    [Theory]
+    [InlineData("send_keys", "^m")] // Ctrl+M is CR in a terminal
+    [InlineData("send_keys", "^j")] // Ctrl+J is LF
+    [InlineData("send_keys", "^+M")]
+    [InlineData("press_keys", "ctrl+m")]
+    [InlineData("press_keys", "ctrl+j")]
+    public async Task TheQuestion_ForKeysThatActAsEnterInATerminal_SaysTheyPressEnter(string tool, string keys)
+    {
+        At(Terminal);
+        await using var server = await StartAsync(Answer.Decline);
+        var arguments = Call(tool, Terminal);
+        arguments["keys"] = keys;
+
+        await server.CallToolAsync(tool, arguments);
+
+        Questions().Should().ContainSingle().Which.Should().Contain("press Enter");
+    }
+
+    [Theory]
+    [InlineData("send_keys", "%{NUMPAD1}%{NUMPAD3}")]
+    [InlineData("send_keys", "{ALT down}{NUMPAD1}{NUMPAD3}{ALT up}")]
+    [InlineData("press_keys", "alt+numpad1")]
+    public async Task AltNumpad_WhichTypesACharacterByItsCode_ToTheHost_IsRefused_WithoutAQuestion(string tool, string keys)
+    {
+        At(Terminal);
+        await using var server = await StartAsync(Answer.Yes);
+        var arguments = Call(tool, Terminal);
+        arguments["keys"] = keys;
+
+        var result = await server.CallToolAsync(tool, arguments);
+
+        AssertRefused(result, ToolErrorReporting.InvalidArgumentsErrorCode, questions: 0);
+        Payload(result).GetProperty("error").GetString().Should().Contain("Alt");
+    }
+
+    // ---- The keyboard layout of the window ----
+
+    [Theory]
+    [InlineData("send_keys", "кот")] // on a Russian keyboard к is the R key, о the J key, т the N key
+    [InlineData("press_keys", "к о т")]
+    public async Task TheQuestion_ShowsWhatTheKeysTypeOnTheWindowsOwnLayout_AndThatIsWhatIsSent(string tool, string keys)
+    {
+        // Arrange - a Russian layout, where a key yields another character than on the invariant layout (VK_R types к)
+        At(Terminal);
+        _layouts.WindowLayouts[Terminal] = FakeKeyboardLayoutWrapper.Russian;
+        var sent = new List<InputEvent>();
+        _input.Setup(i => i.SendInput(It.IsAny<IReadOnlyList<InputEvent>>()))
+            .Callback((IReadOnlyList<InputEvent> events) => sent.AddRange(events))
+            .Returns((IReadOnlyList<InputEvent> events) => (uint)events.Count);
+        await using var server = await StartAsync(Answer.Yes);
+        var arguments = Call(tool, Terminal);
+        arguments["keys"] = keys;
+
+        // Act
+        var result = await server.CallToolAsync(tool, arguments);
+
+        // Assert - shown as typed there (on the invariant layout these keys would read "rjn"), and the keys sent are those
+        Payload(result).GetProperty("success").GetBoolean().Should().BeTrue(Payload(result).ToString());
+        Shown(Questions().Should().ContainSingle().Subject).Should().Be("кот");
+        sent.Where(e => e.Kind == InputEventKind.VirtualKey && (e.Flags & 0x0002) == 0).Select(e => (char)e.Code)
+            .Should().Equal('R', 'J', 'N');
+        InputPreviews.Render(sent, KeyboardLayout.Of(_layouts, Terminal, capsLock: false)).Shown.Should().Be("кот");
+    }
+
+    [Fact]
+    public async Task TheWindowsLayoutChangingWhileTheUserAnswers_IsRefused_AndNothingIsSent()
+    {
+        // The keys would type other characters than the user was shown
+        At(Terminal);
+        _layouts.WindowLayouts[Terminal] = FakeKeyboardLayoutWrapper.Us;
+        await using var server = await StartAsync(Answer.Yes, meanwhile: () => _layouts.WindowLayouts[Terminal] = FakeKeyboardLayoutWrapper.French);
+
+        var result = await server.CallToolAsync("send_keys", Call("send_keys", Terminal));
+
+        AssertRefused(result, nameof(InputErrorCode.HandleMismatch), questions: 1);
+        Payload(result).GetProperty("error").GetString().Should().Contain("keyboard layout");
     }
 
     // ---- What the question says ----
@@ -506,6 +701,13 @@ public sealed class HostTargetConfirmationContractTests : IDisposable
     [InlineData("rm\u200B -rf", "rm⟨U+200B⟩ -rf")] // a zero-width space
     [InlineData("a\u2028b", "a⟨U+2028⟩b")] // a line separator
     [InlineData("x\u00A0y", "x⟨U+00A0⟩y")] // a no-break space looks like a space
+    [InlineData("rm\uFE0F -rf", "rm⟨U+FE0F⟩ -rf")] // a variation selector
+    [InlineData("e\u0301", "e⟨U+0301⟩")] // a combining mark
+    [InlineData("a\u0301\u0301\u0301b", "a⟨U+0301⟩⟨U+0301⟩⟨U+0301⟩b")]
+    [InlineData("x\U000E0100y", "x⟨U+E0100⟩y")]
+    [InlineData("a\u034Fb\u180Bc", "a⟨U+034F⟩b⟨U+180B⟩c")]
+    [InlineData("\u115F\u1160\u3164\uFFA0\u2800", "⟨U+115F⟩⟨U+1160⟩⟨U+3164⟩⟨U+FFA0⟩⟨U+2800⟩")] // blank letters and symbols
+    [InlineData("2×3", "2⟨U+00D7⟩3")] // the repeat sign itself
     [InlineData("ab⏎c⟨U+0041⟩⟦⟧", "ab⟨U+23CE⟩c⟨U+27E8⟩U+0041⟨U+27E9⟩⟨U+27E6⟩⟨U+27E7⟩")] // the markers themselves, typed
     public async Task TheQuestion_ShowsCharactersThatCouldDisguiseTheText_AsTheirCodePoint(string text, string shown)
     {
@@ -518,11 +720,12 @@ public sealed class HostTargetConfirmationContractTests : IDisposable
     }
 
     [Theory]
-    [InlineData("send_keys", "{DOWN 3}{ENTER}", "⟨DOWN⟩×3⟨ENTER⟩")]
+    [InlineData("send_keys", "{DOWN 3}{ENTER}", "⟨DOWN ×3⟩⟨ENTER⟩")]
+    [InlineData("send_keys", "{ENTER}{ENTER}2", "⟨ENTER ×2⟩2")] // the count cannot run into a digit typed after it
     [InlineData("send_keys", "{a 5}~", "aaaaa⟨ENTER⟩")] // ~ is Enter in send_keys
     [InlineData("send_keys", "^c{RETURN}", "⟨Ctrl+C⟩⟨ENTER⟩")]
-    [InlineData("send_keys", "Hello+1", "Hello⟨Shift+1⟩")]
-    [InlineData("press_keys", "tab*3 enter", "⟨TAB⟩×3⟨ENTER⟩")]
+    [InlineData("send_keys", "Hello+1", "Hello!")] // what Shift+1 types on the window's (US) layout
+    [InlineData("press_keys", "tab*3 enter", "⟨TAB ×3⟩⟨ENTER⟩")]
     [InlineData("press_keys", "ctrl+shift+t", "⟨Ctrl+Shift+T⟩")]
     public async Task TheQuestion_ForKeys_ShowsWhatWillBePressed_WithRepeatsCounted(string tool, string keys, string shown)
     {
@@ -552,7 +755,7 @@ public sealed class HostTargetConfirmationContractTests : IDisposable
 
         await server.CallToolAsync("press_keys", arguments);
 
-        Shown(Questions().Should().ContainSingle().Subject).Should().Be("⟨DOWN⟩×4");
+        Shown(Questions().Should().ContainSingle().Subject).Should().Be("⟨DOWN ×4⟩");
     }
 
     [Theory]
@@ -576,7 +779,7 @@ public sealed class HostTargetConfirmationContractTests : IDisposable
 
         // Assert
         Payload(result).GetProperty("success").GetBoolean().Should().BeTrue(Payload(result).ToString());
-        InputPreviews.Render(sent).Shown.Should().Be(Shown(Questions().Should().ContainSingle().Subject));
+        InputPreviews.Render(sent, KeyboardLayout.Of(_layouts, Terminal, capsLock: false)).Shown.Should().Be(Shown(Questions().Should().ContainSingle().Subject));
     }
     [Fact]
     public async Task TheQuestion_ForAClick_GivesTheButtonAndThePoint()

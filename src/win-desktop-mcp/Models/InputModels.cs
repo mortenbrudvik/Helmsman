@@ -24,7 +24,11 @@ public sealed record SelectorRefusal(string ErrorCode, string Error);
 /// </summary>
 /// <param name="Window">The top-level window the user confirmed.</param>
 /// <param name="ProcessId">Its process when the user was asked (for a UWP frame, the app's own, as the window tools report it).</param>
-public sealed record HostTargetApproval(nint Window, int ProcessId);
+/// <param name="KeyboardLayout">
+/// The keyboard layout (HKL) the question read the keys on, 0 for the invariant layout. Keys are sent only while the window's
+/// layout is still that one: on another, the same keys would type other characters than the user was shown.
+/// </param>
+public sealed record HostTargetApproval(nint Window, int ProcessId, nint KeyboardLayout = 0);
 
 /// <summary>
 /// The window an input call is meant for (roadmap M1.5), or none. With a window the input guard brings it

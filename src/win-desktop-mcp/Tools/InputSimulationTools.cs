@@ -34,8 +34,8 @@ public class InputSimulationTools
     internal const string AllowHostTargetDescription =
         "Allow input to the agent's own host window (its terminal, editor or chat app), named by windowHandle or window.handle. The " +
         "server asks the user first, showing the whole input; nothing is sent without their yes (ConfirmationDeclined), when the " +
-        "client cannot ask (ConfirmationRequired) or for input over 300 characters (TextTooLong). Use only when the user asked " +
-        "for it. Default: false";
+        "client cannot ask (ConfirmationRequired) or for input over 300 characters (TextTooLong); a paste, drag or right or middle " +
+        "click there is refused (PasteNotAllowed). Use only when the user asked for it. Default: false";
 
     internal const string ReleaseHeldModifiersDescription =
         "Release modifier keys (Shift, Ctrl, Alt, Windows) that are down before the input is sent, instead of refusing with " +
@@ -164,7 +164,8 @@ public class InputSimulationTools
         }
 
         var confirmed = await ConfirmAsync(server, [point.Target],
-            new HostInput("mouse_click", $"{ClickName(button, clickCount)} at ({point.X}, {point.Y}) on the window{With(modifiers)}"), cancellationToken).ConfigureAwait(false);
+            new HostInput("mouse_click", $"{ClickName(button, clickCount)} at ({point.X}, {point.Y}) on the window{With(modifiers)}",
+                Pastes: button is MouseButton.Secondary or MouseButton.Middle), cancellationToken).ConfigureAwait(false);
         var target = confirmed.Apply(point.Target);
         return await ObserveAsync(Echo(_inputService.MouseClick(point.X, point.Y, button, clickCount, modifiers ?? [], target,
             releaseHeldModifiers, cancellationToken), point.Requested), target, observe, cancellationToken).ConfigureAwait(false);
@@ -248,7 +249,8 @@ public class InputSimulationTools
         {
             // One question for both points' windows
             var confirmed = await ConfirmAsync(server, [from.Target, to.Target],
-                new HostInput("drag", $"press the {ToolEnum<MouseButton>.Name(button)} button at ({from.X}, {from.Y}) and release it at ({to.X}, {to.Y}){With(modifiers)}"),
+                new HostInput("drag", $"press the {ToolEnum<MouseButton>.Name(button)} button at ({from.X}, {from.Y}) and release it at ({to.X}, {to.Y}){With(modifiers)}",
+                    Pastes: true),
                 cancellationToken).ConfigureAwait(false);
             (@from, to) = (@from with { Target = confirmed.Apply(@from.Target) }, to with { Target = confirmed.Apply(to.Target) });
             result = await _inputService.DragAsync(request with { FromX = from.X, FromY = from.Y, ToX = to.X, ToY = to.Y }, from.Target,
@@ -423,8 +425,14 @@ public class InputSimulationTools
         delayMs = Math.Clamp(delayMs, 0, 100);
         var target = Target(windowHandle, window, allowHostTarget);
         target = (await ConfirmAsync(server, [target], 
-            new HostInput("type_text", Content: () => _inputService.PreviewText(text, delayMs, controlChars, method)), cancellationToken)
-            .ConfigureAwait(false)).Apply(target);
+            new HostInput("type_text", Content: () => _inputService.PreviewText(text, delayMs, controlChars, HostMethod(method), target)),
+            cancellationToken).ConfigureAwait(false)).Apply(target);
+
+        // Text to the agent's host is typed, never pasted: the question shows what is typed, and a paste could put in other text
+        if (target.ConfirmedHost != null)
+        {
+            method = HostMethod(method);
+        }
         var result = await _inputService.TypeTextAsync(text, delayMs, target, releaseHeldModifiers, controlChars, method, cancellationToken)
             .ConfigureAwait(false);
         return await ActionObservation.ResultAsync(result, result.Success, Acted(target, result.ReceivingWindow),
@@ -470,7 +478,7 @@ public class InputSimulationTools
         delayMs = Math.Clamp(delayMs, 0, InputSimulationService.MaxSendKeysDelayMs);
         var target = Target(windowHandle, window, allowHostTarget);
         target = (await ConfirmAsync(server, [target], 
-            new HostInput("send_keys", Content: () => _inputService.PreviewSendKeys(keys)), cancellationToken)
+            new HostInput("send_keys", Content: () => _inputService.PreviewSendKeys(keys, target)), cancellationToken)
             .ConfigureAwait(false)).Apply(target);
         var result = await _inputService.SendKeysAsync(keys, target, releaseHeldModifiers, delayMs, cancellationToken).ConfigureAwait(false);
         return await ActionObservation.ResultAsync(result, result.Success, Acted(target, result.ReceivingWindow),
@@ -527,7 +535,7 @@ public class InputSimulationTools
         ActionObservation.Check(_desktopState, observe, NothingSent);
         var target = Target(windowHandle, window, allowHostTarget);
         target = (await ConfirmAsync(server, [target],
-            new HostInput("press_keys", Content: () => _inputService.PreviewPressKeys(keys, repeat)),
+            new HostInput("press_keys", Content: () => _inputService.PreviewPressKeys(keys, repeat, target)),
             cancellationToken).ConfigureAwait(false)).Apply(target);
         SendKeysResult result;
         try
@@ -554,6 +562,12 @@ public class InputSimulationTools
     private Task<HostConfirmation> ConfirmAsync(McpServer? server, IReadOnlyList<InputTarget> targets, HostInput input,
         CancellationToken cancellationToken) =>
         _hostConfirmation.ConfirmAsync(server, targets, input, cancellationToken);
+
+    /// <summary>
+    /// type_text's method for the agent's host window: auto types there (it would paste long text), and an explicit paste is
+    /// left as it is, so the question refuses it (PasteNotAllowed).
+    /// </summary>
+    private static TextInputMethod HostMethod(TextInputMethod method) => method == TextInputMethod.Auto ? TextInputMethod.Unicode : method;
 
     /// <summary>A click as the user's question names it: "a double primary click".</summary>
     private static string ClickName(MouseButton button, int clickCount) =>

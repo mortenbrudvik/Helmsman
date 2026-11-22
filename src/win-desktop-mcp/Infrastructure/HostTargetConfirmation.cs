@@ -33,7 +33,11 @@ public sealed class HostConfirmation
 /// null when it sends none. The function returns null when the call is refused anyway before anything is sent (keys that do
 /// not parse): the user is not asked then, and without an approval nothing reaches the host.
 /// </param>
-public sealed record HostInput(string Tool, string? Action = null, Func<InputPreview?>? Content = null);
+/// <param name="Pastes">
+/// True when the call pastes or drops content by what it is (a right or middle click, a drag, a paste mode): what it puts
+/// in cannot be shown, so it is refused for the agent's host without a question (PasteNotAllowed).
+/// </param>
+public sealed record HostInput(string Tool, string? Action = null, Func<InputPreview?>? Content = null, bool Pastes = false);
 
 /// <summary>
 /// Asks the user, through the client, before a call's allowHostTarget sends input to the agent's own host window.
@@ -52,6 +56,13 @@ public interface IHostTargetConfirmation
     /// TextTooLong (the input does not fit a question whole), ConfirmationRequired or ConfirmationDeclined: nothing may be sent.
     /// </exception>
     Task<HostConfirmation> ConfirmAsync(McpServer? server, IReadOnlyList<InputTarget> targets, HostInput input, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The approvals of the host windows among <paramref name="targets"/> named with allowHostTarget, without a question: only
+    /// for a call that reads and sends nothing (respond_to_dialog without a button), which allowHostTarget alone let read the
+    /// host before the question existed. A call that acts must use <see cref="ConfirmAsync"/>.
+    /// </summary>
+    HostConfirmation ForReadOnly(IReadOnlyList<InputTarget> targets);
 }
 
 /// <summary>The server's <see cref="IHostTargetConfirmation"/>.</summary>
@@ -97,16 +108,7 @@ public sealed class HostTargetConfirmation : IHostTargetConfirmation
         ArgumentNullException.ThrowIfNull(targets);
         ArgumentNullException.ThrowIfNull(input);
 
-        var hosts = new Dictionary<nint, HostWindowToConfirm>();
-        foreach (var target in targets)
-        {
-            if (target.AllowHostTarget && target.WindowHandle is { } handle && !hosts.ContainsKey(handle) &&
-                _guard.HostWindowToConfirm(target) is { } window)
-            {
-                hosts[handle] = window;
-            }
-        }
-
+        var hosts = HostWindows(targets);
         if (hosts.Count == 0 || _session.IsPaused)
         {
             return HostConfirmation.None;
@@ -114,6 +116,12 @@ public sealed class HostTargetConfirmation : IHostTargetConfirmation
 
         var windows = hosts.Values.DistinctBy(w => w.Window.Handle).ToList();
         var names = string.Join(" and ", windows.Select(w => Name(w.Window)));
+
+        // Never a paste or a drop into the host: what it puts in cannot be shown, and the clipboard can change after the yes
+        if (input.Pastes)
+        {
+            throw new ToolErrorException(nameof(InputErrorCode.PasteNotAllowed), HostPasteRefusal(names));
+        }
 
         // The question shows every character and key that would be sent, or the call is refused: never a cut preview
         InputPreview? content = null;
@@ -123,6 +131,19 @@ public sealed class HostTargetConfirmation : IHostTargetConfirmation
             if (content == null)
             {
                 return HostConfirmation.None;
+            }
+
+            if (content.Pastes)
+            {
+                throw new ToolErrorException(nameof(InputErrorCode.PasteNotAllowed), HostPasteRefusal(names));
+            }
+
+            if (content.TypesByCode)
+            {
+                throw new ToolErrorException(ToolErrorReporting.InvalidArgumentsErrorCode,
+                    $"The keys press a numeric keypad digit with Alt held, which types a character by its code, into {names}, the " +
+                    "agent's own host. That is never allowed there: the question could not show the character it types. Nothing " +
+                    "was sent, and the user was not asked. Type the character itself with type_text.");
             }
 
             if (content.Shown.Length > MaxShownLength)
@@ -151,8 +172,34 @@ public sealed class HostTargetConfirmation : IHostTargetConfirmation
                 "sent. Ask the user how to continue.");
         }
 
-        return new HostConfirmation(hosts.ToDictionary(p => p.Key, p => p.Value.Approval));
+        return new HostConfirmation(hosts.ToDictionary(p => p.Key, p => p.Value.Approval with { KeyboardLayout = content?.Layout ?? 0 }));
     }
+
+    public HostConfirmation ForReadOnly(IReadOnlyList<InputTarget> targets) =>
+        new(HostWindows(targets).ToDictionary(p => p.Key, p => p.Value.Approval));
+
+    /// <summary>The host windows among <paramref name="targets"/> named with allowHostTarget, by the handle each target names.</summary>
+    private Dictionary<nint, HostWindowToConfirm> HostWindows(IReadOnlyList<InputTarget> targets)
+    {
+        ArgumentNullException.ThrowIfNull(targets);
+        var hosts = new Dictionary<nint, HostWindowToConfirm>();
+        foreach (var target in targets)
+        {
+            if (target.AllowHostTarget && target.WindowHandle is { } handle && !hosts.ContainsKey(handle) &&
+                _guard.HostWindowToConfirm(target) is { } window)
+            {
+                hosts[handle] = window;
+            }
+        }
+
+        return hosts;
+    }
+
+    private static string HostPasteRefusal(string names) =>
+        $"The input pastes or drops content into {names}, the agent's own host (Ctrl+V, Shift+Insert, Win+V, the SYN character, a " +
+        "right or middle click, a drag, or a paste method). That is never allowed: the user is shown every character sent there, " +
+        "and what a paste or drop puts in cannot be shown and can change after their yes. Nothing was sent, and the user was not " +
+        "asked. Type the text with type_text (method unicode) instead.";
 
     /// <summary>
     /// The question: which window (its title quoted on one line, <see cref="UserConfirmation.Quote(string?)"/>, and its
@@ -175,8 +222,9 @@ public sealed class HostTargetConfirmation : IHostTargetConfirmation
         }
         else
         {
-            var then = content.PressesEnter ? ", and press Enter, which in a terminal runs the command"
-                : content.TypesLineBreak ? ", with line breaks, which in a terminal can run the command"
+            var then = content.PressesEnter
+                ? ", and press Enter (the Enter key, or a line break, Ctrl+M or Ctrl+J, which a terminal takes as Enter), which in a " +
+                  "terminal runs the command"
                 : string.Empty;
             question.Append($"{tool} will {content.How} in this window{then}:\n")
                 .Append(ShownInput.Open).Append(content.Shown).Append(ShownInput.Close).Append('\n')

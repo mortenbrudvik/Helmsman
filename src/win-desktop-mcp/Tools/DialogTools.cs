@@ -69,8 +69,8 @@ public class DialogTools
         [Description(WindowTargeting.WindowDescription)]
         WindowSelector? window = null,
         [Description("Allow answering a dialog of the agent's own host window (its terminal, editor or chat app). Works only " +
-                     "with handle (or window.handle); the server asks the user first (ConfirmationDeclined, ConfirmationRequired). " +
-                     "Use only when the user asked for it. Default: false")]
+                     "with handle (or window.handle); a press asks the user first (ConfirmationDeclined, ConfirmationRequired), a read " +
+                     "does not. Use only when the user asked for it. Default: false")]
         bool allowHostTarget = false,
         [Description("The bound of each read and how long the press may block, in milliseconds (default: 5000, clamped " +
                      "to 1000-30000).")]
@@ -90,9 +90,11 @@ public class DialogTools
                 "an AutomationId, or its visible text; leave it out to only read the dialog. Nothing was done.");
         }
 
-        var confirmed = await ConfirmHostAsync(server, target, allowHostTarget,
-            new HostInput("respond_to_dialog", button == null ? "read the dialog, pressing nothing" : $"press the button {UserConfirmation.Quote(button)}"),
-            cancellationToken).ConfigureAwait(false);
+        // A read sends nothing to the host: allowHostTarget lets it read as it did before the question; a press asks the user
+        var confirmed = button == null
+            ? allowHostTarget && target != nint.Zero ? _hostConfirmation.ForReadOnly([InputTarget.Window(target, allowHostTarget: true)]).For(target) : null
+            : await ConfirmHostAsync(server, target, allowHostTarget,
+                new HostInput("respond_to_dialog", $"press the button {UserConfirmation.Quote(button)}"), cancellationToken).ConfigureAwait(false);
         var result = await _dialogs.RespondAsync(new DialogResponseRequest(target, button, allowHostTarget, timeout) { ConfirmedHost = confirmed },
                 cancellationToken)
             .ConfigureAwait(false);

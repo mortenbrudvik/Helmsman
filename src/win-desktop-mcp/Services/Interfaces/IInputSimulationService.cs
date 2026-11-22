@@ -161,14 +161,18 @@ public interface IInputSimulationService
     /// <summary>
     /// What <see cref="TypeTextAsync"/> would type or paste, as the user's question before allowHostTarget shows it
     /// (<see cref="InputPreview"/>): built from the same events (line breaks normalized, controlChars and the method's
-    /// default applied), read on the invariant layout, so every character is shown as itself. Null when the call would be
-    /// refused before anything is sent (empty text, a line break without controlChars): nothing is asked then.
+    /// default applied), on the same layout (<paramref name="target"/>'s for keys, none for characters sent as themselves).
+    /// Null when the call would be refused before anything is sent (empty text, a line break without controlChars): nothing
+    /// is asked then.
     /// </summary>
-    InputPreview? PreviewText(string text, int delayBetweenKeysMs, TextControlChars? controlChars, TextInputMethod method);
+    InputPreview? PreviewText(string text, int delayBetweenKeysMs, TextControlChars? controlChars, TextInputMethod method, InputTarget target);
 
-    /// <summary>What <see cref="SendKeysAsync"/> would press, parsed as it parses them; null when they do not parse.</summary>
-    InputPreview? PreviewSendKeys(string keys);
+    /// <summary>
+    /// What <see cref="SendKeysAsync"/> would press, parsed as it parses them on <paramref name="target"/>'s keyboard layout;
+    /// null when they do not parse.
+    /// </summary>
+    InputPreview? PreviewSendKeys(string keys, InputTarget target);
 
-    /// <summary>What <see cref="PressKeysAsync"/> would press, <paramref name="repeat"/> included; null when they do not parse.</summary>
-    InputPreview? PreviewPressKeys(KeyList keys, int repeat);
+    /// <summary>What <see cref="PressKeysAsync"/> would press, <paramref name="repeat"/> included, on <paramref name="target"/>'s layout; null when they do not parse.</summary>
+    InputPreview? PreviewPressKeys(KeyList keys, int repeat, InputTarget target);
 }
