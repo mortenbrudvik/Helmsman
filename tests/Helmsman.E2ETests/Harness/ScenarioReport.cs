@@ -63,13 +63,13 @@ public sealed class ScenarioRecorder(InProcessMcpServer server, ITestOutputHelpe
 /// <summary>
 /// The scenarios of one test run (roadmap M7.6), shared by the scenario tests as a class fixture: each scenario is measured
 /// with a <see cref="ScenarioRecorder"/>, compared with the same scenario of the previous run, and the run is written as a
-/// JSON file when the tests end. The folder is WAM_SCENARIO_RESULTS, or WamScenarios in the temp folder; the previous run is
+/// JSON file when the tests end. The folder is HELMSMAN_SCENARIO_RESULTS, or WamScenarios in the temp folder; the previous run is
 /// the newest file there.
 /// </summary>
 public sealed class ScenarioReport : IDisposable
 {
     /// <summary>The environment variable that names the results folder (a CI artifact folder, for example).</summary>
-    public const string ResultsVariable = "WAM_SCENARIO_RESULTS";
+    public const string ResultsVariable = "HELMSMAN_SCENARIO_RESULTS";
 
     private static readonly JsonSerializerOptions Json = new()
     {

@@ -6,7 +6,7 @@ namespace Helmsman.E2ETests.HarnessTests;
 /// <summary>
 /// The UI Automation engine scenarios (roadmap M3.2) are the release gate for the default engine (TESTING.md, "Release
 /// gate: the UI Automation engines"): each must read the fixture with both engines in one gated run, whatever
-/// WAM_UIA_ENGINE says in the shell that runs it. These tests read the assembly's metadata only.
+/// HELMSMAN_UIA_ENGINE says in the shell that runs it. These tests read the assembly's metadata only.
 /// </summary>
 public class UiaEngineScenarioTests
 {
@@ -35,7 +35,7 @@ public class UiaEngineScenarioTests
         // Assert
         scenarios.Should().NotBeEmpty();
         withOneEngine.Should().BeEmpty(
-            "an engine scenario left to the server's default engine runs with whatever WAM_UIA_ENGINE says, so the gate " +
+            "an engine scenario left to the server's default engine runs with whatever HELMSMAN_UIA_ENGINE says, so the gate " +
             "would read the fixture with one engine only; make it a theory with [InlineData(UiaEngine.Uia3)] and " +
             "[InlineData(UiaEngine.Uia2)], or a " + BothEnginesPrefix + "* fact that starts a server per engine");
     }

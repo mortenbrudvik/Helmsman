@@ -10,7 +10,7 @@ namespace Helmsman.E2ETests.Harness;
 public static class FixtureAppLocator
 {
     /// <summary>Full path of a WamFixtureApp.exe to use instead of the one built with the tests.</summary>
-    public const string PathEnvironmentVariable = "WAM_FIXTURE_APP_PATH";
+    public const string PathEnvironmentVariable = "HELMSMAN_FIXTURE_APP_PATH";
 
     /// <summary>The AssemblyMetadata key the project file writes the relative path under.</summary>
     public const string BuildPathMetadataKey = "WamFixtureAppPath";

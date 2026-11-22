@@ -17,7 +17,7 @@ on:
           - scenarios
         default: no-input
       engine:
-        description: 'UI Automation engine the server reads with (WAM_UIA_ENGINE): uia3, the default, or uia2. The release gate runs the no-input tier once with each.'
+        description: 'UI Automation engine the server reads with (HELMSMAN_UIA_ENGINE): uia3, the default, or uia2. The release gate runs the no-input tier once with each.'
         type: choice
         options:
           - uia3
@@ -36,9 +36,10 @@ jobs:
     runs-on: ${{ inputs.runner }}
     timeout-minutes: 20
     env:
-      # Set to 1 only in the test step below, for the tier that was asked for.
-      WAM_ALLOW_DESKTOP_TESTS: '0'
-      WAM_ALLOW_DESKTOP_NOINPUT_TESTS: '0'
+      # Set to 1 only in the test step below, for the tier that was asked for. A HELMSMAN_ name that is set, even to 0,
+      # wins over its WAM_ name from before 4.0.0.
+      HELMSMAN_ALLOW_DESKTOP_TESTS: '0'
+      HELMSMAN_ALLOW_DESKTOP_NOINPUT_TESTS: '0'
 
     steps:
       - name: Check for an interactive desktop
@@ -114,19 +115,19 @@ jobs:
         env:
           TIER: ${{ inputs.tier }}
           # The scenarios that leave the engine to the server read with this one; the engine scenarios read with both
-          WAM_UIA_ENGINE: ${{ inputs.engine }}
+          HELMSMAN_UIA_ENGINE: ${{ inputs.engine }}
         run: |
           if ($env:TIER -eq 'all') {
-            $env:WAM_ALLOW_DESKTOP_TESTS = '1'
+            $env:HELMSMAN_ALLOW_DESKTOP_TESTS = '1'
             $filter = 'Category=Desktop'
           } elseif ($env:TIER -eq 'scenarios') {
             # Each run is written beside the runner's earlier ones (its temp folder outlives the job on a self-hosted
             # runner), so the report compares it with the previous run; the new file is uploaded below
-            $env:WAM_ALLOW_DESKTOP_TESTS = '1'
-            $env:WAM_SCENARIO_RESULTS = Join-Path $env:TEMP 'WamScenarios'
+            $env:HELMSMAN_ALLOW_DESKTOP_TESTS = '1'
+            $env:HELMSMAN_SCENARIO_RESULTS = Join-Path $env:TEMP 'WamScenarios'
             $filter = 'FullyQualifiedName~ScenarioEvaluationTests'
           } else {
-            $env:WAM_ALLOW_DESKTOP_NOINPUT_TESTS = '1'
+            $env:HELMSMAN_ALLOW_DESKTOP_NOINPUT_TESTS = '1'
             $filter = 'Category=DesktopNoInput'
           }
           $results = Join-Path $PWD 'TestResults/e2e'
@@ -150,12 +151,12 @@ jobs:
           $passed = @($outcomes | Where-Object { $_ -eq 'Passed' }).Count
           $failed = @($outcomes | Where-Object { $_ -eq 'Failed' }).Count
           $skipped = @($outcomes | Where-Object { $_ -eq 'NotExecuted' }).Count
-          "### E2E tests ($env:TIER, $env:WAM_UIA_ENGINE)`n`n$passed passed, $failed failed, $skipped skipped." >> $env:GITHUB_STEP_SUMMARY
+          "### E2E tests ($env:TIER, $env:HELMSMAN_UIA_ENGINE)`n`n$passed passed, $failed failed, $skipped skipped." >> $env:GITHUB_STEP_SUMMARY
           if ($passed + $failed -eq 0) {
-            throw "No end-to-end test ran for tier '$env:TIER' (filter $filter, engine $env:WAM_UIA_ENGINE): the opt-in did not reach the tests."
+            throw "No end-to-end test ran for tier '$env:TIER' (filter $filter, engine $env:HELMSMAN_UIA_ENGINE): the opt-in did not reach the tests."
           }
-          if ($env:TIER -eq 'scenarios' -and (Test-Path $env:WAM_SCENARIO_RESULTS)) {
-            $newest = Get-ChildItem -LiteralPath $env:WAM_SCENARIO_RESULTS -Filter 'scenarios-*.json' | Sort-Object Name | Select-Object -Last 1
+          if ($env:TIER -eq 'scenarios' -and (Test-Path $env:HELMSMAN_SCENARIO_RESULTS)) {
+            $newest = Get-ChildItem -LiteralPath $env:HELMSMAN_SCENARIO_RESULTS -Filter 'scenarios-*.json' | Sort-Object Name | Select-Object -Last 1
             if ($newest) {
               New-Item -ItemType Directory -Force (Join-Path $results 'scenarios') | Out-Null
               Copy-Item -LiteralPath $newest.FullName -Destination (Join-Path $results 'scenarios')

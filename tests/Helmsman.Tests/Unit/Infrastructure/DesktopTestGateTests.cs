@@ -38,13 +38,14 @@ public class DesktopTestGateTests
 
         // Assert
         reason.Should().NotBeNullOrWhiteSpace();
-        reason.Should().Contain("WAM_ALLOW_DESKTOP_TESTS=1");
+        reason.Should().Contain("HELMSMAN_ALLOW_DESKTOP_TESTS=1");
     }
 
     [Fact]
-    public void EnvironmentVariable_IsWamAllowDesktopTests()
+    public void EnvironmentVariable_IsHelmsmanAllowDesktopTests()
     {
-        DesktopTestGate.EnvironmentVariable.Should().Be("WAM_ALLOW_DESKTOP_TESTS");
+        DesktopTestGate.EnvironmentVariable.Should().Be("HELMSMAN_ALLOW_DESKTOP_TESTS");
+        DesktopTestGate.OldEnvironmentVariable.Should().Be("WAM_ALLOW_DESKTOP_TESTS");
     }
 
     #endregion
@@ -52,9 +53,10 @@ public class DesktopTestGateTests
     #region GetNoInputSkipReason and tiers
 
     [Fact]
-    public void NoInputEnvironmentVariable_IsWamAllowDesktopNoInputTests()
+    public void NoInputEnvironmentVariable_IsHelmsmanAllowDesktopNoInputTests()
     {
-        DesktopTestGate.NoInputEnvironmentVariable.Should().Be("WAM_ALLOW_DESKTOP_NOINPUT_TESTS");
+        DesktopTestGate.NoInputEnvironmentVariable.Should().Be("HELMSMAN_ALLOW_DESKTOP_NOINPUT_TESTS");
+        DesktopTestGate.OldNoInputEnvironmentVariable.Should().Be("WAM_ALLOW_DESKTOP_NOINPUT_TESTS");
     }
 
     [Theory]
@@ -65,7 +67,7 @@ public class DesktopTestGateTests
     [InlineData("1", "1")]
     public void GetNoInputSkipReason_WhenEitherOptInIsExactlyOne_ReturnsNull(string? noInputValue, string? desktopValue)
     {
-        // Act - the full opt-in (WAM_ALLOW_DESKTOP_TESTS=1) includes the narrower no-input tier
+        // Act - the full opt-in (HELMSMAN_ALLOW_DESKTOP_TESTS=1) includes the narrower no-input tier
         var reason = DesktopTestGate.GetNoInputSkipReason(noInputValue, desktopValue);
 
         // Assert
@@ -88,28 +90,33 @@ public class DesktopTestGateTests
 
         // Assert
         reason.Should().NotBeNullOrWhiteSpace();
-        reason.Should().Contain("WAM_ALLOW_DESKTOP_NOINPUT_TESTS=1");
-        reason.Should().Contain("WAM_ALLOW_DESKTOP_TESTS=1");
+        reason.Should().Contain("HELMSMAN_ALLOW_DESKTOP_NOINPUT_TESTS=1");
+        reason.Should().Contain("HELMSMAN_ALLOW_DESKTOP_TESTS=1");
     }
 
     [Fact]
     public void GetSkipReason_ForInputTier_IgnoresTheNoInputOptIn()
     {
         // Arrange - the no-input opt-in must never unlock tests that send input
-        var variables = new Dictionary<string, string?> { ["WAM_ALLOW_DESKTOP_NOINPUT_TESTS"] = "1" };
+        var variables = new Dictionary<string, string?>
+        {
+            ["HELMSMAN_ALLOW_DESKTOP_NOINPUT_TESTS"] = "1", ["WAM_ALLOW_DESKTOP_NOINPUT_TESTS"] = "1"
+        };
 
         // Act
         var reason = DesktopTestGate.GetSkipReason(DesktopTier.Input, name => variables.GetValueOrDefault(name));
 
         // Assert
         reason.Should().NotBeNull();
-        reason.Should().Contain("WAM_ALLOW_DESKTOP_TESTS=1");
+        reason.Should().Contain("HELMSMAN_ALLOW_DESKTOP_TESTS=1");
     }
 
     [Theory]
+    [InlineData("HELMSMAN_ALLOW_DESKTOP_NOINPUT_TESTS")]
+    [InlineData("HELMSMAN_ALLOW_DESKTOP_TESTS")]
     [InlineData("WAM_ALLOW_DESKTOP_NOINPUT_TESTS")]
     [InlineData("WAM_ALLOW_DESKTOP_TESTS")]
-    public void GetSkipReason_ForNoInputTier_AcceptsEitherOptIn(string variable)
+    public void GetSkipReason_ForNoInputTier_AcceptsEitherOptIn_UnderEitherName(string variable)
     {
         // Arrange
         var variables = new Dictionary<string, string?> { [variable] = "1" };
@@ -130,7 +137,7 @@ public class DesktopTestGateTests
         var act = () => DesktopTestGate.ThrowIfNotAllowed(tier, _ => null);
 
         // Assert - harness code calls this before it starts anything, as a second line of defense
-        act.Should().Throw<InvalidOperationException>().WithMessage("*WAM_ALLOW_DESKTOP_TESTS=1*");
+        act.Should().Throw<InvalidOperationException>().WithMessage("*HELMSMAN_ALLOW_DESKTOP_TESTS=1*");
     }
 
     [Fact]
@@ -138,10 +145,74 @@ public class DesktopTestGateTests
     {
         // Act
         var act = () => DesktopTestGate.ThrowIfNotAllowed(
-            DesktopTier.NoInput, name => name == "WAM_ALLOW_DESKTOP_NOINPUT_TESTS" ? "1" : null);
+            DesktopTier.NoInput, name => name == "HELMSMAN_ALLOW_DESKTOP_NOINPUT_TESTS" ? "1" : null);
 
         // Assert
         act.Should().NotThrow();
+    }
+
+    #endregion
+
+    #region Old names (before release 4.0.0)
+
+    /// <summary>The variables as a fake environment: a name not in it is not present.</summary>
+    private static Func<string, string?> FakeEnvironment(params (string Name, string Value)[] variables) =>
+        name => variables.Where(v => v.Name == name).Select(v => v.Value).FirstOrDefault();
+
+    [Theory]
+    [InlineData(DesktopTier.Input, "WAM_ALLOW_DESKTOP_TESTS")]
+    [InlineData(DesktopTier.NoInput, "WAM_ALLOW_DESKTOP_TESTS")]
+    [InlineData(DesktopTier.NoInput, "WAM_ALLOW_DESKTOP_NOINPUT_TESTS")]
+    public void TheOldName_OptsIn_WhenTheNewNameIsNotPresent(DesktopTier tier, string oldName)
+    {
+        DesktopTestGate.GetSkipReason(tier, FakeEnvironment((oldName, "1"))).Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("0")]
+    [InlineData("")]
+    [InlineData("yes")]
+    public void TheNewName_WinsOverTheOldOne_WhenPresent_WhateverItsValue(string newValue)
+    {
+        // Arrange - the old names opt in; the new ones are present (even empty) and do not
+        var environment = FakeEnvironment(
+            ("HELMSMAN_ALLOW_DESKTOP_TESTS", newValue), ("WAM_ALLOW_DESKTOP_TESTS", "1"),
+            ("HELMSMAN_ALLOW_DESKTOP_NOINPUT_TESTS", newValue), ("WAM_ALLOW_DESKTOP_NOINPUT_TESTS", "1"));
+
+        // Act and assert - neither tier runs
+        DesktopTestGate.GetSkipReason(DesktopTier.Input, environment).Should().NotBeNull();
+        DesktopTestGate.GetSkipReason(DesktopTier.NoInput, environment).Should().NotBeNull();
+        DesktopTestGate.Read(environment, DesktopTestGate.EnvironmentVariable).Should().Be(newValue);
+    }
+
+    [Fact]
+    public void TheNewName_OptsIn_WhenTheOldOneSaysNo()
+    {
+        var environment = FakeEnvironment(("HELMSMAN_ALLOW_DESKTOP_TESTS", "1"), ("WAM_ALLOW_DESKTOP_TESTS", "0"));
+
+        DesktopTestGate.GetSkipReason(DesktopTier.Input, environment).Should().BeNull();
+    }
+
+    [Fact]
+    public void TheOldNoInputName_NeverOptsInToTheInputTier()
+    {
+        DesktopTestGate.GetSkipReason(DesktopTier.Input, FakeEnvironment(("WAM_ALLOW_DESKTOP_NOINPUT_TESTS", "1")))
+            .Should().NotBeNull();
+    }
+
+    [Fact]
+    public void NeitherName_IsNoOptIn()
+    {
+        DesktopTestGate.GetSkipReason(DesktopTier.Input, FakeEnvironment()).Should().NotBeNull();
+        DesktopTestGate.GetSkipReason(DesktopTier.NoInput, FakeEnvironment()).Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Read_RefusesANameThatIsNoOptIn()
+    {
+        var act = () => DesktopTestGate.Read(FakeEnvironment(), "HELMSMAN_TOOLSETS");
+
+        act.Should().Throw<ArgumentException>();
     }
 
     #endregion
@@ -245,8 +316,7 @@ public class DesktopTestGateTests
     public void DesktopFact_SkipMatchesGateForCurrentEnvironment()
     {
         // Arrange
-        var expected = DesktopTestGate.GetSkipReason(
-            Environment.GetEnvironmentVariable(DesktopTestGate.EnvironmentVariable));
+        var expected = DesktopTestGate.GetSkipReason(DesktopTier.Input, Environment.GetEnvironmentVariable);
 
         // Act
         var attribute = new DesktopFactAttribute();
@@ -259,8 +329,7 @@ public class DesktopTestGateTests
     public void DesktopTheory_SkipMatchesGateForCurrentEnvironment()
     {
         // Arrange
-        var expected = DesktopTestGate.GetSkipReason(
-            Environment.GetEnvironmentVariable(DesktopTestGate.EnvironmentVariable));
+        var expected = DesktopTestGate.GetSkipReason(DesktopTier.Input, Environment.GetEnvironmentVariable);
 
         // Act
         var attribute = new DesktopTheoryAttribute();
@@ -279,9 +348,7 @@ public class DesktopTestGateTests
     public void DesktopNoInputFact_SkipMatchesNoInputGateForCurrentEnvironment()
     {
         // Arrange
-        var expected = DesktopTestGate.GetNoInputSkipReason(
-            Environment.GetEnvironmentVariable(DesktopTestGate.NoInputEnvironmentVariable),
-            Environment.GetEnvironmentVariable(DesktopTestGate.EnvironmentVariable));
+        var expected = DesktopTestGate.GetSkipReason(DesktopTier.NoInput, Environment.GetEnvironmentVariable);
 
         // Act
         var attribute = new DesktopNoInputFactAttribute();
@@ -294,9 +361,7 @@ public class DesktopTestGateTests
     public void DesktopNoInputTheory_SkipMatchesNoInputGateForCurrentEnvironment()
     {
         // Arrange
-        var expected = DesktopTestGate.GetNoInputSkipReason(
-            Environment.GetEnvironmentVariable(DesktopTestGate.NoInputEnvironmentVariable),
-            Environment.GetEnvironmentVariable(DesktopTestGate.EnvironmentVariable));
+        var expected = DesktopTestGate.GetSkipReason(DesktopTier.NoInput, Environment.GetEnvironmentVariable);
 
         // Act
         var attribute = new DesktopNoInputTheoryAttribute();
@@ -322,7 +387,7 @@ public class DesktopTestGateTests
     [DesktopFact]
     public void DesktopFact_Canary_RunsOnlyWhenOptedIn()
     {
-        Environment.GetEnvironmentVariable(DesktopTestGate.EnvironmentVariable).Should().Be("1");
+        DesktopTestGate.Read(Environment.GetEnvironmentVariable, DesktopTestGate.EnvironmentVariable).Should().Be("1");
     }
 
     [DesktopTheory]
@@ -330,7 +395,7 @@ public class DesktopTestGateTests
     [InlineData(2)]
     public void DesktopTheory_Canary_RunsOnlyWhenOptedIn(int _)
     {
-        Environment.GetEnvironmentVariable(DesktopTestGate.EnvironmentVariable).Should().Be("1");
+        DesktopTestGate.Read(Environment.GetEnvironmentVariable, DesktopTestGate.EnvironmentVariable).Should().Be("1");
     }
 
     [DesktopNoInputFact]
@@ -338,8 +403,8 @@ public class DesktopTestGateTests
     {
         new[]
         {
-            Environment.GetEnvironmentVariable(DesktopTestGate.NoInputEnvironmentVariable),
-            Environment.GetEnvironmentVariable(DesktopTestGate.EnvironmentVariable)
+            DesktopTestGate.Read(Environment.GetEnvironmentVariable, DesktopTestGate.NoInputEnvironmentVariable),
+            DesktopTestGate.Read(Environment.GetEnvironmentVariable, DesktopTestGate.EnvironmentVariable)
         }.Should().Contain("1");
     }
 
@@ -349,8 +414,8 @@ public class DesktopTestGateTests
     {
         new[]
         {
-            Environment.GetEnvironmentVariable(DesktopTestGate.NoInputEnvironmentVariable),
-            Environment.GetEnvironmentVariable(DesktopTestGate.EnvironmentVariable)
+            DesktopTestGate.Read(Environment.GetEnvironmentVariable, DesktopTestGate.NoInputEnvironmentVariable),
+            DesktopTestGate.Read(Environment.GetEnvironmentVariable, DesktopTestGate.EnvironmentVariable)
         }.Should().Contain("1");
     }
 

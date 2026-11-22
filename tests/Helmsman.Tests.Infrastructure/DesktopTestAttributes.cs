@@ -41,17 +41,27 @@ public enum DesktopTier
 /// explorers and coverage tools. The <c>Category=Desktop</c> trait is reported as well so CI
 /// can leave these tests out of the run entirely. This project is shared by the unit test project
 /// and the end-to-end test project, so both use the same gate and the same variables.
+/// <para>Each opt-in had a <c>WAM_</c> name before release 4.0.0 (<see cref="OldEnvironmentVariable"/>,
+/// <see cref="OldNoInputEnvironmentVariable"/>), as the server's settings did. The old name is still read when the new
+/// one is not present in the environment; when the new one is present, whatever its value, the old one is ignored
+/// (<see cref="Read"/>), the rule the server applies to its settings.</para>
 /// </remarks>
 public static class DesktopTestGate
 {
     /// <summary>Set this variable to <c>1</c> to run desktop tests of both tiers.</summary>
-    public const string EnvironmentVariable = "WAM_ALLOW_DESKTOP_TESTS";
+    public const string EnvironmentVariable = "HELMSMAN_ALLOW_DESKTOP_TESTS";
 
     /// <summary>
     /// Set this variable to <c>1</c> to run only the no-input tier
     /// (<see cref="DesktopNoInputFactAttribute"/>, <see cref="DesktopNoInputTheoryAttribute"/>).
     /// </summary>
-    public const string NoInputEnvironmentVariable = "WAM_ALLOW_DESKTOP_NOINPUT_TESTS";
+    public const string NoInputEnvironmentVariable = "HELMSMAN_ALLOW_DESKTOP_NOINPUT_TESTS";
+
+    /// <summary>The name of <see cref="EnvironmentVariable"/> before release 4.0.0, read when the new one is not set.</summary>
+    public const string OldEnvironmentVariable = "WAM_ALLOW_DESKTOP_TESTS";
+
+    /// <summary>The name of <see cref="NoInputEnvironmentVariable"/> before release 4.0.0, read when the new one is not set.</summary>
+    public const string OldNoInputEnvironmentVariable = "WAM_ALLOW_DESKTOP_NOINPUT_TESTS";
 
     /// <summary>Trait name reported for every desktop test.</summary>
     public const string TraitName = "Category";
@@ -84,8 +94,27 @@ public static class DesktopTestGate
               $"without sending input. Set {NoInputEnvironmentVariable}=1 (or {EnvironmentVariable}=1) to run it.";
 
     /// <summary>
+    /// The value of the opt-in <paramref name="name"/> (<see cref="EnvironmentVariable"/> or
+    /// <see cref="NoInputEnvironmentVariable"/>) through <paramref name="readVariable"/>: its own when it is present, even
+    /// empty; otherwise its old name's; null when neither is present.
+    /// </summary>
+    public static string? Read(Func<string, string?> readVariable, string name)
+    {
+        ArgumentNullException.ThrowIfNull(readVariable);
+        var oldName = name switch
+        {
+            EnvironmentVariable => OldEnvironmentVariable,
+            NoInputEnvironmentVariable => OldNoInputEnvironmentVariable,
+            _ => throw new ArgumentException($"'{name}' is not an opt-in of the desktop test gate.", nameof(name))
+        };
+
+        return readVariable(name) ?? readVariable(oldName);
+    }
+
+    /// <summary>
     /// Returns the skip reason for a test of <paramref name="tier"/>, reading the opt-in variables
-    /// through <paramref name="readVariable"/>, or null when the tier is allowed.
+    /// through <paramref name="readVariable"/> (each under its old name when the new one is not set, <see cref="Read"/>),
+    /// or null when the tier is allowed.
     /// </summary>
     public static string? GetSkipReason(DesktopTier tier, Func<string, string?> readVariable)
     {
@@ -93,10 +122,10 @@ public static class DesktopTestGate
 
         return tier switch
         {
-            DesktopTier.Input => GetSkipReason(readVariable(EnvironmentVariable)),
+            DesktopTier.Input => GetSkipReason(Read(readVariable, EnvironmentVariable)),
             DesktopTier.NoInput => GetNoInputSkipReason(
-                readVariable(NoInputEnvironmentVariable),
-                readVariable(EnvironmentVariable)),
+                Read(readVariable, NoInputEnvironmentVariable),
+                Read(readVariable, EnvironmentVariable)),
             _ => throw new ArgumentOutOfRangeException(nameof(tier), tier, "Unknown desktop tier.")
         };
     }
@@ -128,7 +157,7 @@ public static class DesktopTestGate
 
     /// <summary>The skip reason for the current process environment.</summary>
     public static string? CurrentSkipReason =>
-        GetSkipReason(Environment.GetEnvironmentVariable(EnvironmentVariable));
+        GetSkipReason(DesktopTier.Input, Environment.GetEnvironmentVariable);
 
     /// <summary>The skip reason for a no-input test in the current process environment.</summary>
     public static string? CurrentNoInputSkipReason =>
@@ -166,7 +195,7 @@ public interface IDesktopTestRequirement
 
 /// <summary>
 /// A <see cref="FactAttribute"/> for a test with real desktop side effects. It is skipped
-/// unless <c>WAM_ALLOW_DESKTOP_TESTS=1</c> and always carries the trait <c>Category=Desktop</c>.
+/// unless <c>HELMSMAN_ALLOW_DESKTOP_TESTS=1</c> and always carries the trait <c>Category=Desktop</c>.
 /// </summary>
 [TraitDiscoverer(DesktopTraitDiscoverer.TypeName, DesktopTraitDiscoverer.AssemblyName)]
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
@@ -196,7 +225,7 @@ public sealed class DesktopFactAttribute : FactAttribute, ITraitAttribute
 
 /// <summary>
 /// A <see cref="TheoryAttribute"/> for a test with real desktop side effects. It is skipped
-/// unless <c>WAM_ALLOW_DESKTOP_TESTS=1</c> and always carries the trait <c>Category=Desktop</c>.
+/// unless <c>HELMSMAN_ALLOW_DESKTOP_TESTS=1</c> and always carries the trait <c>Category=Desktop</c>.
 /// </summary>
 [TraitDiscoverer(DesktopTraitDiscoverer.TypeName, DesktopTraitDiscoverer.AssemblyName)]
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
@@ -226,8 +255,8 @@ public sealed class DesktopTheoryAttribute : TheoryAttribute, ITraitAttribute
 
 /// <summary>
 /// A <see cref="FactAttribute"/> for a no-input desktop test: it starts the suite's own fixture app and
-/// only reads or captures it. It is skipped unless <c>WAM_ALLOW_DESKTOP_NOINPUT_TESTS=1</c> or
-/// <c>WAM_ALLOW_DESKTOP_TESTS=1</c>, and carries the traits <c>Category=Desktop</c> and
+/// only reads or captures it. It is skipped unless <c>HELMSMAN_ALLOW_DESKTOP_NOINPUT_TESTS=1</c> or
+/// <c>HELMSMAN_ALLOW_DESKTOP_TESTS=1</c>, and carries the traits <c>Category=Desktop</c> and
 /// <c>Category=DesktopNoInput</c>.
 /// </summary>
 [TraitDiscoverer(DesktopNoInputTraitDiscoverer.TypeName, DesktopNoInputTraitDiscoverer.AssemblyName)]
@@ -258,7 +287,7 @@ public sealed class DesktopNoInputFactAttribute : FactAttribute, ITraitAttribute
 
 /// <summary>
 /// A <see cref="TheoryAttribute"/> for a no-input desktop test. It is skipped unless
-/// <c>WAM_ALLOW_DESKTOP_NOINPUT_TESTS=1</c> or <c>WAM_ALLOW_DESKTOP_TESTS=1</c>, and carries the traits
+/// <c>HELMSMAN_ALLOW_DESKTOP_NOINPUT_TESTS=1</c> or <c>HELMSMAN_ALLOW_DESKTOP_TESTS=1</c>, and carries the traits
 /// <c>Category=Desktop</c> and <c>Category=DesktopNoInput</c>.
 /// </summary>
 [TraitDiscoverer(DesktopNoInputTraitDiscoverer.TypeName, DesktopNoInputTraitDiscoverer.AssemblyName)]

@@ -3,7 +3,7 @@ using Helmsman.Services;
 namespace Helmsman.E2ETests.Scenarios;
 
 /// <summary>
-/// Takeover detection against the fixture (roadmap M7.4), in the full (input) tier, with WAM_TAKEOVER_DETECTION=stop: Windows
+/// Takeover detection against the fixture (roadmap M7.4), in the full (input) tier, with HELMSMAN_TAKEOVER_DETECTION=stop: Windows
 /// installs the real low-level hooks while type_text runs, and the server's own typing, which Windows marks as injected,
 /// never counts as the user's, so the text goes in whole. Run it while nobody uses the keyboard or mouse: the user's input
 /// would stop the typing, which is the feature, and fail the test. Input goes only to the fixture

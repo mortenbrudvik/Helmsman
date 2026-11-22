@@ -5,7 +5,7 @@ namespace Helmsman.E2ETests.Scenarios;
 /// AutomationIds, control types and positions. No-input tier.
 /// </summary>
 /// <remarks>
-/// Every test runs with both UI Automation engines (roadmap M3.2), whatever WAM_UIA_ENGINE says, so one gated run reads
+/// Every test runs with both UI Automation engines (roadmap M3.2), whatever HELMSMAN_UIA_ENGINE says, so one gated run reads
 /// the fixture with each: these are among the scenarios of the engine release gate (TESTING.md).
 /// </remarks>
 public class FixtureUiElementsTests

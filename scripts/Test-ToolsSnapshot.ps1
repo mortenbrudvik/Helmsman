@@ -19,7 +19,7 @@
 
     It RUNS the exe. The server starts as it does for an MCP client: it records the foreground window, logs its
     safety settings to stderr and joins the pause shared by the servers on the desktop. The script starts it
-    with WAM_PAUSE_HOTKEY=none, so it registers no global hotkey. It calls no tool, so it sends no input and
+    with HELMSMAN_PAUSE_HOTKEY=none, so it registers no global hotkey. It calls no tool, so it sends no input and
     changes no window. The build workflow runs it on a GitHub-hosted runner; it is not part of the test suite.
 
     The build workflow runs it twice: on the exe it has just published from the checked-out sources (always),
@@ -139,11 +139,13 @@ $startInfo.CreateNoWindow = $true
 $startInfo.RedirectStandardInput = $true
 $startInfo.RedirectStandardOutput = $true
 $startInfo.RedirectStandardError = $true
-$startInfo.Environment['WAM_PAUSE_HOTKEY'] = 'none' # no global hotkey for a server that only lists its tools
-# The snapshot is the whole tool surface: every toolset, nothing excluded, not read-only, whatever the caller's settings
-$startInfo.Environment['WAM_TOOLSETS'] = 'all'
-[void]$startInfo.Environment.Remove('WAM_EXCLUDE_TOOLS')
-[void]$startInfo.Environment.Remove('WAM_READ_ONLY')
+$startInfo.Environment['HELMSMAN_PAUSE_HOTKEY'] = 'none' # no global hotkey for a server that only lists its tools
+# The snapshot is the whole tool surface: every toolset, nothing excluded, not read-only, whatever the caller's settings.
+# A setting's name from before 4.0.0 is read when its HELMSMAN_ name is not set, so both names of the two that are removed go.
+$startInfo.Environment['HELMSMAN_TOOLSETS'] = 'all'
+foreach ($name in 'HELMSMAN_EXCLUDE_TOOLS', 'HELMSMAN_READ_ONLY', 'WAM_EXCLUDE_TOOLS', 'WAM_READ_ONLY') {
+    [void]$startInfo.Environment.Remove($name)
+}
 $utf8 = [System.Text.UTF8Encoding]::new($false)
 $startInfo.StandardInputEncoding = $utf8
 $startInfo.StandardOutputEncoding = $utf8

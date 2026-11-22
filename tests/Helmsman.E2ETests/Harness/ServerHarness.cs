@@ -107,7 +107,7 @@ public sealed class ServerHarness : IDisposable
     /// <paramref name="fixtureProcessId"/>. Refuses unless the tier is opted in.
     /// </summary>
     /// <param name="uiaEngine">The UI Automation engine the server reads with (roadmap M3.2); null for the server's own
-    /// choice (WAM_UIA_ENGINE, by default UIA3), so a scenario can run its reads against both engines.</param>
+    /// choice (HELMSMAN_UIA_ENGINE, by default UIA3), so a scenario can run its reads against both engines.</param>
     /// <param name="agentHost">The agent's host as <see cref="RecordAgentHost(DesktopTier)"/> recorded it before the fixture
     /// started, which the server then uses as its own; null to let the server record it now, as it does when it starts.</param>
     /// <param name="allowedActivations">Input tier only: the packaged apps the scenario may activate, without arguments
@@ -267,7 +267,7 @@ public sealed class ServerHarness : IDisposable
     /// <summary>
     /// The audit log folder of a harness (roadmap M2.17): inside its temporary <paramref name="layoutsPath"/>, which
     /// <see cref="Dispose"/> deletes, so a test that calls an audited tool through the server never writes or prunes
-    /// the user's own audit folder (%LOCALAPPDATA% or WAM_AUDIT_PATH). Layout storage reads only the top-level
+    /// the user's own audit folder (%LOCALAPPDATA% or HELMSMAN_AUDIT_PATH). Layout storage reads only the top-level
     /// <c>*.json</c> files, so the subfolder is invisible to it.
     /// </summary>
     public static string AuditFolderFor(string layoutsPath) => Path.Combine(layoutsPath, AuditLogOptions.FolderName);

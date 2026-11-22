@@ -4,14 +4,14 @@ namespace Helmsman.E2ETests.Scenarios;
 
 /// <summary>
 /// The two UI Automation engines (roadmap M3.2) against the fixture: the UIA3 COM client (the default) and the managed
-/// UIA2 client (WAM_UIA_ENGINE=uia2) must read the same tree and find the same elements with the same identity, patterns
+/// UIA2 client (HELMSMAN_UIA_ENGINE=uia2) must read the same tree and find the same elements with the same identity, patterns
 /// and state, and the bounded, cached, breadth-first walk (roadmap M3.1) must keep the levels nearest the window.
 /// No-input tier: they only read.
 /// </summary>
 /// <remarks>
 /// <para>These are the checks the M3.2 spike could not make without a desktop, and part of the engine release gate
 /// (TESTING.md, "Release gate: the UI Automation engines"). Every test reads with both engines itself, whatever
-/// WAM_UIA_ENGINE says. They confirm that the COM client's control view (its cache requests' TreeFilter and the
+/// HELMSMAN_UIA_ENGINE says. They confirm that the COM client's control view (its cache requests' TreeFilter and the
 /// ControlViewCondition of FindAllBuildCache) lists the same children as the managed client, that both report the same
 /// bounds, and that the tree reads work from the worker threads.</para>
 /// <para>They also cover what only the UIA3 engine reads from cache requests of its own: the identity (process, window
