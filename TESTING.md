@@ -294,7 +294,7 @@ Helmsman/
     │       └── Tools/
     ├── Helmsman.Tests.Infrastructure/  # Shared desktop test gate ([DesktopFact], [DesktopNoInputFact], ...)
     │                                               # and the in-process MCP test host (InProcessMcpServer)
-    ├── FixtureApp/                # WamFixtureApp: the WPF app the end-to-end tests drive
+    ├── FixtureApp/                # HelmsmanFixtureApp: the WPF app the end-to-end tests drive
     └── Helmsman.E2ETests/
         ├── Harness/               # Starts the fixture, guarded server services, event log reader
         ├── HarnessTests/          # Ordinary tests of the harness (never start the fixture)
@@ -1986,10 +1986,10 @@ Rules for new tests:
   desktop shares. The E2E `WrapperCatalog` classifies the wrapper's members, and the shared pause's Set
   and Reset, as `GlobalHotkey`, which no tier allows. The one test of the real named event,
   `NativeHotkeyWrapperSharedPauseTests`, opens it only through wrappers built with `NativeHotkeyWrapper(string)` on a
-  name of its own (`Local\WamTests.SharedPause.<guid>`), never the servers' `Local\Helmsman.InputPaused`,
+  name of its own (`Local\HelmsmanTests.SharedPause.<guid>`), never the servers' `Local\Helmsman.InputPaused`,
   builds the servers' parameterless wrapper only to read the name it would open, and registers no hotkey;
   `TestCodeNativeWrapperTests` traces the name passed to that constructor through the IL and fails one it
-  cannot trace to a `Local\WamTests.` literal of the test's own, unless `SanctionedHotkeyNames` gives a reason (a
+  cannot trace to a `Local\HelmsmanTests.` literal of the test's own, unless `SanctionedHotkeyNames` gives a reason (a
   naming helper counts only when it takes no parameter, loads no field and calls no test or server code). It also
   fails an `OpenDesktopPause` on a wrapper it cannot trace, in the same method, to such a constructor on such a name,
   a `Set` or `Reset` of a pause it cannot trace to such an `OpenDesktopPause`, and a parameterless wrapper that does
@@ -2092,7 +2092,7 @@ a real one.
 ### End-to-end tests against the fixture app
 
 `tests/Helmsman.E2ETests` tests the real server services against an app the suite
-owns, `tests/FixtureApp` (WamFixtureApp, a small WPF app). This is where Windows behaviour that
+owns, `tests/FixtureApp` (HelmsmanFixtureApp, a small WPF app). This is where Windows behaviour that
 mocks cannot reproduce gets tested: the foreground lock, UI Automation trees, captures and DPI.
 
 **The fixture app** has fixed AutomationIds (`FixtureContract.Ids`): an edit box, a password box (UI
@@ -2217,7 +2217,7 @@ both engines in every run (see
 [Release gate: the UI Automation engines](#release-gate-the-ui-automation-engines)). The Uia3Tree unit tests never
 create the COM client: they run over Moq mocks of its interfaces. The harness finds the fixture exe from a
 path the build records in the test assembly; set `HELMSMAN_FIXTURE_APP_PATH` to use another build of
-`WamFixtureApp.exe` (for example in Windows Sandbox; unlike the opt-ins, its name from before 4.0.0 is not read). The harness refuses any exe with another name.
+`HelmsmanFixtureApp.exe` (for example in Windows Sandbox; unlike the opt-ins, its name from before 4.0.0 is not read). The harness refuses any exe with another name, a fixture built before the test internals were renamed (`WamFixtureApp.exe`) included.
 
 **Writing a scenario.** Put it in `Scenarios/`, mark it `[DesktopNoInputFact]` when it only reads or
 captures and `[DesktopFact]` when it acts, and start from `E2ESession`:
@@ -2250,7 +2250,7 @@ on such a machine; the requirement is only checked once the tier is opted in.
 **Fixture surfaces for M6.** Five more launch options, none of which changes the fixture unless a scenario asks for it.
 The one change to every start is that the main window's status text now reads Ready from its first frame, instead of
 reading Starting until the ready event.
-`OpenCanvas` (`--open-canvas`, M6.3) opens the window `WAM Fixture Canvas <instance>`, which draws
+`OpenCanvas` (`--open-canvas`, M6.3) opens the window `Helmsman Fixture Canvas <instance>`, which draws
 `FixtureContract.CanvasLines` (dark and light text, down to 9 pt) in OnRender. UI Automation finds only its
 `canvasSurface` pane there, with no name, text or children. Every canvas word has a character that is not a hex digit, so
 it cannot turn up in a title's random instance token. Its `canvasOpened` event gives each line's and word's screen
@@ -2265,7 +2265,7 @@ the harness refuses a later one when it builds the options, where the test would
 event the watchdog cut off. Neither touches the status text, which already reads Ready in the first frame, so after the ready
 event the panel or spinner is the only region of the main window that changes. That holds while the fixture is not
 activated (the default for a no-input test): an activated fixture focuses the edit box, whose caret blinks.
-`OpenOverlay` (`--open-overlay`, M6.7) opens `WAM Fixture Overlay <instance>`, an unowned WS_EX_TOPMOST tool window
+`OpenOverlay` (`--open-overlay`, M6.7) opens `Helmsman Fixture Overlay <instance>`, an unowned WS_EX_TOPMOST tool window
 centred on the primary monitor. That is over the main window's middle unless `--other-scale-monitor` moved the main
 window to another monitor: the overlay does not follow it. Its `overlayOpened` event reports `topmost`, `toolWindow` and `ownerHwnd`.
 `ExcludeOverlayFromCapture` (`--exclude-overlay-from-capture`, issue #17) opens the overlay, with or without `--open-overlay`,
@@ -2453,7 +2453,7 @@ Every run keeps these rules, for every debug instance it starts:
 
 1. Before starting, record every top-level window handle and every `msedge`, `chrome` and `brave` process ID.
 2. Start the browser only with launch_browser_with_debug (`edge` or `chrome`), with no `userDataDir` or a new
-   `%TEMP%\WamM5Check-<guid>` folder, on an explicit free port or port 0. Its `processId` must be new and its command line must
+   `%TEMP%\HelmsmanM5Check-<guid>` folder, on an explicit free port or port 0. Its `processId` must be new and its command line must
    carry that `--user-data-dir`; if the process or the window was already there, the launch was handed to the user's
    browser: stop and close nothing.
 3. Open only pages of a 127.0.0.1 HttpListener the check runs, or `data:` pages the check's own script opens over the
@@ -2549,7 +2549,7 @@ never with keystrokes; windows are moved only with set_window_bounds (`x` and `y
 
 Roadmap M5.4 (on a real Edge, then on a real Chrome with `browser: "chrome"` as in the M5.1 block; every other rule is
 unchanged). Pages are 127.0.0.1 HttpListener pages under 1 MB (rule 3). A named profile is only
-`wam-m54-check-<8 hex digits>`, made by this check and deleted at its end. No call is given a process ID, port or window
+`helmsman-m54-check-<8 hex digits>`, made by this check and deleted at its end. No call is given a process ID, port or window
 of the user's browser: the refusals of the user's browser are covered by the fakes (`DebugBrowserLifecycleTests`):
 
 - **Close a temporary-profile browser.** Launch without `profile` or `userDataDir`: `userDataDir` is under
@@ -2718,7 +2718,7 @@ the service's move or resize call, half a pair is `InvalidArguments` with no cal
 selector in `BrowserReadingToolsTests`, and mouse_click's description in `ToolDescriptionTests`. Not yet run on a real
 desktop; before the release that carries it, the owner checks:
 
-1. **Partial set_window_bounds on the fixture.** On the WamFixtureApp main window the harness started (and only on it),
+1. **Partial set_window_bounds on the fixture.** On the HelmsmanFixtureApp main window the harness started (and only on it),
    by its handle: `x` and `y` alone keep the visible frame's size to the pixel; `width` and `height` alone keep its
    top-left corner and leave the z-order and the foreground as they were (read get_foreground_window before and after:
    the agent's host stays in front); `x` and `y` alone onto the monitor with the other scale go through the second
@@ -2767,7 +2767,7 @@ The E2E scenarios ran on the owner's desktop on 2026-10-17 (see Desktop run: M6 
    reports the profile language it used (on a Norwegian profile without a Norwegian OCR language, the first installed one
    with an `OcrLanguageFallback` warning); `language: "en-US"` works; a language that is not installed (`ja-JP` when it
    is absent) is `OcrLanguageNotInstalled` with `installedLanguages`.
-2. **The fixture's canvas (E2E).** `FixtureOcrTests` on `WAM Fixture Canvas`, which the harness opens and closes. No-input
+2. **The fixture's canvas (E2E).** `FixtureOcrTests` on `Helmsman Fixture Canvas`, which the harness opens and closes. No-input
    tier: every canvas line read inside the rectangle the fixture drew it in (its text compared with O/0 and l/I/1 folded and
    no spaces next to digits: on the owner's desktop real Windows OCR read `4711km` as `471 1 km` and `3141pt` as `314 Ipt`,
    which find_text_on_screen's contains and exact now find, October 2026), at the primary monitor's scale and on a
@@ -2778,7 +2778,7 @@ The E2E scenarios ran on the owner's desktop on 2026-10-17 (see Desktop run: M6 
    point is `StaleCapture`; a region over a canvas a policy denies (the scenario's own policy) reads none of its words and
    reports `maskedWindows`. Record the time per call and which lines OCR misread (the 9-point line, the light-on-dark one),
    at 100%, 125%, 150% and 175% where you have such a monitor.
-3. **The user's policy.** Start the server with a deny list naming `WamFixtureApp`: read_screen_text on the canvas
+3. **The user's policy.** Start the server with a deny list naming `HelmsmanFixtureApp`: read_screen_text on the canvas
    window is `TargetDeniedByPolicy`; a monitor read with the canvas in front returns none of its words and
    `maskedWindows` of at least 1.
 4. **Real canvas content, opened by the check.** A debug Edge from launch_browser_with_debug on a throwaway profile,
@@ -2806,7 +2806,7 @@ the three with `HELMSMAN_TOOLSETS=-input`. Before the release that carries it, t
    neither read nor seeded): initialize advertises `resources`, `prompts` and `completions`; the three lists match
    `Contract/resources.snapshot.json`; `helmsman://layouts/work-setup` (a seeded sample) reads, `helmsman://layouts/nope` is a
    not-found error with the PresetNotFound message, and completion offers the sample names.
-2. **helmsman://windows and helmsman://monitors against the tools**: with the WamFixtureApp window the harness started, read
+2. **helmsman://windows and helmsman://monitors against the tools**: with the HelmsmanFixtureApp window the harness started, read
    `helmsman://windows` and call find_windows at once (same handle, title and bounds), and compare `helmsman://monitors` with
    get_monitors; on a mixed-DPI machine the negative coordinates and scale factors match.
 3. **Claude Code** with the plugin built from the branch: `/mcp` lists the resources and prompts, a prompt runs as a
@@ -2829,7 +2829,7 @@ yet run on a real desktop; before the release that carries it, the owner checks:
 2. **Notepad, by hand, in a real client** (no window the check did not open): launch a new Notepad with
    launch_application and `waitForWindow`, and note its handle and processId. On that handle, run_steps with
    `type_text`, `press_keys` `ctrl+s` and `wait_for_window` for the Save As dialog it owns; then answer the dialog with
-   file_dialog, a direct call, to a file under `%TEMP%\wam-m62`. Check that the file holds the text, close Notepad with
+   file_dialog, a direct call, to a file under `%TEMP%\helmsman-m62`. Check that the file holds the text, close Notepad with
    close_window by the noted handle only, and delete the file. Never close or act on a window by its title. Windows 11's
    Notepad restores the user's own tabs (see
    [Desktop check: 3.0.0 review fixes and issues #8 to #11](#desktop-check-300-review-fixes-and-issues-8-to-11)): run
@@ -2897,8 +2897,9 @@ images). The scenarios:
 
 `ScenarioReport` (a class fixture) prints each scenario with its change since the previous run (calls, milliseconds and
 tokens), and writes the run as `scenarios-<UTC time>.json` to `HELMSMAN_SCENARIO_RESULTS` (its name from before 4.0.0
-is not read), or `%TEMP%\WamScenarios`; the previous
-run is the newest file there. Run them while nobody uses the keyboard or mouse:
+is not read), or `%TEMP%\HelmsmanScenarios`; the previous
+run is the newest file there (runs from before the test internals were renamed are in `%TEMP%\WamScenarios`: move
+them over to compare with them). Run them while nobody uses the keyboard or mouse:
 
 ```powershell
 $env:HELMSMAN_ALLOW_DESKTOP_TESTS = '1'
@@ -3406,7 +3407,7 @@ serve and the replaced tools that are served. `Contract/RemovedToolsContractTest
 decision D1): no selection lists the nine replaced tools, a call to one is `ToolRemoved` naming its replacement (never
 forwarded, never audited), `HELMSMAN_EXCLUDE_TOOLS` and `HELMSMAN_TOOLSETS` values that name them or `deprecated` read without
 failing closed (`+click` warns that click is a tool 3.0.0 removed, not a toolset:
-`ARemovedToolsName_InWamToolsets_IsIgnoredWithAWarningThatSaysItIsATool`), a `monitorIndex` argument or placement
+`ARemovedToolsName_InHelmsmanToolsets_IsIgnoredWithAWarningThatSaysItIsATool`), a `monitorIndex` argument or placement
 member is refused naming `monitor`, the three geometry batches of `windows-batch` are served only with `windows`, and get_server_info's `moved`. `Contract/ServerInfoToolContractTests` calls
 `get_server_info` over MCP (a real `ServerInfoService` over the contract services' mocked sources),
 `Unit/Services/ServerInfoServiceTests` checks the report and its warnings, and `Contract/ServerInstructionsTests`
