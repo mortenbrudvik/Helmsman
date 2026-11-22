@@ -21,11 +21,13 @@ public class LayoutService : ILayoutService
     private readonly IForegroundService _foregroundService;
     private readonly ILaunchPlacementService _launchPlacement;
     private readonly ILayoutPresetStore _store;
+    private readonly ILaunchConfirmationStore _confirmations;
     private readonly INativeAppsWrapper? _apps;
     private readonly IInstalledAppsService? _installedApps;
 
     /// <param name="foregroundService">Brings the windows of placements with focus set to the front, verified.</param>
     /// <param name="store">Stores the presets: their reads, saves and deletes, under one gate.</param>
+    /// <param name="confirmations">The launches of agent-written presets the user confirmed (owner decision D15).</param>
     /// <param name="launchPlacement">
     /// Places the windows launchMissing launches, as the launch tools place theirs (roadmap M3.F27), and respects the user's
     /// pause.
@@ -41,6 +43,7 @@ public class LayoutService : ILayoutService
         IProcessService processService,
         IForegroundService foregroundService,
         ILayoutPresetStore store,
+        ILaunchConfirmationStore confirmations,
         ILaunchPlacementService launchPlacement,
         INativeAppsWrapper? apps = null,
         IInstalledAppsService? installedApps = null)
@@ -51,6 +54,7 @@ public class LayoutService : ILayoutService
         _foregroundService = foregroundService;
         _launchPlacement = launchPlacement ?? throw new ArgumentNullException(nameof(launchPlacement));
         _store = store ?? throw new ArgumentNullException(nameof(store));
+        _confirmations = confirmations ?? throw new ArgumentNullException(nameof(confirmations));
         _apps = apps;
         _installedApps = installedApps;
     }
@@ -315,115 +319,15 @@ public class LayoutService : ILayoutService
             ? $"description is longer than {LayoutPresetSchema.MaxDescriptionLength} characters. Nothing was saved."
             : null;
 
-    #region Launch confirmations (owner decision D15)
-
     /// <summary>
     /// The file in the layouts folder that keeps the confirmed launches (<see cref="LayoutPresetSchema.LaunchFingerprint"/>),
     /// one per line, so a confirmation holds across restarts. Not a .json file, so it is never read as a preset.
     /// </summary>
-    public const string LaunchConfirmationsFileName = ".launch-confirmations";
+    public const string LaunchConfirmationsFileName = LaunchConfirmationStore.LaunchConfirmationsFileName;
 
-    private readonly object _confirmationsLock = new();
+    public bool AreLaunchesConfirmed(LayoutPreset preset) => _confirmations.AreLaunchesConfirmed(preset);
 
-    // The confirmations as last read from the file, and what the file was then: it is read again when it changes or goes away
-    // (review M6.8 #6), so deleting it revokes every confirmation at once
-    private HashSet<string> _confirmedLaunches = new(StringComparer.Ordinal);
-    private (bool Exists, DateTime LastWriteUtc, long Length)? _confirmationsStamp;
-
-    // Confirmations the file could not keep (it could not be written): they hold until the server stops
-    private readonly HashSet<string> _unsavedConfirmations = new(StringComparer.Ordinal);
-
-    public bool AreLaunchesConfirmed(LayoutPreset preset)
-    {
-        ArgumentNullException.ThrowIfNull(preset);
-        if (!LayoutPresetSchema.IsAgentAuthored(preset))
-            return true;
-
-        // A preset that starts more than the question shows is never confirmed (review M6.8 #1)
-        if (LayoutPresetSchema.ConfirmationRefusal(preset) != null)
-            return false;
-
-        var key = LayoutPresetSchema.LaunchFingerprint(preset);
-        lock (_confirmationsLock)
-        {
-            return Confirmations().Contains(key) || _unsavedConfirmations.Contains(key);
-        }
-    }
-
-    public void ConfirmLaunches(LayoutPreset preset)
-    {
-        ArgumentNullException.ThrowIfNull(preset);
-        var key = LayoutPresetSchema.LaunchFingerprint(preset);
-        lock (_confirmationsLock)
-        {
-            if (Confirmations().Contains(key))
-                return;
-
-            try
-            {
-                // Appended in one write, on a line of its own whatever the file ends with; another server may append too
-                using (var stream = new FileStream(ConfirmationsPath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete))
-                {
-                    var line = System.Text.Encoding.UTF8.GetBytes("\n" + key + "\n");
-                    stream.Write(line, 0, line.Length);
-                }
-
-                _confirmationsStamp = null;
-            }
-            catch (Exception ex) when (IsFileSystemError(ex))
-            {
-                _unsavedConfirmations.Add(key);
-            }
-        }
-    }
-
-    private string ConfirmationsPath => Path.Combine(LayoutsPath, LaunchConfirmationsFileName);
-
-    /// <summary>
-    /// The confirmed launches in the file, read again whenever it was written, replaced or deleted since the last read
-    /// (callers hold <see cref="_confirmationsLock"/>). Only whole lines of 64 lowercase hex digits count: garbage, a cut-off
-    /// line or a blank line confirms nothing.
-    /// </summary>
-    private HashSet<string> Confirmations()
-    {
-        (bool Exists, DateTime LastWriteUtc, long Length) stamp;
-        try
-        {
-            var file = new FileInfo(ConfirmationsPath);
-            stamp = file.Exists ? (true, file.LastWriteTimeUtc, file.Length) : (false, default, 0);
-        }
-        catch (Exception ex) when (IsFileSystemError(ex))
-        {
-            stamp = (false, default, 0);
-        }
-
-        if (_confirmationsStamp == stamp)
-            return _confirmedLaunches;
-
-        var keys = new HashSet<string>(StringComparer.Ordinal);
-        try
-        {
-            if (stamp.Exists)
-            {
-                foreach (var line in File.ReadLines(ConfirmationsPath))
-                {
-                    var key = line.Trim();
-                    if (key.Length == 64 && key.All(char.IsAsciiHexDigitLower))
-                        keys.Add(key);
-                }
-            }
-        }
-        catch (Exception ex) when (IsFileSystemError(ex))
-        {
-            // An unreadable file confirms nothing
-        }
-
-        _confirmedLaunches = keys;
-        _confirmationsStamp = stamp;
-        return keys;
-    }
-
-    #endregion
+    public void ConfirmLaunches(LayoutPreset preset) => _confirmations.ConfirmLaunches(preset);
 
     /// <summary>How long a layout's launch waits for its window.</summary>
     private const int LaunchWaitTimeoutMs = 5000;

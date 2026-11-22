@@ -222,6 +222,9 @@ public static class ServiceRegistration
         // The presets' folder (one gate and one cache for every read and write), created when it is first resolved
         services.AddSingleton<ILayoutPresetStore>(sp => new LayoutPresetStore(createLayoutStorage(),
             folderAccess: sp.GetRequiredService<ILayoutFolderAccess>(), logger: sp.GetService<ILogger<LayoutService>>()));
+        // The launches of agent-written presets the user confirmed (owner decision D15), in a file in the same folder
+        services.AddSingleton<ILaunchConfirmationStore>(sp =>
+            new LaunchConfirmationStore(sp.GetRequiredService<ILayoutPresetStore>().LayoutsPath));
         // launchMissing's windows are placed as the launch tools place theirs (roadmap M3.F27); save_layout records a
         // packaged app's window by its appId (roadmap M6.8)
         services.AddSingleton<ILayoutService, LayoutService>();

@@ -15,16 +15,22 @@ public sealed class WiredLayoutService : LayoutService
         IProcessService processService,
         IForegroundService foregroundService,
         LayoutPresetStore store,
+        LaunchConfirmationStore confirmations,
         ILaunchPlacementService launchPlacement,
         INativeAppsWrapper? apps,
         IInstalledAppsService? installedApps)
-        : base(windowService, monitorService, processService, foregroundService, store, launchPlacement, apps, installedApps)
+        : base(windowService, monitorService, processService, foregroundService, store, confirmations, launchPlacement, apps,
+            installedApps)
     {
         Store = store;
+        Confirmations = confirmations;
     }
 
     /// <summary>Stores the presets.</summary>
     public LayoutPresetStore Store { get; }
+
+    /// <summary>The launches the user confirmed.</summary>
+    public LaunchConfirmationStore Confirmations { get; }
 
     /// <summary>
     /// The parts wired over the presets in <paramref name="layoutsPath"/>, without migrating or seeding anything; when it is
@@ -59,7 +65,8 @@ public sealed class WiredLayoutService : LayoutService
         ILogger<LayoutService>? logger = null)
     {
         var store = new LayoutPresetStore(options, folderAccess, logger);
-        return new WiredLayoutService(windowService, monitorService, processService, foregroundService, store, launchPlacement, apps,
-            installedApps);
+        var confirmations = new LaunchConfirmationStore(store.LayoutsPath);
+        return new WiredLayoutService(windowService, monitorService, processService, foregroundService, store, confirmations,
+            launchPlacement, apps, installedApps);
     }
 }
