@@ -1,12 +1,12 @@
 {
-  "name": "win-desktop-mcp",
+  "name": "helmsman",
   "version": "3.2.0",
   "description": "Comprehensive Windows application and window management from Claude. Launch apps, control windows, snap layouts, and automate desktop workflows.",
   "author": {
     "name": "Morten Brudvik"
   },
-  "homepage": "https://github.com/mortenbrudvik/WindowsAppManagerMcp",
-  "repository": "https://github.com/mortenbrudvik/WindowsAppManagerMcp",
+  "homepage": "https://github.com/mortenbrudvik/Helmsman",
+  "repository": "https://github.com/mortenbrudvik/Helmsman",
   "license": "MIT",
   "keywords": [
     "windows",
@@ -20,8 +20,8 @@
   ],
   "skills": "./skills/",
   "mcpServers": {
-    "win-desktop-mcp": {
-      "command": "${CLAUDE_PLUGIN_ROOT}/bin/win-desktop-mcp.exe"
+    "helmsman": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/bin/helmsman.exe"
     }
   }
 }

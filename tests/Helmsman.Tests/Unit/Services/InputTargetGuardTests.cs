@@ -2024,7 +2024,7 @@ public class InputTargetGuardTests
     private void SecurityWarningOfTheServer()
     {
         _hostGuard.Setup(g => g.Host).Returns(new HostSnapshot(ServerPid, [new HostProcess(TerminalPid, null)], nint.Zero, null, null, null));
-        Window(SecurityWarning, ServerPid, "win-desktop-mcp", "Open File - Security Warning");
+        Window(SecurityWarning, ServerPid, "helmsman", "Open File - Security Warning");
         _windows.Setup(w => w.GetClassName(SecurityWarning)).Returns("#32770");
         _hostGuard.Setup(g => g.IsHostWindow(SecurityWarning)).Returns(true);
     }

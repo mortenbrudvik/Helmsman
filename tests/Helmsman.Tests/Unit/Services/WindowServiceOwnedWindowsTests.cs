@@ -209,7 +209,7 @@ public class WindowServiceOwnedWindowsTests
         _desktop.Add("Layers", "Palette", extendedStyle: WsExToolWindow, processId: 700, processName: "notepad");
         _desktop.Add("Elsewhere", "Notepad", cloaked: true, processId: 700, processName: "notepad");
         _desktop.Add("Program Manager", "Progman", processId: 300, processName: "explorer");
-        _desktop.Add("Server window", processId: ServerProcessId, processName: "win-desktop-mcp");
+        _desktop.Add("Server window", processId: ServerProcessId, processName: "helmsman");
 
         // Act
         var windows = CreateSut().GetApplicationWindows();

@@ -300,7 +300,7 @@ public sealed class ContractServices : IDisposable
             InputGuardOptions.Default.DestructiveChordSource));
         NativeWindows.Setup(w => w.GetProcessName(It.IsAny<uint>())).Returns((uint id) => id switch
         {
-            31_000 => "win-desktop-mcp",
+            31_000 => "helmsman",
             30_900 => "claude",
             30_500 => "pwsh",
             30_100 => "WindowsTerminal",

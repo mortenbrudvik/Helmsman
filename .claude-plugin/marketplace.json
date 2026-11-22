@@ -1,6 +1,6 @@
 {
-  "name": "win-desktop-mcp-marketplace",
-  "description": "win-desktop-mcp: control Windows applications and desktop layouts from Claude",
+  "name": "helmsman-marketplace",
+  "description": "Helmsman: control Windows applications and desktop layouts from Claude",
   "owner": {
     "name": "Morten Brudvik"
   },
@@ -10,15 +10,15 @@
   },
   "plugins": [
     {
-      "name": "win-desktop-mcp",
+      "name": "helmsman",
       "description": "Comprehensive Windows application and window management. Launch apps, control windows, snap layouts, and automate desktop workflows.",
       "version": "3.2.0",
       "source": "./",
       "author": {
         "name": "Morten Brudvik"
       },
-      "homepage": "https://github.com/mortenbrudvik/WindowsAppManagerMcp",
-      "repository": "https://github.com/mortenbrudvik/WindowsAppManagerMcp",
+      "homepage": "https://github.com/mortenbrudvik/Helmsman",
+      "repository": "https://github.com/mortenbrudvik/Helmsman",
       "license": "MIT",
       "keywords": [
         "windows",

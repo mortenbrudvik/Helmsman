@@ -10,7 +10,7 @@ namespace Helmsman.Tests.Unit;
 /// </summary>
 public class VersionConsistencyTests
 {
-    private const string PluginName = "win-desktop-mcp";
+    private const string PluginName = "helmsman";
 
     [Fact]
     public void PluginJson_Version_MatchesDirectoryBuildProps()
@@ -49,9 +49,9 @@ public class VersionConsistencyTests
     }
 
     /// <summary>
-    /// The product has one id, win-desktop-mcp: the plugin, its marketplace entry, the plugin's only MCP server key, the
+    /// The product has one id, helmsman: the plugin, its marketplace entry, the plugin's only MCP server key, the
     /// MCP serverInfo.name, the plugin cache folder the layout migration looks for, the release scripts' plugin name and
-    /// the skill folder (using-win-desktop-mcp) all use it, and the marketplace is named after it. A rename that misses
+    /// the skill folder (using-helmsman) all use it, and the marketplace is named after it. A rename that misses
     /// one of them gives users two names for one product (and Set-Version.ps1 a marketplace entry it cannot find).
     /// </summary>
     [Fact]

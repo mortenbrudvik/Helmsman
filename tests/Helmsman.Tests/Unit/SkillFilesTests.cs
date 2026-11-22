@@ -5,7 +5,7 @@ using FluentAssertions.Execution;
 namespace Helmsman.Tests.Unit;
 
 /// <summary>
-/// The plugin skill (skills/using-win-desktop-mcp, issue #11) is a small core, SKILL.md, which a client loads whole
+/// The plugin skill (skills/using-helmsman, issue #11) is a small core, SKILL.md, which a client loads whole
 /// whenever the skill triggers, and reference files beside it that the core names and an agent reads only when its task
 /// needs them. An agent finds the details by following the links, so a broken link or anchor hides them, a reference
 /// file that the core does not link is never read, and a core that grows back costs every session its tokens again. The
@@ -50,7 +50,7 @@ public partial class SkillFilesTests
     [GeneratedRegex(@"^(?<level>#{1,6})\s+(?<heading>.+?)\s*#*\s*$")]
     private static partial Regex Heading();
 
-    private static string SkillDirectory => RepositoryFiles.PathOf("skills", "using-win-desktop-mcp");
+    private static string SkillDirectory => RepositoryFiles.PathOf("skills", "using-helmsman");
 
     private static IEnumerable<string> FileNames() =>
         Directory.EnumerateFiles(SkillDirectory, "*.md").Select(path => Path.GetFileName(path)!).Order(StringComparer.Ordinal);
@@ -154,7 +154,7 @@ public partial class SkillFilesTests
 
         using var scope = new AssertionScope();
         lines[0].Should().Be("---");
-        lines[1].Should().Be("name: using-win-desktop-mcp");
+        lines[1].Should().Be("name: using-helmsman");
         lines[2].Should().StartWith("description:", "the description is what makes a client load the skill");
         lines.Skip(1).Should().Contain("---", "the front matter is closed");
     }

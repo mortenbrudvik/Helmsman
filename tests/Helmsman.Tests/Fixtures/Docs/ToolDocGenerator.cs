@@ -50,12 +50,12 @@ public static partial class ToolDocGenerator
 {
     public static readonly GeneratedDoc Readme = new("README.md", ["README.md"]);
     public static readonly GeneratedDoc ToolsReference = new("docs/TOOLS.md", ["docs", "TOOLS.md"]);
-    public static readonly GeneratedDoc Skill = new("SKILL.md", ["skills", "using-win-desktop-mcp", "SKILL.md"]);
-    public static readonly GeneratedDoc SkillTools = new(SkillToolsName, ["skills", "using-win-desktop-mcp", "tools.md"]);
+    public static readonly GeneratedDoc Skill = new("SKILL.md", ["skills", "using-helmsman", "SKILL.md"]);
+    public static readonly GeneratedDoc SkillTools = new(SkillToolsName, ["skills", "using-helmsman", "tools.md"]);
 
     public static IReadOnlyList<GeneratedDoc> All { get; } = [Readme, ToolsReference, Skill, SkillTools];
 
-    private const string SkillToolsName = "skills/using-win-desktop-mcp/tools.md";
+    private const string SkillToolsName = "skills/using-helmsman/tools.md";
 
     private const string ParamsPrefix = "params:";
 
@@ -114,7 +114,7 @@ public static partial class ToolDocGenerator
             ("docs/TOOLS.md", _) when id.StartsWith(ParamsPrefix, StringComparison.Ordinal) =>
                 ParameterTables(ToolSurface.Tool(tools, id[ParamsPrefix.Length..]), current),
             ("SKILL.md", "count") =>
-                $"win-desktop-mcp provides {count} MCP tools for managing Windows applications, windows, and desktop layouts.",
+                $"Helmsman provides {count} MCP tools for managing Windows applications, windows, and desktop layouts.",
             (SkillToolsName, "tool-tables") => SkillToolTables(count),
             _ => throw new ArgumentException($"{doc} has an unknown generated region '{id}'.", nameof(id))
         };

@@ -51,7 +51,7 @@ public sealed class ServerInfoServiceTests : IDisposable
         _audit.Setup(a => a.Folder).Returns(@"C:\Users\user\AppData\Local\Helmsman\audit");
         _windows.Setup(w => w.GetProcessName(It.IsAny<uint>())).Returns((uint id) => id switch
         {
-            4242 => "win-desktop-mcp",
+            4242 => "helmsman",
             3100 => "node",
             2900 => "pwsh",
             2800 => "WindowsTerminal",
@@ -172,7 +172,7 @@ public sealed class ServerInfoServiceTests : IDisposable
             new AgentHostWindow(0x2002, "console", 2800, "WindowsTerminal"),
             new AgentHostWindow(0x2002, "startupForeground", 2800, "WindowsTerminal"));
         info.Host.Processes.Should().Equal(
-            new AgentHostProcess(4242, "server", "win-desktop-mcp"),
+            new AgentHostProcess(4242, "server", "helmsman"),
             new AgentHostProcess(3100, "ancestor", "node"),
             new AgentHostProcess(2900, "ancestor", "pwsh"),
             new AgentHostProcess(3300, "consoleServer", "OpenConsole"));
@@ -195,7 +195,7 @@ public sealed class ServerInfoServiceTests : IDisposable
         info.Warnings.Should().ContainSingle().Which.Should().Contain("ancestor processes").And.Contain("started before the server").And.Contain("Tell the user")
             // Review A4: the effects that are no refusal, so an agent that sees many windows marked or left out knows why
             .And.Contain("isAgentHost").And.Contain("popups").And.Contain("desktop search");
-        info.Host.Processes.Should().Equal(new AgentHostProcess(4242, "server", "win-desktop-mcp"));
+        info.Host.Processes.Should().Equal(new AgentHostProcess(4242, "server", "helmsman"));
     }
 
     [Fact]

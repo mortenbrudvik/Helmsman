@@ -94,7 +94,7 @@ public class WindowServiceListingTests
     [Fact]
     public void Listing_LeavesOutTheServersOwnWindows()
     {
-        var own = _desktop.Add("Server window", processId: ServerProcessId, processName: "win-desktop-mcp");
+        var own = _desktop.Add("Server window", processId: ServerProcessId, processName: "helmsman");
         var sut = CreateSut();
 
         sut.GetAllWindows().Should().BeEmpty();
