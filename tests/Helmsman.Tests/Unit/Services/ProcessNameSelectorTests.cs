@@ -40,7 +40,6 @@ public class ProcessNameSelectorTests
     [InlineData("\"C:\\Program Files\\notepad.exe\"")]
     [InlineData(@"\\server\share\notepad.exe")]
     [InlineData(@".\notepad.exe")]
-    [InlineData("C:notepad.exe")]
     public void AProcessNameThatIsAPath_IsInvalidArguments_ThatNamesTheProcessNameToPass(string path)
     {
         _desktop.Add("Untitled - Notepad", processName: "notepad");
@@ -51,6 +50,21 @@ public class ProcessNameSelectorTests
         resolution.ErrorCode.Should().Be("InvalidArguments");
         resolution.Error.Should().Contain("window.processName").And.Contain("not a path").And.Contain("'notepad'")
             .And.Contain("Nothing was done");
+    }
+
+    [Theory]
+    [InlineData("C:notepad.exe")]
+    [InlineData(@"shell:AppsFolder\Microsoft.WindowsCalculator_8wekyb3d8bbwe!App")]
+    [InlineData("ms-settings:display")]
+    public void ALocationThatIsNoPlainFilePath_IsInvalidArguments_WithoutAGuessedName(string value)
+    {
+        _desktop.Add("Untitled - Notepad", processName: "notepad");
+
+        var resolution = CreateSut().ResolveWindow(new WindowSelector { ProcessName = value });
+
+        resolution.ErrorCode.Should().Be("InvalidArguments");
+        resolution.Error.Should().Contain("window.processName takes a process name, not a path or other location")
+            .And.Contain("as find_windows and list_processes report it").And.NotContain("pass '");
     }
 
     [Fact]

@@ -93,14 +93,41 @@ public class ProcessNameNormalizationTests
             return;
         }
 
-        refusal.Should().StartWith("window.processName takes a process name, not a path: pass 'notepad'")
-            .And.Contain($"instead of '{input}'");
+        refusal.Should().StartWith("window.processName takes a process name, not a path");
+        if (input == "C:notepad.exe")
+            refusal.Should().NotContain("pass 'notepad'", "a drive-relative path is no plain path, so no name is guessed");
+        else
+            refusal.Should().StartWith("window.processName takes a process name, not a path: pass 'notepad'").And.Contain($"instead of '{input}'");
     }
 
-    [Fact]
-    public void PathRefusal_OfAFolderWithoutAFile_AsksForTheProcesssName()
+    [Theory]
+    [InlineData(@"C:\Program Files\Microsoft VS Code\Code.exe", "Code")]
+    [InlineData("C:/Tools/python3.12.exe", "python3.12")]
+    [InlineData(@"\\server\share\Microsoft.Photos.exe", "Microsoft.Photos")]
+    [InlineData(@"tools\notepad.exe", "notepad")]
+    [InlineData("./tools/notepad", "notepad")]
+    [InlineData("\"C:\\Windows\\notepad.exe\"", "notepad")]
+    public void PathRefusal_OfAPlainFilePath_SuggestsItsFileName(string path, string name)
     {
-        ProcessNames.PathRefusal("processName", @"C:\Windows\").Should().Contain("pass the process's name").And.NotContain("pass ''");
+        ProcessNames.PathRefusal("processName", path).Should().Contain($"pass '{name}' (as find_windows and list_processes report it)");
+    }
+
+    [Theory]
+    [InlineData(@"shell:AppsFolder\Microsoft.WindowsCalculator_8wekyb3d8bbwe!App")]
+    [InlineData("ms-settings:display")]
+    [InlineData("https://example.com/notepad.exe")]
+    [InlineData("C:notepad.exe")]
+    [InlineData(@"C:\Windows\")]
+    [InlineData("C:/")]
+    [InlineData(@"\\server\share\")]
+    [InlineData(@"C:\Windows\.exe")]
+    public void PathRefusal_OfAnythingElse_SaysOnlyThatAProcessNameIsExpected(string value)
+    {
+        var refusal = ProcessNames.PathRefusal("processName", value);
+
+        refusal.Should().StartWith($"processName takes a process name, not a path or other location such as '{value}': pass the name " +
+                                   "as find_windows and list_processes report it.");
+        refusal.Should().NotContain("pass '", "nothing is guessed from a value that is no plain file path");
     }
 
     [Fact]

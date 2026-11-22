@@ -77,8 +77,10 @@ public static class ProcessNames
         Normalize(actual).Contains(name, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Why the argument <paramref name="parameter"/> cannot be <paramref name="value"/>, a path, with the process name to
-    /// pass instead; null when it is no path. The caller adds what was not done.
+    /// Why the argument <paramref name="parameter"/> cannot be <paramref name="value"/>, a path or another location; null
+    /// when it is neither. The process name to pass is suggested only for a plain file path that ends in a file name
+    /// (<see cref="FileNameOf"/>); anything else (shell:AppsFolder\..., ms-settings:display, C:notepad.exe) gets no guess.
+    /// The caller adds what was not done.
     /// </summary>
     public static string? PathRefusal(string parameter, string? value)
     {
@@ -86,18 +88,33 @@ public static class ProcessNames
         if (value == null || !IsPath(value))
             return null;
 
-        var name = Normalize(FileNameOf(value));
-        var pass = name.Length > 0
-            ? $"pass '{name}' (as find_windows and list_processes report it) instead of '{value}'"
-            : $"pass the process's name as find_windows and list_processes report it, not '{value}'";
-        return $"{parameter} takes a process name, not a path: {pass}. A folder is not compared with the process's own, so a " +
-               "path is refused rather than matching every process of that name.";
+        return FileNameOf(value) is { } fileName && Normalize(fileName) is { Length: > 0 } name
+            ? $"{parameter} takes a process name, not a path: pass '{name}' (as find_windows and list_processes report it) " +
+              $"instead of '{value}'. A folder is not compared with the process's own, so a path is refused rather than matching " +
+              "every process of that name."
+            : $"{parameter} takes a process name, not a path or other location such as '{value}': pass the name as find_windows " +
+              "and list_processes report it. A process is matched by its name alone, so such a value is refused rather than " +
+              "read as a name.";
     }
 
-    /// <summary>The text after the last folder or drive separator, as the file name a path ends in.</summary>
-    private static string FileNameOf(string path)
+    /// <summary>
+    /// The file name a plain file path ends in, or null when <paramref name="value"/> is no such path: it must hold a '\' or
+    /// '/', have no ':' other than a drive's (C:\ or C:/), and end in a name rather than a separator. A drive-relative path
+    /// (C:notepad.exe), a URI or shell location (ms-settings:, shell:AppsFolder\...) and a folder are not.
+    /// </summary>
+    private static string? FileNameOf(string value)
     {
-        var trimmed = path.Trim().Trim('"').Trim();
-        return trimmed[(trimmed.LastIndexOfAny(['\\', '/', ':']) + 1)..];
+        var text = value.Trim().Trim('"').Trim();
+        var separator = text.LastIndexOfAny(['\\', '/']);
+        if (separator < 0)
+            return null;
+
+        var isDrivePath = text.Length >= 3 && char.IsAsciiLetter(text[0]) && text[1] == ':' && text[2] is '\\' or '/';
+        var colons = text.Count(c => c == ':');
+        if (colons > (isDrivePath ? 1 : 0))
+            return null;
+
+        var name = text[(separator + 1)..].Trim();
+        return name.Length > 0 ? name : null;
     }
 }
