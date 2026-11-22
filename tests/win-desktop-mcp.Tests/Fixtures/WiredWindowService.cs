@@ -13,11 +13,10 @@ public sealed class WiredWindowService : WindowService
         INativeWindowWrapper nativeWrapper,
         IHostGuard hostGuard,
         ITargetPolicy targetPolicy,
+        WindowGeometryService geometry,
         WindowZOrderService zOrder,
-        WindowClosingService closing,
-        IWindowCallRunner windowCalls,
-        TimeSpan? stateChangeTimeout)
-        : base(monitorService, nativeWrapper, hostGuard, targetPolicy, zOrder, closing, windowCalls, stateChangeTimeout)
+        WindowClosingService closing)
+        : base(monitorService, nativeWrapper, hostGuard, targetPolicy, geometry, zOrder, closing)
     {
     }
 
@@ -37,8 +36,9 @@ public sealed class WiredWindowService : WindowService
         TopmostPins? topmostPins = null)
     {
         var calls = windowCalls ?? new WindowCallRunner(nativeWrapper);
+        var geometry = new WindowGeometryService(monitorService, nativeWrapper, targetPolicy, calls, stateChangeTimeout);
         var zOrder = new WindowZOrderService(nativeWrapper, targetPolicy, calls, topmostPins ?? new TopmostPins());
         var closing = new WindowClosingService(monitorService, nativeWrapper, hostGuard, targetPolicy, virtualDesktops);
-        return new WiredWindowService(monitorService, nativeWrapper, hostGuard, targetPolicy, zOrder, closing, calls, stateChangeTimeout);
+        return new WiredWindowService(monitorService, nativeWrapper, hostGuard, targetPolicy, geometry, zOrder, closing);
     }
 }

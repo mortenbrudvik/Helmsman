@@ -65,6 +65,8 @@ public static class ServiceRegistration
         services.AddSingleton<INativeVirtualDesktopWrapper, NativeVirtualDesktopWrapper>();
         // The windows set_window_zorder made topmost (roadmap M6.7), which get_server_info lists
         services.AddSingleton<TopmostPins>();
+        // The window placements and state changes (roadmap M2.2, M2.3), under the target policy, through the call runner above
+        services.AddSingleton<IWindowGeometry, WindowGeometryService>();
         // set_window_zorder (roadmap M6.7): the z-order changes, under the target policy, recorded in the pins above
         services.AddSingleton<IWindowZOrder, WindowZOrderService>();
         // close_window's close under the target policy and the shell and host guards, and the reads of what a close leaves
