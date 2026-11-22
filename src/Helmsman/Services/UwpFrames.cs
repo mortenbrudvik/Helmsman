@@ -48,7 +48,7 @@ public static class UwpFrames
     /// <summary>Whether the process name, with or without a path or ".exe", is ApplicationFrameHost's.</summary>
     public static bool IsFrameHostProcess(string? processName) =>
         !string.IsNullOrWhiteSpace(processName) &&
-        string.Equals(TargetPolicySettings.NormalizeProcessName(processName), FrameHostProcessName, StringComparison.OrdinalIgnoreCase);
+        string.Equals(ProcessNames.Normalize(processName), FrameHostProcessName, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// The process of the CoreWindow child that <paramref name="frame"/> hosts while its app runs, or null

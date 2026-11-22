@@ -42,6 +42,18 @@ public class LayoutMatcherAndPositionSafetyTests
         error.Should().StartWith($"placements[2].{field}").And.Contain("every window", why);
     }
 
+    [Theory]
+    [InlineData(@"C:\Windows\System32\notepad.exe", false)]
+    [InlineData("C:/Windows/notepad.exe", true)]
+    public void AProcessNameThatIsAPath_IsRefused_AsTheWindowSelectorsRefuseIt(string path, bool exact)
+    {
+        LayoutPresetSchema.TryBuildPlacement(new LayoutPlacementSpec(path, Snap: "left_half", ExactProcessName: exact), 1, OneMonitor,
+            out var placement, out var error).Should().BeFalse();
+
+        placement.Should().BeNull();
+        error.Should().StartWith("placements[1].processName").And.Contain("not a path").And.Contain("'notepad'");
+    }
+
     [Fact]
     public void AProcessNameWithExe_IsStillTaken()
     {
@@ -90,6 +102,37 @@ public class LayoutMatcherAndPositionSafetyTests
         // Assert
         plan.NotApplicable.Should().Contain(field).And.Contain("every window");
         plan.Window.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData(@"C:\Program Files\Microsoft VS Code\Code.exe", false, LayoutMatchBy.ProcessOnly)]
+    [InlineData(@"C:\Program Files\Microsoft VS Code\Code.exe", true, LayoutMatchBy.ProcessAndTitle)]
+    [InlineData(@"C:\Program Files\Microsoft VS Code\Code.exe", false, LayoutMatchBy.TitleOnly)]
+    public void AFilesProcessNameThatIsAPath_IsNotApplicable_AndGetsNoWindow(string processName, bool exactProcessName, LayoutMatchBy matchBy)
+    {
+        // Arrange - a file a person edited: the path matched no window before, and its launch expected a window of a process
+        // named by the whole path; now the placement says why it is skipped
+        var placement = Placement(new WindowMatcher("Visual Studio Code", processName) { ExactProcessName = exactProcessName });
+
+        // Act
+        var plan = LayoutPlanner.Plan([placement], [Notepad, Code], OneMonitor, matchBy, NoExePath).Single();
+
+        // Assert
+        plan.NotApplicable.Should().Contain("processName").And.Contain("not a path").And.Contain("'Code'");
+        plan.Window.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("\"Code.exe\"", true)]
+    [InlineData(" CODE.EXE ", true)]
+    [InlineData("\"cod\"", false)]
+    public void AFilesQuotedProcessName_MatchesAsTheWindowSelectorsMatchIt(string processName, bool exactProcessName)
+    {
+        var placement = Placement(new WindowMatcher(null, processName) { ExactProcessName = exactProcessName });
+
+        var plan = LayoutPlanner.Plan([placement], [Notepad, Code], OneMonitor, LayoutMatchBy.ProcessOnly, NoExePath).Single();
+
+        plan.Window.Should().Be(Code, plan.NotApplicable);
     }
 
     [Theory]

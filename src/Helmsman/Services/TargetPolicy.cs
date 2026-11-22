@@ -21,12 +21,12 @@ public sealed class TargetPolicy : ITargetPolicy
     public TargetPolicy(TargetPolicySettings settings, INativeWindowWrapper windows)
     {
         Settings = settings ?? throw new ArgumentNullException(nameof(settings));
-        _denied = new HashSet<string>(settings.DeniedProcesses.Select(TargetPolicySettings.NormalizeProcessName),
-            StringComparer.OrdinalIgnoreCase);
+        // Entries read once more (settings may be built by hand): an entry "notepad.exe.exe" read from the variable denies
+        // notepad, and keeps doing so
+        _denied = new HashSet<string>(settings.DeniedProcesses.Select(ProcessNames.Normalize), StringComparer.OrdinalIgnoreCase);
         _allowed = settings.AllowedProcesses == null
             ? null
-            : new HashSet<string>(settings.AllowedProcesses.Select(TargetPolicySettings.NormalizeProcessName),
-                StringComparer.OrdinalIgnoreCase);
+            : new HashSet<string>(settings.AllowedProcesses.Select(ProcessNames.Normalize), StringComparer.OrdinalIgnoreCase);
         _windows = windows ?? throw new ArgumentNullException(nameof(windows));
 
         // The prompt goes with the default list's security prompts (consent, smartscreen): a list that drops them drops it
@@ -41,7 +41,7 @@ public sealed class TargetPolicy : ITargetPolicy
 
         var names = processNames
             .Where(name => !string.IsNullOrWhiteSpace(name))
-            .Select(name => TargetPolicySettings.NormalizeProcessName(name!))
+            .Select(name => ProcessNames.Normalize(name!))
             .Where(name => name.Length > 0)
             .ToList();
 

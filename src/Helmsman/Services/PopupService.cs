@@ -785,7 +785,7 @@ public sealed class PopupService : IPopupService
             }
 
             _isExplorer ??= _owner._windows.GetProcessName(_processId) is { } name &&
-                            string.Equals(TargetPolicySettings.NormalizeProcessName(name), "explorer", StringComparison.OrdinalIgnoreCase);
+                            string.Equals(ProcessNames.Normalize(name), "explorer", StringComparison.OrdinalIgnoreCase);
             return _isExplorer.Value;
         }
 

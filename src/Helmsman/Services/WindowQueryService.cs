@@ -193,6 +193,12 @@ public sealed class WindowQueryService : IWindowQuery
                    "processName, processId and className. An empty selector never matches every window. Nothing was done.";
         }
 
+        // A path before a blank name: 'C:\Windows\' is a path, not a blank filter
+        if (ProcessNames.PathRefusal("window.processName", selector.ProcessName) is { } path)
+        {
+            return $"{path} Nothing was done.";
+        }
+
         if (BlankFilter(selector) is { } blank)
         {
             return $"window.{blank} is blank, so it would match every window; leave it out or give the text to match. Nothing was done.";
@@ -233,7 +239,7 @@ public sealed class WindowQueryService : IWindowQuery
             return "titleContains";
         if (selector.TitleEquals is { Length: > 0 } equals && WindowTitles.Normalize(equals).Length == 0)
             return "titleEquals";
-        if (selector.ProcessName is { Length: > 0 } processName && WindowMatching.WithoutExe(processName).Length == 0)
+        if (selector.ProcessName is { Length: > 0 } processName && ProcessNames.Normalize(processName).Length == 0)
             return "processName";
         if (selector.ClassName is { Length: > 0 } className && string.IsNullOrWhiteSpace(className))
             return "className";

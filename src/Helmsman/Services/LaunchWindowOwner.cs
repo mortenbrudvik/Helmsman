@@ -95,7 +95,7 @@ public sealed class LaunchWindowOwner
         _launchedProcessId = launchedProcessId;
         _launchedAtUtc = launchedAtUtc;
         _imagePath = imagePath;
-        _processNames = new HashSet<string>(processNames.Where(n => !string.IsNullOrWhiteSpace(n)).Select(StripExe), StringComparer.OrdinalIgnoreCase);
+        _processNames = new HashSet<string>(processNames.Where(n => !string.IsNullOrWhiteSpace(n)).Select(ProcessNames.Normalize), StringComparer.OrdinalIgnoreCase);
         _hint = hint is { IsEmpty: false } ? hint : null;
         _onlyStartedProcess = onlyStartedProcess;
     }
@@ -237,11 +237,11 @@ public sealed class LaunchWindowOwner
         if (string.IsNullOrWhiteSpace(_hint.ProcessName))
             return true;
 
-        var wanted = StripExe(_hint.ProcessName.Trim());
+        // Part of the name, read as the window selectors read it; a path (which launch_application refuses) matches nothing
         return new[] { window.ProcessId, window.HostProcessId ?? 0 }
             .Where(id => id > 0)
             .Select(ProcessNameOf)
-            .Any(name => name != null && name.Contains(wanted, StringComparison.OrdinalIgnoreCase));
+            .Any(name => ProcessNames.Contains(name, _hint.ProcessName));
     }
 
     private bool ProcessMatches(int processId)
@@ -301,7 +301,7 @@ public sealed class LaunchWindowOwner
     {
         if (!_processNamesById.TryGetValue(processId, out var name))
         {
-            name = _processes.GetProcessList() is { } list && list.TryGetValue(processId, out var entry) ? StripExe(entry.ImageName) : null;
+            name = _processes.GetProcessList() is { } list && list.TryGetValue(processId, out var entry) ? ProcessNames.Normalize(entry.ImageName) : null;
             _processNamesById[processId] = name;
         }
 

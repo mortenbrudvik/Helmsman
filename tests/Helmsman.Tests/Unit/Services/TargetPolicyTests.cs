@@ -165,7 +165,7 @@ public class TargetPolicyTests
 
         // Assert
         verdict.Allowed.Should().BeFalse();
-        verdict.ProcessName.Should().Be(TargetPolicySettings.NormalizeProcessName(processName));
+        verdict.ProcessName.Should().Be(ProcessNames.Normalize(processName));
         verdict.Reason.Should().Contain("default deny list");
     }
 

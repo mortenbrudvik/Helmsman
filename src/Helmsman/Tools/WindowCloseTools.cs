@@ -373,8 +373,8 @@ public class WindowCloseTools
             : $"{name} must be between 0 and {MaxCloseWaitMs} milliseconds, but it is {waitMs}. Nothing was closed.";
 
     /// <summary>
-    /// close_application's one target, checked: exactly one of handle, window, processId and processName, and the name
-    /// without ".exe". Returns the name (null unless processName was given).
+    /// close_application's one target, checked: exactly one of handle, window, processId and processName, and the name read
+    /// as <see cref="ProcessNames"/> reads it (a path is refused). Returns the name (null unless processName was given).
     /// </summary>
     private static string? ApplicationName(long? handle, bool window, int? processId, string? processName)
     {
@@ -396,12 +396,12 @@ public class WindowCloseTools
             return null;
         }
 
-        var name = processName.Trim();
-        if (name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+        if (ProcessNames.PathRefusal(nameof(processName), processName) is { } path)
         {
-            name = name[..^4];
+            throw new ToolErrorException(ToolErrorReporting.InvalidArgumentsErrorCode, $"{path} Nothing was closed.");
         }
 
+        var name = ProcessNames.Normalize(processName);
         return name.Length > 0
             ? name
             : throw new ToolErrorException(ToolErrorReporting.InvalidArgumentsErrorCode, "processName is empty. Nothing was closed.");

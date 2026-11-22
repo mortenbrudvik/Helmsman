@@ -365,6 +365,47 @@ public class LayoutServiceTests : IDisposable
         excluded.Preset!.Placements.Select(p => p.Matcher.ProcessName).Should().Equal("notepad");
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task CaptureCurrentLayoutAsync_AProcessFilterThatIsAPath_IsInvalidArguments_AndKeepsExistingPreset(bool include)
+    {
+        // A path matched no window, so an excluded app was saved anyway, or nothing was; it is refused instead
+        _mockWindowService.Setup(w => w.GetAllWindows(false)).Returns([TestDataFactory.CreateWindowInfo(1, "Notepad", "notepad")]);
+        var sut = CreateSut();
+        await sut.SavePresetAsync(TestDataFactory.CreateLayoutPreset("keep-me", "Good layout"));
+        string[] filter = ["chrome", @"C:\Windows\System32\notepad.exe"];
+
+        var result = include
+            ? await sut.CaptureCurrentLayoutAsync("keep-me", includeProcesses: filter)
+            : await sut.CaptureCurrentLayoutAsync("keep-me", excludeProcesses: filter);
+
+        result.Success.Should().BeFalse();
+        result.ErrorCode.Should().Be("InvalidArguments");
+        result.ErrorMessage.Should().Contain(include ?"includeProcesses" : "excludeProcesses").And.Contain("not a path")
+            .And.Contain("'notepad'").And.Contain("Nothing was saved");
+        sut.GetPreset("keep-me")!.Description.Should().Be("Good layout");
+    }
+
+    [Theory]
+    [InlineData("\"notepad.exe\"")]
+    [InlineData(" NOTEPAD.EXE ")]
+    public async Task CaptureCurrentLayoutAsync_ProcessFilters_ReadTheNameAsTheWindowSelectorsDo(string name)
+    {
+        _mockWindowService.Setup(w => w.GetAllWindows(false)).Returns(
+        [
+            TestDataFactory.CreateWindowInfo(1, "Notepad", "notepad"),
+            TestDataFactory.CreateWindowInfo(2, "Chrome", "chrome")
+        ]);
+        var sut = CreateSut();
+
+        var included = await sut.CaptureCurrentLayoutAsync("include", includeProcesses: [name]);
+        var excluded = await sut.CaptureCurrentLayoutAsync("exclude", excludeProcesses: [name]);
+
+        included.Preset!.Placements.Select(p => p.Matcher.ProcessName).Should().Equal("notepad");
+        excluded.Preset!.Placements.Select(p => p.Matcher.ProcessName).Should().Equal("chrome");
+    }
+
     [Fact]
     public async Task CaptureCurrentLayoutAsync_WithExcludeFilter_ExcludesSpecifiedProcesses()
     {

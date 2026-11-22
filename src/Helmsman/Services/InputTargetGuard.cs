@@ -572,7 +572,7 @@ public sealed class InputTargetGuard : IInputTargetGuard
 
         var name = _windows.GetProcessName((uint)processId);
         return name != null &&
-               string.Equals(TargetPolicySettings.NormalizeProcessName(name), "explorer", StringComparison.OrdinalIgnoreCase);
+               string.Equals(ProcessNames.Normalize(name), "explorer", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>

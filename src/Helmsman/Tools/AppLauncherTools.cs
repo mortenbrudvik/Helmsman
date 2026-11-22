@@ -337,6 +337,21 @@ public class AppLauncherTools
                 $"limit must be at least 1, but it is {limit}. Leave it out for every process.");
         }
 
+        // A name filter is read as a process name is (ProcessNames): a path is refused, pathContains takes a folder, and a
+        // filter blank once read ('.exe', spaces) would keep every process
+        if (ProcessNames.PathRefusal(nameof(nameFilter), nameFilter) is { } path)
+        {
+            throw new ToolErrorException(ToolErrorReporting.InvalidArgumentsErrorCode,
+                $"{path} pathContains filters by folder. Nothing was listed.");
+        }
+
+        if (!string.IsNullOrEmpty(nameFilter) && ProcessNames.Normalize(nameFilter).Length == 0)
+        {
+            throw new ToolErrorException(ToolErrorReporting.InvalidArgumentsErrorCode,
+                $"nameFilter '{nameFilter}' is blank once spaces, quotes and '.exe' are taken off, so it would keep every process; " +
+                "leave it out or give part of a name. Nothing was listed.");
+        }
+
         // A name filter as short as "e" matches most processes, so it bounds nothing without a limit
         if (includeCommandLine && processId == null && (string.IsNullOrEmpty(nameFilter) || limit is not <= MaxCommandLineProcesses))
         {
@@ -403,6 +418,12 @@ public class AppLauncherTools
         McpServer? server = null,
         CancellationToken cancellationToken = default)
     {
+        // A path is no name to check the PID's process against (its folder would not be compared)
+        if (ProcessNames.PathRefusal(nameof(expectedProcessName), expectedProcessName) is { } path)
+        {
+            throw new ToolErrorException(ToolErrorReporting.InvalidArgumentsErrorCode, $"{path} Nothing was done.");
+        }
+
         // Nothing while the user has paused input, not even a question
         InputGateToolFilter.ThrowIfPaused(_session);
 

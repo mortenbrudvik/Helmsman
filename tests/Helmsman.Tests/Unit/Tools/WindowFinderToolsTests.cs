@@ -731,6 +731,35 @@ public class WindowFinderToolsTests
         include(Event(46, WindowEventType.Shown, 0x200, null)).Should().BeFalse();
     }
 
+    [Theory]
+    [InlineData(@"C:\Windows\System32\notepad.exe")]
+    [InlineData("C:/Windows/notepad.exe")]
+    public void GetWindowEvents_AProcessNameThatIsAPath_IsInvalidArguments_AndReadsNothing(string path)
+    {
+        var sut = new WindowFinderTools(_mockWindowService.Object, Permissive.SecurityProbe, journal: _journal.Object);
+
+        var act = () => sut.GetWindowEvents(processName: path);
+
+        act.Should().Throw<ToolErrorException>()
+            .Where(e => e.ErrorCode == ToolErrorReporting.InvalidArgumentsErrorCode && e.Message.Contains("not a path") && e.Message.Contains("'notepad'"));
+        _journal.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public void GetWindowEvents_AQuotedProcessName_FiltersByThatName()
+    {
+        Func<WindowEventEntry, bool>? include = null;
+        _journal.Setup(j => j.Read(null, 50, It.IsAny<Func<WindowEventEntry, bool>?>()))
+            .Callback<long?, int, Func<WindowEventEntry, bool>?>((_, _, filter) => include = filter)
+            .Returns(new WindowEventRead([], 0, EventTime, StartedNow: false, Missed: 0, More: false));
+        var sut = new WindowFinderTools(_mockWindowService.Object, Permissive.SecurityProbe, journal: _journal.Object);
+
+        sut.GetWindowEvents(processName: "\"notepad.exe\"");
+
+        include!(Event(1, WindowEventType.Shown, 0x200, "notepad")).Should().BeTrue();
+        include(Event(2, WindowEventType.Shown, 0x200, "notepad++")).Should().BeFalse();
+    }
+
     [Fact]
     public void GetWindowEvents_WithoutFilters_ReadsEverything_AndReportsOnlyTheFlagsThatApply()
     {

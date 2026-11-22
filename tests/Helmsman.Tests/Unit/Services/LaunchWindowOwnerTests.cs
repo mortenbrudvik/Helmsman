@@ -176,6 +176,29 @@ public class LaunchWindowOwnerTests
         owner.Matches(Window(8000, "Document1 - Word")).Should().BeFalse("the title does not match");
     }
 
+    [Theory]
+    [InlineData("\"winword.exe\"")]
+    [InlineData(" WINWORD .exe ")]
+    public void AHintsProcessName_IsReadAsTheWindowSelectorsReadIt(string processName)
+    {
+        AddProcess(8000, 4, "WINWORD.EXE", LaunchedAt.AddHours(-1));
+        var owner = OwnerOf(@"C:\Docs\report.docx", LaunchTargetKind.Other, launchedProcessId: null,
+            hint: new LaunchWindowHint(ProcessName: processName));
+
+        owner.Matches(Window(8000, "report.docx - Word")).Should().BeTrue();
+    }
+
+    [Fact]
+    public void AHintsProcessNameThatIsAPath_MatchesNoWindow()
+    {
+        // launch_application refuses it first; the owner never reads it as its file name
+        AddProcess(8000, 4, "WINWORD.EXE", LaunchedAt.AddHours(-1));
+        var owner = OwnerOf(@"C:\Docs\report.docx", LaunchTargetKind.Other, launchedProcessId: null,
+            hint: new LaunchWindowHint(ProcessName: @"C:\Office\WINWORD.EXE"));
+
+        owner.Matches(Window(8000, "report.docx - Word")).Should().BeFalse();
+    }
+
     [Fact]
     public void AHintsProcessName_AlsoMatchesTheFrameHostOfAUwpWindow()
     {

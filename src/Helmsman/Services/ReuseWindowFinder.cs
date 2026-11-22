@@ -62,7 +62,7 @@ internal sealed class ReuseWindowFinder
         var hint = request.ExpectWindow is { IsEmpty: false } expected ? expected : null;
         var names = LaunchWindowOwner.SameAppProcessNames(target);
         var imagePath = target.Kind == LaunchTargetKind.NativeExecutable && Path.IsPathFullyQualified(target.FileName) ? target.FileName : null;
-        var wantedProcess = string.IsNullOrWhiteSpace(hint?.ProcessName) ? null : StripExe(hint.ProcessName.Trim());
+        var wantedProcess = string.IsNullOrWhiteSpace(hint?.ProcessName) ? null : hint.ProcessName;
         var family = target.Kind == LaunchTargetKind.PackagedApp && _appsWrapper != null ? target.App?.PackageFamilyName : null;
         if (names.Count == 0 && imagePath == null && wantedProcess == null && family == null)
         {
@@ -91,14 +91,15 @@ internal sealed class ReuseWindowFinder
             titleNames = shownNames;
         }
 
-        var nameSet = new HashSet<string>(names.Select(StripExe), StringComparer.OrdinalIgnoreCase);
+        var nameSet = new HashSet<string>(names.Select(ProcessNames.Normalize), StringComparer.OrdinalIgnoreCase);
         var appWindows = _windowService.GetApplicationWindows()
             .Where(w => !w.IsAgentHost && taken?.Contains(w.Handle) != true && openBefore?.Contains(w.Handle) != false)
-            .Where(w => (names.Count == 0 && imagePath == null && family == null) || nameSet.Contains(StripExe(w.ProcessName)) ||
+            .Where(w => (names.Count == 0 && imagePath == null && family == null) || nameSet.Contains(ProcessNames.Normalize(w.ProcessName)) ||
                         (imagePath != null && string.Equals(_processWrapper.GetProcessImagePath(w.ProcessId), imagePath, StringComparison.OrdinalIgnoreCase)) ||
                         (family != null && string.Equals(_appsWrapper!.GetPackageFamilyName(w.ProcessId), family, StringComparison.OrdinalIgnoreCase)))
-            .Where(w => wantedProcess == null || w.ProcessName.Contains(wantedProcess, StringComparison.OrdinalIgnoreCase) ||
-                        w.HostProcessName?.Contains(wantedProcess, StringComparison.OrdinalIgnoreCase) == true)
+            // Part of the name, read as the window selectors read it; a path (which launch_application refuses) matches nothing
+            .Where(w => wantedProcess == null || ProcessNames.Contains(w.ProcessName, wantedProcess) ||
+                        ProcessNames.Contains(w.HostProcessName, wantedProcess))
             .Where(w => _windowService.EvaluateTargetPolicy(w.Handle) is not { Allowed: false })
             .ToList();
 

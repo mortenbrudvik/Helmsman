@@ -112,30 +112,13 @@ public sealed record TargetPolicySettings(
         return new TargetPolicySettings(denied, allowed, source);
     }
 
-    /// <summary>
-    /// The image name a policy entry or a process name stands for: no quotes, no folder, no ".exe", no
-    /// surrounding spaces. Compare the results case-insensitively.
-    /// </summary>
-    public static string NormalizeProcessName(string name)
-    {
-        ArgumentNullException.ThrowIfNull(name);
-
-        var trimmed = name.Trim().Trim('"').Trim();
-        var separator = trimmed.LastIndexOfAny(['\\', '/']);
-        if (separator >= 0)
-        {
-            trimmed = trimmed[(separator + 1)..];
-        }
-
-        return trimmed.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? trimmed[..^4].Trim() : trimmed;
-    }
-
+    /// <summary>Each entry as the image name it stands for (<see cref="ProcessNames.Normalize"/>: a folder or ".exe" is dropped).</summary>
     private static List<string> Tokens(string? value) =>
         string.IsNullOrWhiteSpace(value)
             ? []
             : value.Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .SelectMany(token => SpaceAfterExtension.Split(token))
-                .Select(NormalizeProcessName)
+                .Select(ProcessNames.Normalize)
                 .Where(name => name.Length > 0)
                 .ToList();
 

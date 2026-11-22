@@ -406,6 +406,37 @@ public class WindowManagerToolsCloseTests
         _gateFreeDuringTheWait.Should().Equal(true);
     }
 
+    [Theory]
+    [InlineData("\"notepad.exe\"")]
+    [InlineData(" NOTEPAD .exe ")]
+    public async Task CloseApplication_ByName_ReadsTheNameAsTheTargetPolicyDoes(string processName)
+    {
+        Desktop(AppWindow(1, 700, "notepad", "a.txt - Notepad"), AppWindow(3, 800, "mspaint", "Untitled - Paint"));
+
+        var result = await CreateSut().CloseApplication(processName: processName, timeoutMs: 0);
+
+        result.ProcessIds.Should().Equal(700);
+        _windowService.Verify(w => w.CloseWindow(1, false), Times.Once);
+        _windowService.Verify(w => w.CloseWindow(3, It.IsAny<bool>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(@"C:\Windows\System32\notepad.exe")]
+    [InlineData("C:/Windows/notepad.exe")]
+    public async Task CloseApplication_ByAPath_IsInvalidArguments_AndNothingIsClosed(string path)
+    {
+        // A folder is not compared with the process's own: the path is refused rather than closing every notepad, or
+        // reporting that notepad has no window
+        Desktop(AppWindow(1, 700, "notepad", "a.txt - Notepad"));
+
+        var act = () => CreateSut().CloseApplication(processName: path);
+
+        var error = (await act.Should().ThrowAsync<ToolErrorException>()).Which;
+        error.ErrorCode.Should().Be(ToolErrorReporting.InvalidArgumentsErrorCode);
+        error.Message.Should().Contain("processName").And.Contain("not a path").And.Contain("'notepad'").And.Contain("Nothing was closed");
+        _windowService.Verify(w => w.CloseWindow(It.IsAny<nint>(), It.IsAny<bool>()), Times.Never);
+    }
+
     [Fact]
     public async Task CloseApplication_ByHandle_ClosesThatWindowsProcess()
     {

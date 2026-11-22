@@ -85,7 +85,8 @@ public sealed class ProcessListingService : IProcessListing
         {
             if (query.ProcessId is { } processId && process.ProcessId != processId)
                 continue;
-            if (!string.IsNullOrEmpty(query.NameFilter) && !process.Name.Contains(query.NameFilter, StringComparison.OrdinalIgnoreCase))
+            // Part of the name, read as a process name is (ProcessNames); a path or a blank filter keeps nothing
+            if (!string.IsNullOrEmpty(query.NameFilter) && !ProcessNames.Contains(process.Name, query.NameFilter))
                 continue;
 
             var windows = windowsByProcess.GetValueOrDefault(process.ProcessId);

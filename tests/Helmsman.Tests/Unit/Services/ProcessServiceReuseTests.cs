@@ -531,6 +531,39 @@ public class ProcessServiceReuseTests
         named.Window.Should().Be(word);
     }
 
+    [Theory]
+    [InlineData(@"C:\Program Files\Microsoft Office\root\Office16\WINWORD.EXE")]
+    [InlineData("C:/Program Files/Microsoft Office/root/Office16/WINWORD.EXE")]
+    public async Task ExpectWindowProcessName_ThatIsAPath_IsInvalidArguments_AndNothingIsStarted(string path)
+    {
+        // It matched no window, so an open Word was not reused and the document opened again; it is refused instead
+        _resolver.Setup(r => r.Resolve(It.IsAny<string>(), It.IsAny<string?>()))
+            .Returns<string, string?>((exe, _) => new ResolvedLaunchTarget(exe, LaunchTargetKind.Other));
+        Open(0x10, "WINWORD", "report.docx - Word");
+
+        var result = await LaunchAsync(@"C:\docs\report.docx", expectWindow: new LaunchWindowHint(ProcessName: path));
+
+        result.Success.Should().BeFalse();
+        result.ErrorCode.Should().Be("InvalidArguments");
+        result.ErrorMessage.Should().Contain("expectWindow.processName").And.Contain("not a path").And.Contain("'WINWORD'");
+        VerifyNothingStarted();
+    }
+
+    [Theory]
+    [InlineData("\"winword.exe\"")]
+    [InlineData(" WINWORD.EXE ")]
+    public async Task ExpectWindowProcessName_IsReadAsTheWindowSelectorsReadIt(string processName)
+    {
+        _resolver.Setup(r => r.Resolve(It.IsAny<string>(), It.IsAny<string?>()))
+            .Returns<string, string?>((exe, _) => new ResolvedLaunchTarget(exe, LaunchTargetKind.Other));
+        var word = Open(0x10, "WINWORD", "report.docx - Word");
+
+        var result = await LaunchAsync(@"C:\docs\report.docx", expectWindow: new LaunchWindowHint(ProcessName: processName));
+
+        result.Status.Should().Be(LaunchStatus.AlreadyOpen);
+        result.Window.Should().Be(word);
+    }
+
     [Fact]
     public async Task ExpectWindowProcessName_NarrowsTheProgramsWindows()
     {

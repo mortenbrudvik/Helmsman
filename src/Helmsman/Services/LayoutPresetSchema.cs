@@ -542,11 +542,18 @@ public static partial class LayoutPresetSchema
     /// <summary>
     /// The field of a matcher that is given but blank once normalized, as apply_layout and the window selectors compare it, with
     /// why: a processName that is nothing but '.exe', or a titleContains of only invisible format characters (a zero-width
-    /// space, bidirectional marks). Either normalizes to "", which matches every window. Null when neither is blank.
+    /// space, bidirectional marks). Either normalizes to "", which matches every window. A processName that is a path is
+    /// refused too, as the window selectors refuse it (<see cref="ProcessNames.PathRefusal"/>): it would match no window, and
+    /// its launch would wait for a window of no process. Null when neither field is refused.
     /// </summary>
     private static string? BlankMatcherError(string? processName, string? titleContains)
     {
-        if (processName != null && WindowMatching.WithoutExe(processName).Length == 0)
+        if (ProcessNames.PathRefusal("processName", processName) is { } path)
+        {
+            return path;
+        }
+
+        if (processName != null && ProcessNames.Normalize(processName).Length == 0)
         {
             return $"processName '{processName}' is blank once '.exe' is taken off, so it would match every window. Give the " +
                    "process's name, or leave it out.";

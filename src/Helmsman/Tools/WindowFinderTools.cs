@@ -105,6 +105,12 @@ public partial class WindowFinderTools
             throw new ToolErrorException(ToolErrorReporting.InvalidArgumentsErrorCode, invalid!);
         }
 
+        // A path would match nothing (the service never reads it as its file name): say so instead of an empty list
+        if (ProcessNames.PathRefusal(nameof(processName), processName) is { } path)
+        {
+            throw new ToolErrorException(ToolErrorReporting.InvalidArgumentsErrorCode, path);
+        }
+
         try
         {
             var results = _windowService.FindWindows(new WindowQuery
@@ -171,15 +177,18 @@ public partial class WindowFinderTools
             throw new ToolErrorException(ToolErrorReporting.ToolErrorCode, "This server has no window event journal.");
         }
 
+        if (ProcessNames.PathRefusal(nameof(processName), processName) is { } path)
+        {
+            throw new ToolErrorException(ToolErrorReporting.InvalidArgumentsErrorCode, path);
+        }
+
         var wanted = types is { Length: > 0 } ? types.ToHashSet() : null;
-        var process = string.IsNullOrWhiteSpace(processName) ? null : TargetPolicySettings.NormalizeProcessName(processName);
+        var process = string.IsNullOrWhiteSpace(processName) ? null : processName;
         Func<WindowEventEntry, bool>? include = wanted == null && process == null && handle == null
             ? null
             : entry => (wanted == null || wanted.Contains(entry.Type)) &&
                        (handle == null || entry.Handle == handle) &&
-                       (process == null || (entry.ProcessName != null &&
-                                            string.Equals(TargetPolicySettings.NormalizeProcessName(entry.ProcessName), process,
-                                                StringComparison.OrdinalIgnoreCase)));
+                       (process == null || ProcessNames.Matches(entry.ProcessName, process));
         var read = _journal.Read(sinceSeq, limit, include);
         return new WindowEventsResult(true, read.Events, read.NextSeq, read.RecordingSince,
             StartedNow: read.StartedNow ? true : null,

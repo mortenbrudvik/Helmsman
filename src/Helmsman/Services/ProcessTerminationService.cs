@@ -423,7 +423,7 @@ public sealed class ProcessTerminationService : IProcessTermination
     {
         foreach (var child in tree)
         {
-            if (ProtectedProcesses.Contains(TargetPolicySettings.NormalizeProcessName(child.ImageName)))
+            if (ProtectedProcesses.Contains(ProcessNames.Normalize(child.ImageName)))
             {
                 return child;
             }
@@ -647,8 +647,12 @@ public sealed class ProcessTerminationService : IProcessTermination
               "or close its window with close_window."
             : $"Cannot terminate protected system process '{processName}'.";
 
+    /// <summary>
+    /// Whether the PID's process has the expected name, read as <see cref="ProcessNames"/> reads an argument: a path never
+    /// passes (kill_process refuses it first). The process's own name is compared as Windows reports it.
+    /// </summary>
     private static bool ProcessNameMatches(string actualName, string expectedName) =>
-        actualName.Equals(StripExe(expectedName.Trim()), StringComparison.OrdinalIgnoreCase);
+        ProcessNames.FromArgument(expectedName) is { Length: > 0 } name && actualName.Equals(name, StringComparison.OrdinalIgnoreCase);
 
     private static bool IsAccessDenied(Exception ex) => ex switch
     {

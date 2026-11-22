@@ -1178,6 +1178,11 @@ public class ProcessServiceTests
     [InlineData("notepad")]
     [InlineData("NOTE")]
     [InlineData("pad")]
+    [InlineData("notepad.exe")]
+    [InlineData("NOTEPAD.EXE")]
+    [InlineData("pad.exe")]
+    [InlineData("\"notepad.exe\"")]
+    [InlineData(" notepad ")]
     public void GetRunningProcesses_WithNameFilter_KeepsTheProcessesWhoseNameContainsItIgnoringCase(string nameFilter)
     {
         // Arrange
@@ -1189,6 +1194,18 @@ public class ProcessServiceTests
 
         // Assert
         result.Should().ContainSingle().Which.ProcessId.Should().Be(Notepad);
+    }
+
+    [Theory]
+    [InlineData(@"C:\Windows\notepad.exe")]
+    [InlineData(".exe")]
+    public void GetRunningProcesses_WithANameFilterThatIsAPathOrBlank_KeepsNothing(string nameFilter)
+    {
+        // list_processes refuses these first; the service never widens them to their file name or to every process
+        UseIntegrity();
+        UseProcessTable();
+
+        CreateListingSut().GetRunningProcesses(Everything with { NameFilter = nameFilter }).Should().BeEmpty();
     }
 
     [Fact]

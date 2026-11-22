@@ -389,7 +389,7 @@ public sealed class HostGuard : IHostGuard
     }
 
     private static bool IsConsoleServerImage(string imageName) =>
-        TargetPolicySettings.NormalizeProcessName(imageName) is var name &&
+        ProcessNames.Normalize(imageName) is var name &&
         (string.Equals(name, "conhost", StringComparison.OrdinalIgnoreCase) ||
          string.Equals(name, "OpenConsole", StringComparison.OrdinalIgnoreCase));
 

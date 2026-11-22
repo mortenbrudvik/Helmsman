@@ -117,6 +117,13 @@ public sealed class LaunchPlanner : ILaunchPlanner
     /// </summary>
     public LaunchPlan PlanFor(LaunchRequest request)
     {
+        // The window to expect is named by its process's name (part of it); a path would match no window, so the launch's
+        // window would not be recognised and reuseExisting would start another copy
+        if (ProcessNames.PathRefusal("expectWindow.processName", request.ExpectWindow?.ProcessName) is { } path)
+        {
+            return LaunchPlan.Rejected($"{path} Nothing was started.", ToolErrorReporting.InvalidArgumentsErrorCode);
+        }
+
         if (request.RunAsAdmin && request.ReuseExisting)
         {
             return LaunchPlan.Rejected(

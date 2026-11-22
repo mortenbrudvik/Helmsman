@@ -250,11 +250,11 @@ public static class LayoutPlanner
 
     /// <summary>
     /// Whether <paramref name="processName"/> names a process once normalized as the windows are compared: not null, whitespace
-    /// or only '.exe' (review finding F4). A layout's launch expects a window of that process only then: "" is part of every
-    /// process name.
+    /// or only '.exe' (review finding F4), and not a path (<see cref="ProcessNames"/>). A layout's launch expects a window of
+    /// that process only then: "" is part of every process name.
     /// </summary>
     public static bool NamesAProcess(string? processName) =>
-        !string.IsNullOrEmpty(processName) && WindowMatching.WithoutExe(processName).Length > 0;
+        !string.IsNullOrEmpty(processName) && ProcessNames.FromArgument(processName) is { Length: > 0 };
 
     /// <summary>Whether the matcher's process name names a process once normalized (<see cref="NamesAProcess"/>).</summary>
     private static bool HasProcessName(WindowMatcher matcher) => NamesAProcess(matcher.ProcessName);

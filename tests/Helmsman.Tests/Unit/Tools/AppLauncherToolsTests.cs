@@ -522,6 +522,38 @@ public class AppLauncherToolsTests
         _mockProcessService.Verify(p => p.KillProcessAsync(1234, true, true, 2500, "notepad.exe", It.IsAny<KillSafeguards?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Theory]
+    [InlineData(@"C:\Windows\System32\notepad.exe")]
+    [InlineData("C:/Windows/notepad.exe")]
+    public async Task KillProcess_AnExpectedNameThatIsAPath_IsInvalidArguments_AndNothingIsAsked(string path)
+    {
+        SetupKill(new KillResult(true, 1234, "notepad"));
+
+        var act = () => CreateSut().KillProcess(processId: 1234, confirm: true, expectedProcessName: path);
+
+        var error = (await act.Should().ThrowAsync<ToolErrorException>()).Which;
+        error.ErrorCode.Should().Be(ToolErrorReporting.InvalidArgumentsErrorCode);
+        error.Message.Should().Contain("expectedProcessName").And.Contain("not a path").And.Contain("'notepad'");
+        _mockProcessService.Verify(p => p.KillProcessAsync(It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<int>(),
+            It.IsAny<string?>(), It.IsAny<KillSafeguards?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(@"C:\Windows\System32\notepad.exe", "not a path")]
+    [InlineData("C:/Windows/notepad.exe", "not a path")]
+    [InlineData(".exe", "blank")]
+    [InlineData("  ", "blank")]
+    public void ListProcesses_ANameFilterThatIsAPathOrBlank_IsInvalidArguments(string nameFilter, string why)
+    {
+        ListReturns();
+
+        var act = () => CreateSut().ListProcesses(nameFilter: nameFilter);
+
+        act.Should().Throw<ToolErrorException>()
+            .Where(e => e.ErrorCode == ToolErrorReporting.InvalidArgumentsErrorCode && e.Message.Contains(why) && e.Message.Contains("nameFilter"));
+        _mockProcessService.Verify(p => p.GetRunningProcesses(It.IsAny<ProcessQuery>()), Times.Never);
+    }
+
     [Fact]
     public async Task KillProcess_WithDefaults_UsesDefaultForceKill()
     {

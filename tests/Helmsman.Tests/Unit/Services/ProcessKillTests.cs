@@ -738,6 +738,20 @@ public class ProcessKillTests
     }
 
     [Theory]
+    [InlineData(@"C:\Windows\System32\notepad.exe")]
+    [InlineData(@"C:\Evil\notepad.exe")]
+    public async Task KillProcess_AnExpectedNameThatIsAPath_NeverPassesTheGuard(string expected)
+    {
+        // kill_process refuses such a name first (InvalidArguments); a caller that does not still gets no kill: the
+        // folder is not compared with the process's own, so the path is never taken for its file name
+        var result = await CreateSut().KillProcessAsync(Pid, confirm: true, expectedProcessName: expected);
+
+        result.ErrorCode.Should().Be(nameof(ProcessErrorCode.ProcessNameMismatch));
+        _mockProcess.Verify(p => p.CloseMainWindow(), Times.Never);
+        VerifyNeverForceKilled();
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task KillProcess_ExpectedNameMismatch_DoesNothing(bool forceKill)
@@ -763,6 +777,8 @@ public class ProcessKillTests
     [InlineData("notepad.exe")]
     [InlineData("NOTEPAD.EXE")]
     [InlineData("  notepad  ")]
+    [InlineData("\"notepad.exe\"")]
+    [InlineData("notepad .exe")]
     public async Task KillProcess_ExpectedNameMatches_Proceeds(string expected)
     {
         // Arrange

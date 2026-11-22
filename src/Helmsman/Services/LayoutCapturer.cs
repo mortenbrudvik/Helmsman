@@ -66,6 +66,10 @@ public class LayoutCapturer : ILayoutCapturer
         if (DescriptionError(description) is { } descriptionError)
             return new LayoutSaveResult(false, null, ErrorMessage: descriptionError, ErrorCode: Infrastructure.ToolErrorReporting.InvalidArgumentsErrorCode);
 
+        // A filter that is a path would match no window, so an app it excludes would be saved anyway (ProcessNames)
+        if ((ProcessFilterError("includeProcesses", includeProcesses) ?? ProcessFilterError("excludeProcesses", excludeProcesses)) is { } filterError)
+            return new LayoutSaveResult(false, null, ErrorMessage: filterError, ErrorCode: Infrastructure.ToolErrorReporting.InvalidArgumentsErrorCode);
+
         var windows = _windowService.GetAllWindows(includeMinimized);
         if (_monitorService.GetAllMonitors().Count == 0)
         {
@@ -272,6 +276,12 @@ public class LayoutCapturer : ILayoutCapturer
     private static string? DescriptionError(string? description) =>
         description?.Length > LayoutPresetSchema.MaxDescriptionLength
             ? $"description is longer than {LayoutPresetSchema.MaxDescriptionLength} characters. Nothing was saved."
+            : null;
+
+    /// <summary>Why a capture filter's entry cannot be used: it is a path (<see cref="ProcessNames.PathRefusal"/>); null when none is.</summary>
+    private static string? ProcessFilterError(string parameter, string[]? names) =>
+        names?.Select(name => ProcessNames.PathRefusal(parameter, name)).FirstOrDefault(error => error != null) is { } error
+            ? $"{error} Nothing was saved."
             : null;
 
     #region Capture helpers
