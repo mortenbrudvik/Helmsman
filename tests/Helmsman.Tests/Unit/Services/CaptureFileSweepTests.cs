@@ -209,18 +209,15 @@ public sealed class CaptureFileSweepTests : IDisposable
         File.Exists(target).Should().BeTrue();
     }
 
-    [Fact]
+    [SymbolicLinkFact]
     public void Sweep_WhenTheCapturesFolderIsADirectorySymbolicLink_DeletesNothing()
     {
-        // Arrange - needs Developer Mode or the privilege to create symbolic links; without it, CaptureFileSweepGuardTests
-        // covers the same through the fake file system
+        // Arrange - skipped without the privilege to create symbolic links; CaptureFileSweepGuardTests covers the same
+        // through the fake file system
         var outside = Path.Combine(_root, "outside");
         var target = Write(outside, OwnName());
         Directory.Delete(_captures);
-        if (!TryCreateSymbolicLink(_captures, outside, directory: true))
-        {
-            return;
-        }
+        CreateSymbolicLink(_captures, outside, directory: true);
 
         // Act
         var deleted = CreateSut().Sweep();
@@ -230,16 +227,13 @@ public sealed class CaptureFileSweepTests : IDisposable
         File.Exists(target).Should().BeTrue();
     }
 
-    [Fact]
+    [SymbolicLinkFact]
     public void Sweep_LeavesAFileThatIsASymbolicLink_AndWhatItLeadsTo()
     {
         // Arrange - a link of the writer's name to a file elsewhere (see the test above about the privilege)
         var target = Write(Path.Combine(_root, "outside"), "keep.png");
         var link = Path.Combine(_captures, OwnName());
-        if (!TryCreateSymbolicLink(link, target, directory: false))
-        {
-            return;
-        }
+        CreateSymbolicLink(link, target, directory: false);
 
         var own = Write(_captures, OwnName());
 
@@ -376,26 +370,62 @@ public sealed class CaptureFileSweepTests : IDisposable
         File.GetAttributes(link).Should().HaveFlag(FileAttributes.ReparsePoint, "mklink /J made the junction: {0}", output);
     }
 
-    private bool TryCreateSymbolicLink(string link, string target, bool directory)
+    /// <summary>Makes a symbolic link; only [SymbolicLinkFact] tests call it, which run only where links can be made.</summary>
+    private void CreateSymbolicLink(string link, string target, bool directory)
     {
-        try
+        if (directory)
         {
-            if (directory)
-            {
-                Directory.CreateSymbolicLink(link, target);
-            }
-            else
-            {
-                File.CreateSymbolicLink(link, target);
-            }
+            Directory.CreateSymbolicLink(link, target);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        else
         {
-            // No privilege to create symbolic links (no Developer Mode)
-            return false;
+            File.CreateSymbolicLink(link, target);
         }
 
         _links.Add(link);
-        return true;
+        File.GetAttributes(link).Should().HaveFlag(FileAttributes.ReparsePoint);
+    }
+}
+
+/// <summary>
+/// A fact that makes symbolic links: skipped, with the reason, where this user cannot make one (it needs Developer Mode or
+/// the Create symbolic links privilege). The probe makes one file link in a folder of its own under %TEMP% and deletes it.
+/// </summary>
+public sealed class SymbolicLinkFactAttribute : FactAttribute
+{
+    private static readonly Lazy<string?> Unavailable = new(() =>
+    {
+        var folder = Path.Combine(Path.GetTempPath(), $"helmsman-symlink-probe-{Guid.NewGuid():N}");
+        try
+        {
+            Directory.CreateDirectory(folder);
+            var target = Path.Combine(folder, "target.txt");
+            File.WriteAllText(target, "probe");
+            File.CreateSymbolicLink(Path.Combine(folder, "link.txt"), target);
+            return null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return $"This user cannot create symbolic links (turn on Developer Mode, or run with the Create symbolic links " +
+                   $"privilege): {ex.Message} CaptureFileSweepGuardTests covers the same guard through a fake file system.";
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(folder, recursive: true);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+            }
+        }
+    });
+
+    public SymbolicLinkFactAttribute()
+    {
+        if (Unavailable.Value is { } reason)
+        {
+            Skip = reason;
+        }
     }
 }
