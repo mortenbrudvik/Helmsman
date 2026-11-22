@@ -188,8 +188,19 @@ public sealed partial class InterpreterGuard
     /// <param name="executable">The executable as the agent asked for it.</param>
     /// <param name="resolvedFileName">What the resolver will hand to Windows: the program's full path, or the input unchanged.</param>
     /// <param name="arguments">The arguments; null or empty means none.</param>
-    public InterpreterRefusal? Check(string executable, string resolvedFileName, IReadOnlyList<string>? arguments)
+    public InterpreterRefusal? Check(string executable, string resolvedFileName, IReadOnlyList<string>? arguments) =>
+        Check(executable, resolvedFileName, arguments, out _);
+
+    /// <summary>
+    /// <see cref="Check(string, string, IReadOnlyList{string}?)"/>, telling also whether the launch it allowed opens one of
+    /// Windows' own consoles, so that the launch can start it in its own folder whatever working directory was asked for.
+    /// </summary>
+    /// <param name="systemConsole">True when the launch is allowed and opens a Windows console (<see cref="IsSystemConsole"/>);
+    /// false when it is refused or opens anything else.</param>
+    public InterpreterRefusal? Check(
+        string executable, string resolvedFileName, IReadOnlyList<string>? arguments, out bool systemConsole)
     {
+        systemConsole = false;
         var names = new[] { FileNameOf(executable), FileNameOf(resolvedFileName) }.OfType<string>().ToList();
         var shown = string.Equals(executable.Trim(), resolvedFileName, StringComparison.OrdinalIgnoreCase)
             ? $"'{resolvedFileName}'"
@@ -200,11 +211,17 @@ public sealed partial class InterpreterGuard
         {
             if (!IsSystemConsole(resolvedFileName))
             {
+                // A console name that App Paths maps to another file (x.msc to an .exe) is named as what it resolves to
+                var resolvesToConsole = FileNameOf(resolvedFileName) is { } resolvedName &&
+                                        Path.GetExtension(resolvedName).Equals(ConsoleExtension, StringComparison.OrdinalIgnoreCase);
+                var what = resolvesToConsole
+                    ? $"{shown} is a management console file (.msc) that is not one of Windows' own consoles"
+                    : $"'{executable}' is named as a management console file (.msc) but resolves to '{resolvedFileName}', which " +
+                      "is not one of Windows' own consoles";
                 return new InterpreterRefusal(nameof(LaunchErrorCode.ScriptFile),
-                    $"{shown} is a management console file (.msc) that is not one of Windows' own consoles, and a console file " +
-                    $"can make MMC run commands: {NoCommands} Only the consoles in the Windows system folder ({_systemDirectory}) " +
-                    "can be opened, by their name (services.msc, devmgmt.msc, eventvwr.msc) or full path. Ask the user to open " +
-                    "any other. Nothing was started.");
+                    $"{what}, and a console file can make MMC run commands: {NoCommands} Only the consoles in the Windows " +
+                    $"system folder ({_systemDirectory}) can be opened, by their name (services.msc, devmgmt.msc, eventvwr.msc) " +
+                    "or full path. Ask the user to open any other. Nothing was started.");
             }
 
             if (arguments is { Count: > 0 })
@@ -215,6 +232,7 @@ public sealed partial class InterpreterGuard
             }
 
             // Windows' own console, without arguments: ShellExecute opens exactly this file (the resolved path) with MMC
+            systemConsole = true;
             return null;
         }
 

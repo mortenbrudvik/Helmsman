@@ -163,7 +163,9 @@ public sealed class LaunchPlanner : ILaunchPlanner
     /// the working directory, and the resolved path is what gets started.</item>
     /// <item>Arguments are quoted with the Windows command-line rules (<see cref="CommandLineBuilder"/>).</item>
     /// <item>The server does not run commands or scripts for the agent (roadmap M3.F8): an interpreter or system tool with
-    /// arguments, and a script, installer or shortcut file, are refused by <see cref="InterpreterGuard"/>.</item>
+    /// arguments, and a script, installer or shortcut file, are refused by <see cref="InterpreterGuard"/>. One of Windows'
+    /// own consoles, which the guard allows, starts in its own folder (System32) whatever working directory was asked for,
+    /// and the plan's warning says when one was not used.</item>
     /// <item>When the target cannot be verified to be a native executable (a URI, document or unresolved name, which
     /// may be handed to cmd.exe), arguments containing cmd.exe metacharacters are rejected, because cmd.exe
     /// ignores \" escaping and expands %VAR% even inside quotes.</item>
@@ -264,9 +266,26 @@ public sealed class LaunchPlanner : ILaunchPlanner
                 warning);
         }
 
-        if (_interpreterGuard.Check(executable, target.FileName, arguments) is { } refusal)
+        if (_interpreterGuard.Check(executable, target.FileName, arguments, out var systemConsole) is { } refusal)
         {
             return LaunchPlan.Rejected(refusal.Message, refusal.ErrorCode, warning);
+        }
+
+        // A Windows console starts in its own folder, System32, whatever working directory was asked for: MMC may run elevated
+        // for it, and must not load anything from a folder the agent chose
+        var startDirectory = requestedWorkingDirectory ?? DefaultWorkingDirectory(target);
+        if (systemConsole)
+        {
+            var ownFolder = DefaultWorkingDirectory(target);
+            if (requestedWorkingDirectory != null &&
+                !string.Equals(Path.TrimEndingDirectorySeparator(requestedWorkingDirectory), ownFolder, StringComparison.OrdinalIgnoreCase))
+            {
+                warning = CombineWarnings(warning,
+                    $"workingDirectory '{requestedWorkingDirectory}' was not used: a Windows console always starts in its own " +
+                    $"folder ({ownFolder}).");
+            }
+
+            startDirectory = ownFolder;
         }
 
         // A desktop app's shell:AppsFolder entry: the shell starts its program, which the guard above cannot see (roadmap
@@ -329,7 +348,7 @@ public sealed class LaunchPlanner : ILaunchPlanner
         {
             FileName = target.FileName,
             UseShellExecute = true,
-            WorkingDirectory = requestedWorkingDirectory ?? DefaultWorkingDirectory(target)
+            WorkingDirectory = startDirectory
         };
 
         if (arguments?.Length > 0)

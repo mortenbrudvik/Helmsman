@@ -649,6 +649,33 @@ public class InterpreterGuardTests
         empty.Should().BeNull();
     }
 
+    [Theory]
+    [InlineData("services.msc", Services, null, true)]
+    [InlineData("services.msc", Services, "/s", false)]
+    [InlineData(@"C:\Users\me\Downloads\services.msc", @"C:\Users\me\Downloads\services.msc", null, false)]
+    [InlineData("notepad", Notepad, null, false)]
+    [InlineData("cmd", Cmd, "/c", false)]
+    public void Check_TellsWhetherTheLaunchItAllowedOpensAWindowsConsole(string executable, string resolved, string? argument, bool expected)
+    {
+        // Act - the planner starts such a launch in System32, whatever working directory was asked for
+        CreateSut().Check(executable, resolved, argument == null ? null : [argument], out var systemConsole);
+
+        // Assert
+        systemConsole.Should().Be(expected);
+    }
+
+    [Fact]
+    public void Check_AConsoleNameThatResolvesToAProgram_IsRefused_NamingWhatItResolvesTo()
+    {
+        // Act - App Paths may map a name like x.msc to any file
+        var refusal = CreateSut().Check("x.msc", @"C:\Tools\x.exe", null);
+
+        // Assert - the .exe is not called a console file
+        refusal!.ErrorCode.Should().Be(nameof(LaunchErrorCode.ScriptFile));
+        refusal.Message.Should().Contain(@"'x.msc' is named as a management console file (.msc) but resolves to 'C:\Tools\x.exe'")
+            .And.NotContain("is a management console file").And.Contain("Nothing was started");
+    }
+
     [Fact]
     public void Check_TheSystemFolder_IsComparedWithoutItsTrailingSeparator_AndInAnyCase()
     {

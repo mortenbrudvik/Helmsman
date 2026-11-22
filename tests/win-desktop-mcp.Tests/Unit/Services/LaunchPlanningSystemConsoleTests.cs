@@ -21,8 +21,12 @@ public class LaunchPlanningSystemConsoleTests
         Services, @"C:\Windows\System32\devmgmt.msc", @"C:\Windows\System32\mmc.exe",
         // A planted copy of the same name in the working and the current directory, and consoles only those places have
         @"C:\Users\me\repo\services.msc", @"C:\Users\me\repo\local.msc", @"C:\Tools\pathonly.msc",
-        @"C:\Users\me\Downloads\services.msc", @"C:\Windows\SysWOW64\services.msc", @"C:\Windows\System32\en-US\services.msc"
+        @"C:\Users\me\Downloads\services.msc", @"C:\Windows\SysWOW64\services.msc", @"C:\Windows\System32\en-US\services.msc",
+        @"C:\Windows\System32\eventvwr.msc", @"C:\Tools\x.exe"
     };
+
+    // App Paths entries (HKCU or HKLM), by key name
+    private readonly Dictionary<string, string> _appPaths = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly Mock<INativeProcessWrapper> _processes = new(MockBehavior.Strict);
     private readonly List<ProcessStartInfo> _started = [];
@@ -36,11 +40,12 @@ public class LaunchPlanningSystemConsoleTests
             .Returns(process.Object);
     }
 
-    private WiredProcessService CreateSut() => WiredProcessService.Create(
+    private WiredProcessService CreateSut(IInstalledAppsService? installedApps = null) => WiredProcessService.Create(
         TestDataFactory.CreateMockWindowService().Object,
         new InputValidationService(ProtocolAllowlist.BuiltIn),
         TestDataFactory.CreateMockBrowserDetectionService().Object,
-        new ExecutableResolver(_files.Contains, () => PathDir, _ => [], WindowsDir, SystemDir, () => WorkingDir,
+        new ExecutableResolver(_files.Contains, () => PathDir,
+            key => _appPaths.TryGetValue(key, out var value) ? [value] : [], WindowsDir, SystemDir, () => WorkingDir,
             () => ".COM;.EXE;.BAT;.CMD;.VBS;.JS;.MSC"),
         Permissive.TargetPolicy,
         Permissive.HostGuard,
@@ -49,7 +54,8 @@ public class LaunchPlanningSystemConsoleTests
         new DebugBrowserLocator(),
         Permissive.SecurityProbe,
         new ChromiumSwitchGuard(),
-        _processes.Object);
+        _processes.Object,
+        installedApps: installedApps);
 
     [Theory]
     [InlineData("services.msc", null)]
@@ -68,6 +74,7 @@ public class LaunchPlanningSystemConsoleTests
         Path.IsPathFullyQualified(plan.StartInfo.FileName).Should().BeTrue();
         plan.StartInfo.Arguments.Should().BeEmpty();
         plan.StartInfo.UseShellExecute.Should().BeTrue();
+        plan.StartInfo.WorkingDirectory.Should().BeEquivalentTo(SystemDir, "a console always starts in its own folder");
     }
 
     [Fact]
@@ -81,7 +88,102 @@ public class LaunchPlanningSystemConsoleTests
         _started.Should().ContainSingle();
         _started[0].FileName.Should().Be(Path.Combine(SystemDir, "services.msc"));
         _started[0].Arguments.Should().BeEmpty();
-        _started[0].WorkingDirectory.Should().Be(WorkingDir);
+        _started[0].WorkingDirectory.Should().Be(SystemDir, "the working directory asked for is not used for a console");
+        result.Warning.Should().Contain($"workingDirectory '{WorkingDir}' was not used").And.Contain(SystemDir);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(SystemDir)]
+    [InlineData(SystemDir + @"\")]
+    [InlineData(@"c:\windows\system32")]
+    public void PlanLaunch_AWindowsConsole_WithoutAnotherWorkingDirectory_StartsInSystem32_WithoutAWarning(string? workingDirectory)
+    {
+        // Act
+        var plan = CreateSut().PlanLaunch("services.msc", workingDirectory: workingDirectory);
+
+        // Assert
+        plan.IsValid.Should().BeTrue(plan.ErrorMessage);
+        plan.StartInfo!.WorkingDirectory.Should().BeEquivalentTo(SystemDir);
+        plan.Warning.Should().BeNull();
+    }
+
+    [Fact]
+    public void PlanLaunch_AProgram_StillStartsInTheWorkingDirectoryAskedFor()
+    {
+        // Act - only a console ignores it
+        var plan = CreateSut().PlanLaunch("mmc", workingDirectory: WorkingDir);
+
+        // Assert
+        plan.StartInfo!.WorkingDirectory.Should().Be(WorkingDir);
+        plan.Warning.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task LaunchApplication_ALaunchRequest_AsLayoutsAndBatchesSendIt_StartsAConsoleInSystem32()
+    {
+        // Act - apply_layout and launch_applications_batch hand the launcher a LaunchRequest, planned by the same PlanLaunch
+        var result = await CreateSut().LaunchApplicationAsync(new LaunchRequest("services.msc", WorkingDirectory: WorkingDir),
+            waitForWindow: false, waitTimeoutMs: 0);
+
+        // Assert
+        result.Success.Should().BeTrue(result.ErrorMessage);
+        _started.Should().ContainSingle().Which.WorkingDirectory.Should().Be(SystemDir);
+    }
+
+    [Fact]
+    public async Task LaunchApplication_AnInstalledAppWhoseShortcutOpensAWindowsConsole_StartsItInSystem32()
+    {
+        // Arrange - Windows Tools' Event Viewer, launched by its display name, is planned again from its shortcut's target
+        const string eventViewer = @"C:\Windows\System32\eventvwr.msc";
+        var installed = new Mock<IInstalledAppsService>();
+        installed.Setup(i => i.FindByName("Event Viewer"))
+            .Returns([new InstalledApp("Event Viewer", "Microsoft.AutoGenerated.EventViewer", false, eventViewer)]);
+
+        // Act
+        var result = await CreateSut(installed.Object).LaunchApplicationAsync("Event Viewer", workingDirectory: WorkingDir);
+
+        // Assert
+        result.Success.Should().BeTrue(result.ErrorMessage);
+        _started.Should().ContainSingle();
+        _started[0].FileName.Should().Be(eventViewer);
+        _started[0].WorkingDirectory.Should().Be(SystemDir);
+        result.Warning.Should().Contain("was not used");
+    }
+
+    [Fact]
+    public async Task LaunchApplication_AConsoleNameFoundInTheWindowsFolderFirst_IsRefused_NotSkippedForSystem32()
+    {
+        // Arrange - the Windows folder is searched before System32, so the bare name resolves to this copy
+        const string windowsCopy = @"C:\Windows\services.msc";
+        _files.Add(windowsCopy);
+
+        // Act
+        var result = await CreateSut().LaunchApplicationAsync("services.msc");
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.ErrorCode.Should().Be(nameof(LaunchErrorCode.ScriptFile));
+        result.ErrorMessage.Should().Contain(windowsCopy);
+        _started.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task LaunchApplication_AConsoleNameThatAppPathsMapsToAProgram_IsRefused_NamingWhatItResolvesTo()
+    {
+        // Arrange - an App Paths key named like a console, pointing at a program
+        const string program = @"C:\Tools\x.exe";
+        _appPaths["x.msc"] = program;
+
+        // Act
+        var result = await CreateSut().LaunchApplicationAsync("x.msc");
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.ErrorCode.Should().Be(nameof(LaunchErrorCode.ScriptFile));
+        result.ErrorMessage.Should().Contain($"'x.msc' is named as a management console file (.msc) but resolves to '{program}'")
+            .And.NotContain("is a management console file");
+        _started.Should().BeEmpty();
     }
 
     [Fact]
