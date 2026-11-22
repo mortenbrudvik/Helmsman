@@ -50,11 +50,15 @@ The user, not the agent, decides which applications the agent may act on. The se
 
 | Variable | Default | Meaning |
 |----------|---------|---------|
-| `HELMSMAN_DENY_PROCESSES` | `1Password, Bitwarden, KeePass, KeePassXC, LastPass, Dashlane, Keeper, KeeperPasswordManager, Enpass, NordPass, ProtonPass, Proton Pass, RoboForm, pwsafe, CredentialUIBroker, CredDialogHost, consent, CHXSmartScreen, smartscreen, SecHealthUI, SecurityHealthHost, Microsoft.AAD.BrokerPlugin, WWAHost` | Image names (with or without `.exe`, separated by commas or semicolons; a name may contain spaces, and whitespace right after `.exe` also separates) the agent may not act on. The default covers common password managers, the Windows credential prompts (`CredentialUIBroker`, `CredDialogHost`), the elevation prompt (`consent`), the SmartScreen prompt "Windows protected your PC" (`CHXSmartScreen`, and `smartscreen`, the reputation broker that starts it) and the Windows Security app (`SecHealthUI`) and its notifications and prompts (`SecurityHealthHost`), and the Entra ID and Microsoft account sign-in windows (`Microsoft.AAD.BrokerPlugin`, and `WWAHost`, which shows the one of Settings' "Access work or school" and other web-based system UIs; both take passwords); with it, the policy also refuses Windows' "Open File - Security Warning" in any process (see below). A value replaces the default list, so a list without the entry `default` drops these; `default` puts the default list back in, and `none` alone turns it off |
+| `HELMSMAN_DENY_PROCESSES` | `1Password, Bitwarden, KeePass, KeePassXC, LastPass, Dashlane, Keeper, KeeperPasswordManager, Enpass, NordPass, ProtonPass, Proton Pass, RoboForm, pwsafe, CredentialUIBroker, CredDialogHost, consent, CHXSmartScreen, smartscreen, SecHealthUI, SecurityHealthHost, Microsoft.AAD.BrokerPlugin, WWAHost` | Image names (with or without `.exe` or a folder, read as [Process names](#process-names) says; separated by commas or semicolons; a name may contain spaces, and whitespace right after `.exe` also separates) the agent may not act on. The default covers common password managers, the Windows credential prompts (`CredentialUIBroker`, `CredDialogHost`), the elevation prompt (`consent`), the SmartScreen prompt "Windows protected your PC" (`CHXSmartScreen`, and `smartscreen`, the reputation broker that starts it) and the Windows Security app (`SecHealthUI`) and its notifications and prompts (`SecurityHealthHost`), and the Entra ID and Microsoft account sign-in windows (`Microsoft.AAD.BrokerPlugin`, and `WWAHost`, which shows the one of Settings' "Access work or school" and other web-based system UIs; both take passwords); with it, the policy also refuses Windows' "Open File - Security Warning" in any process (see below). A value replaces the default list, so a list without the entry `default` drops these; `default` puts the default list back in, and `none` alone turns it off |
 | `HELMSMAN_ALLOW_PROCESSES` | not set | When set, the only image names the agent may act on. The deny list still wins. An app that shows another process's content inside its windows needs that process listed too for the UI Automation reads of that content, such as a WebView2 (`msedgewebview2`) or a preview handler (`prevhost`) |
 | `HELMSMAN_DESTRUCTIVE_CHORDS` | `%{F4} ^w ^q ^{F4} ^+{ESC} #l` | The `send_keys` chords that need `windowHandle`, in `send_keys` syntax, separated by spaces (`#` is the Windows key, as in `send_keys`; Windows ignores an injected Win+L, so `#l` is listed in case it does not; name a punctuation key other than `{+}` `,` `-` `.` by its key, such as `^{OEM_2}`, because `send_keys` sends the key of the target's layout). `default` and `none` work as above. An entry that is not one chord (such as a comma-separated list) is ignored and logged, and the default chords then stay in force as well |
 
 The server logs the deny list, the allow list and the chords in force to stderr when it starts, so a mistyped value shows up there.
+
+#### Process names
+
+A process name is read one way everywhere: in the two lists above, and in every argument that names a process (a [window selector](#window-selectors)'s `processName`, find_windows' `processName` also with `processNameContains`, get_window_events' `processName`, close_application's `processName`, kill_process' `expectedProcessName`, list_processes' `nameFilter`, launch_application's `expectWindow.processName`, a layout placement's `processName`, and save_layout's and save_workspace's `includeProcesses` and `excludeProcesses`). Case does not matter, nor do spaces and quotes around the name or one `.exe` at its end: `notepad`, `notepad.exe`, `NOTEPAD.EXE` and `"notepad.exe"` all name Notepad. Any other extension is part of the name (`notepad.com` is not Notepad), and so is every dot before it (`Microsoft.Photos`, `python3.12`; `python3` does not name `python3.12`). An argument may not be a path (a `\`, `/` or `:` in it): a process is matched by its name alone, so the folder of `C:\Tools\notepad.exe` could not be checked and every Notepad would match. Such an argument is refused with `InvalidArguments`, which names the process name to pass instead (`notepad`), and nothing is done; to tell programs apart by their folder, use list_processes' `pathContains` and then the process's `processId`. The two lists do take a path: its folder is dropped, so the entry `C:\Tools\notepad.exe` denies (or allows) every Notepad, wherever it runs from.
 
 The policy applies to:
 
@@ -71,7 +75,7 @@ A window whose process name cannot be read (it may have exited, or the server ma
 
 [take_screenshot](#take_screenshot) and [capture_region](#capture_region) are not refused, and they do not black out a denied window that is visible in the captured area. Keeping such a window minimized limits what the agent can see, but it is not a guarantee: the window tools above do not restore or raise it, yet input still can (a click on its taskbar button, Alt+Tab), and so can the app itself (for example when it is started again with [launch_application](#launch_application)). Restoring an allowed window with the other window tools (for example set_window_state `restore`) can also show a denied app's dialog that the window owns; focus_window checks those windows first. So close such apps, or keep them on another virtual desktop, while the agent works. The [browser reading](#browser-reading) tools' CDP reads with `cdpPort` are not covered: they read the debug browser through the port the agent gave.
 
-A window is matched by its process's image name; a UWP app's window by its own process and by its frame host (ApplicationFrameHost). Any window of ApplicationFrameHost that hosts the content window of an app in another process counts as such a window, whatever its class, so a prompt that comes up in a frame other than `ApplicationFrameWindow` (CredDialogHost's, for example) is matched by its own process for input, captures and the other checks above. A refused call returns `TargetDeniedByPolicy` and nothing is done: ask the user to do the step. A password manager that runs as a browser extension is part of the browser process and cannot be told apart.
+A window is matched by its process's image name, read as [Process names](#process-names) says; a UWP app's window by its own process and by its frame host (ApplicationFrameHost). Any window of ApplicationFrameHost that hosts the content window of an app in another process counts as such a window, whatever its class, so a prompt that comes up in a frame other than `ApplicationFrameWindow` (CredDialogHost's, for example) is matched by its own process for input, captures and the other checks above. A refused call returns `TargetDeniedByPolicy` and nothing is done: ask the user to do the step. A password manager that runs as a browser extension is part of the browser process and cannot be told apart.
 
 A security prompt that runs inside a shared process cannot be denied by process. Windows' "Open File - Security Warning" ("Do you want to open this file?" or "Do you want to run this file?", with Open or Run and Cancel) comes up in whichever process opens a downloaded file: explorer.exe when File Explorer opens it, and a browser, a mail client or a launcher otherwise. So the policy recognizes that dialog by its structure instead, not by its title or text, which are localized: a dialog box (`#32770`) with the prompt's controls, by control ID and class. Internet Explorer's "File Download" dialog, built the same way, is recognized too. While the deny list includes the default list (`HELMSMAN_DENY_PROCESSES` not set, or with `default`), every check above refuses such a dialog, and each of its controls, with `TargetDeniedByPolicy` and an error that names the prompt, whatever its process: the input tools, element_action, respond_to_dialog and file_dialog; the window tools, closes and focus_window; the captures; and the UI Automation reads (get_active_popups and get_desktop_state leave it out as a popup of a denied app). Only the user answers it: ask the user to. The window lists still list it. Other security prompts that a shared process shows are not recognized, so keep the agent away from them.
 
@@ -79,7 +83,7 @@ The policy decides which windows the agent may act on, not which programs it may
 
 #### What the policy covers
 
-In short, for an app the policy denies:
+In short, for an app the policy denies (named in either list as [Process names](#process-names) says):
 
 - **Refused** (`TargetDeniedByPolicy`, nothing done): the input tools, [element_action](#element_action), [respond_to_dialog](#respond_to_dialog) and [file_dialog](#file_dialog); the Window Control tools and the window batches, [close_window](#close_window), [close_application](#close_application) and [kill_process](#kill_process); [capture_window](#capture_window) and [capture_with_elements](#capture_with_elements); the UI Automation reads, [get_desktop_state](#get_desktop_state)'s included; [get_browser_url](#get_browser_url) and [get_browser_content](#get_browser_content) without `cdpPort`; and the [tab](#browser-tabs-and-navigation) and [page](#browser-page-dom-bridge) tools, also with `cdpPort`.
 - **Masked:** [read_screen_text](#read_screen_text), [find_text_on_screen](#find_text_on_screen) and [wait_for_visual](#wait_for_visual) black out or leave out its windows wherever the pixels they read can show them.
@@ -478,7 +482,7 @@ Every tool that acts on one window takes it as `handle` (`windowHandle` for the 
 | `titleContains` | Part of the title, ignoring case |
 | `titleEquals` | The whole title, ignoring case |
 | `titleRegex` | A .NET regular expression the title must match, ignoring case. A pattern that runs longer than 100 ms on one title is given up (`InvalidArguments`) |
-| `processName` | The whole process name, ignoring case, with or without `.exe`: `notepad` matches notepad.exe, `Code` does not match `Code - Insiders`. With `processNameContains: true`, a part of it. A UWP app's window matches its app process and `ApplicationFrameHost` |
+| `processName` | The whole process name, read as [Process names](#process-names) says (ignoring case, with or without `.exe`; a path is refused with `InvalidArguments`): `notepad` matches notepad.exe, `Code` does not match `Code - Insiders`. With `processNameContains: true`, a part of it. A UWP app's window matches its app process and `ApplicationFrameHost` |
 | `processId` | The process ID (the app's, or a UWP window's host) |
 | `className` | The exact window class, ignoring case; skips the user-facing filter, as in find_windows |
 | `includeCloaked`, `includeUntitled` | Also match cloaked windows (other virtual desktops, suspended apps) or untitled windows |
@@ -542,6 +546,8 @@ Find windows matching specific criteria.
 <!-- tools:end params:find_windows -->
 
 `includeMinimized: false` leaves minimized windows out (issue #16): on a desktop where most windows are minimized, the listing of what can be on screen is a fraction of the full one. Like `sort` and `limit`, it is not a [selector](#window-selectors) field.
+
+`processName` is read as [Process names](#process-names) says: `"notepad.exe"` finds Notepad, and a path such as `C:\Windows\System32\notepad.exe` is refused with `InvalidArguments`, which names the process name to pass, rather than returning an empty list.
 
 The [target policy](#target-policy) does not filter the list: a denied app's windows are returned with their titles, although no tool reads or acts on them.
 
@@ -8973,6 +8979,32 @@ descriptions.
 - **Internal.** The large services are split into smaller ones, and the checks' collaborators (target policy, host
   guard, input session, paste guard, takeover monitor and others) are required rather than optional, so a server built
   without one fails instead of skipping the check; the server always had them, so nothing changes for a client.
+
+Next release (since 4.0.0):
+
+These changes are on the main branch since 4.0.0. The markers mean what they mean for 3.1.0 above: **Changed:** where a
+call that worked with 4.0.0 can now be refused or return something else. No tool description changed, so the tools/list
+sizes are those of 4.0.0.
+
+- **A process name is read one way everywhere.** The target policy read a process name ignoring case, spaces and quotes
+  around it, a folder and one `.exe`, while the tools' arguments that name a process read it three other ways: a quoted
+  `"notepad.exe"` or `notepad .exe` matched no window, list_processes' `nameFilter` `notepad.exe` listed nothing, and
+  `C:\Windows\System32\notepad.exe`, which names Notepad in `HELMSMAN_DENY_PROCESSES`, made find_windows return an empty
+  list. Every such argument is now read as [Process names](#process-names) says, by the same code as the policy's lists:
+  window selectors (and so wait_for_window, the batches and every tool that takes `window`), find_windows,
+  get_window_events, close_application, kill_process' `expectedProcessName`, list_processes' `nameFilter`,
+  launch_application's `expectWindow.processName`, layout placements and save_layout's and save_workspace's process
+  filters. **Changed:** an argument that is a path (a `\`, `/` or `:` in it) is refused with `InvalidArguments`, which
+  names the process name to pass, and nothing is done: a process is matched by its name alone, so the folder could not be
+  checked. With 4.0.0 find_windows returned an empty list, a selector failed with `WindowNotFound` (`HandleMismatch` beside
+  a handle), close_application with `NoClosableWindow`, kill_process with `ProcessNameMismatch`, list_processes listed
+  nothing, save_layout's filter matched no window (an app it excluded was saved), launch_application's `reuseExisting`
+  reused no window and started the program again, and get_window_events filtered by the path's file name. save_layout refuses such a placement
+  (`InvalidPlacement`), and apply_layout skips one read from a file (`notApplicable`, saying why), where it found no
+  window. **Changed:** a selector's `processName` of only quotes is blank (`InvalidArguments`), as one of only `.exe`
+  was; list_processes refuses a `nameFilter` that is blank once read (`.exe`, spaces), which listed nothing; and
+  find_windows' `processName` of only `.exe` with `processNameContains: true` lists no window, where it listed every one.
+  The target policy is unchanged: it reads its lists and the processes' names as before, and no verdict changed.
 
 ## Error Codes
 
