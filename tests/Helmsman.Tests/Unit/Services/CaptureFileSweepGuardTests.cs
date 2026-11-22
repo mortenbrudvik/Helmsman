@@ -70,6 +70,10 @@ public sealed class CaptureFileSweepGuardTests
     [InlineData(FileAttributes.ReadOnly)]
     [InlineData(FileAttributes.Hidden)]
     [InlineData(FileAttributes.System)]
+    [InlineData(FileAttributes.Offline)] // cloud placeholders: deleting one could remove the cloud copy
+    [InlineData((FileAttributes)0x00040000)] // FILE_ATTRIBUTE_RECALL_ON_OPEN
+    [InlineData((FileAttributes)0x00400000)] // FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS
+    [InlineData(FileAttributes.Archive | (FileAttributes)0x00400000)]
     public void Sweep_LeavesAFileListedAsALinkOrMarkedToBeKept(FileAttributes attributes)
     {
         // Arrange
@@ -82,18 +86,40 @@ public sealed class CaptureFileSweepGuardTests
         _files.Deleted.Should().BeEmpty();
     }
 
-    [Fact]
-    public void Sweep_LeavesAFileThatBecameALinkAfterTheListing()
+    [Theory]
+    [InlineData(FileAttributes.ReparsePoint | FileAttributes.Archive)] // a symbolic link by the time of its delete
+    [InlineData(FileAttributes.Offline | FileAttributes.Archive)] // a cloud placeholder by then
+    [InlineData((FileAttributes)0x00040000)]
+    [InlineData((FileAttributes)0x00400000)]
+    [InlineData(FileAttributes.ReadOnly)]
+    public void Sweep_LeavesAFileThatChangedToOneToKeepAfterTheListing(FileAttributes attributes)
     {
-        // Arrange - listed as a plain file, a symbolic link by the time of its delete
+        // Arrange - listed as a plain old file
         var path = AddOldFile();
-        _files.Attributes[path] = FileAttributes.ReparsePoint | FileAttributes.Archive;
+        _files.Attributes[path] = attributes;
 
         // Act
         CreateSut().Sweep();
 
         // Assert
         _files.Deleted.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Sweep_KeepsAFileWrittenAgainUnderItsNameAfterTheListing()
+    {
+        // Arrange - old when listed, written again a moment later (by a server whose clock and name collided, or by hand)
+        var rewritten = AddOldFile();
+        var other = AddOldFile();
+        _files.WrittenAgain[rewritten] = _clock.GetUtcNow().UtcDateTime - TimeSpan.FromSeconds(1);
+
+        // Act
+        var deleted = CreateSut().Sweep();
+
+        // Assert
+        deleted.Should().Be(1);
+        _files.Deleted.Should().Equal(other);
+        _files.FileReads.Should().Be(2, "each file is read again, once, just before its delete");
     }
 
     [Theory]
@@ -249,6 +275,11 @@ public sealed class CaptureFileSweepGuardTests
 
         public int ListCalls { get; private set; }
 
+        public int FileReads { get; private set; }
+
+        /// <summary>The files written again after the listing, with their new last write time.</summary>
+        public Dictionary<string, DateTime> WrittenAgain { get; } = new(StringComparer.OrdinalIgnoreCase);
+
         public Exception? ListFailure { get; set; }
 
         public Func<string, Exception?>? AttributesFailure { get; set; }
@@ -265,6 +296,27 @@ public sealed class CaptureFileSweepGuardTests
             }
 
             return Attributes.TryGetValue(path, out var attributes) ? attributes : null;
+        }
+
+        public CaptureFolderEntry? GetFile(string path)
+        {
+            FileReads++;
+            if (AttributesFailure?.Invoke(path) is { } failure)
+            {
+                throw failure;
+            }
+
+            // Its attributes as set now, its times as listed unless a test wrote it again
+            var name = Path.GetFileName(path);
+            if (!Attributes.TryGetValue(path, out var attributes) || attributes.HasFlag(FileAttributes.Directory) ||
+                Entries.FirstOrDefault(e => e.Name == name) is not { } listed)
+            {
+                return null;
+            }
+
+            return WrittenAgain.TryGetValue(path, out var written)
+                ? listed with { Attributes = attributes, LastWriteTimeUtc = written }
+                : listed with { Attributes = attributes };
         }
 
         public IReadOnlyList<CaptureFolderEntry> ListFiles(string folder)

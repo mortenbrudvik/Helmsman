@@ -31,6 +31,13 @@ public sealed class CaptureFolderFileSystem : ICaptureFolderFileSystem
         }
     }
 
+    public CaptureFolderEntry? GetFile(string path)
+    {
+        // One GetFileAttributesEx, which reads a link's own attributes and times; the properties below use what it read
+        var file = new FileInfo(path);
+        return file.Exists ? new CaptureFolderEntry(file.Name, file.Attributes, file.CreationTimeUtc, file.LastWriteTimeUtc) : null;
+    }
+
     public IReadOnlyList<CaptureFolderEntry> ListFiles(string folder) =>
         new DirectoryInfo(folder).EnumerateFiles("*", FilesDirectlyInTheFolder)
             .Select(file => new CaptureFolderEntry(file.Name, file.Attributes, file.CreationTimeUtc, file.LastWriteTimeUtc))

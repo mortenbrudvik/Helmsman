@@ -119,6 +119,8 @@ public sealed class CaptureFileSweepStartupTests
             return FileAttributes.Directory;
         }
 
+        public CaptureFolderEntry? GetFile(string path) => null;
+
         public IReadOnlyList<CaptureFolderEntry> ListFiles(string folder)
         {
             ListCalls++;

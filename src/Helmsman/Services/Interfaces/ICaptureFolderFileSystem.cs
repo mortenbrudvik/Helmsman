@@ -14,6 +14,13 @@ public interface ICaptureFolderFileSystem
     FileAttributes? GetAttributes(string path);
 
     /// <summary>
+    /// The file at <paramref name="path"/> as it is now, in one read: its own attributes and times (a link's, never its
+    /// target's); null when no file is there (also for a folder). Throws (IOException, UnauthorizedAccessException, ...) when
+    /// it cannot be read.
+    /// </summary>
+    CaptureFolderEntry? GetFile(string path);
+
+    /// <summary>
     /// The files directly in <paramref name="folder"/>, as they are now: no sub-folder, nothing inside one, and a link to a
     /// file listed as the link. Throws (IOException, UnauthorizedAccessException, ...) when the folder cannot be listed.
     /// </summary>

@@ -14,7 +14,9 @@ namespace Helmsman.Services;
 /// What it deletes, and nothing else: a regular file directly in <see cref="Folder"/> whose name
 /// <see cref="CaptureFileWriter.IsOwnFileName"/> recognises as one the writer gives, last created or written more than
 /// <see cref="Retention"/> ago. A file of another name or extension, a sub-folder and what is in it, a link (junction or
-/// symbolic link), and a file marked read-only, hidden or system stay. Nothing outside the folder is touched: not a
+/// symbolic link), a file marked read-only, hidden or system, and a cloud placeholder (offline, recall on open or on data
+/// access) stay. Just before each delete the file is read again, and stays when it no longer qualifies (written again under
+/// the same name, or marked since the listing). Nothing outside the folder is touched: not a
 /// caller's outputPath, not the other folders of %TEMP%\Helmsman, not the folders of the server's earlier names. The name
 /// is all that tells the server's files apart, so a file a caller wrote into this folder under such a name (an outputPath
 /// that copies the writer's naming) counts as the server's.
@@ -53,9 +55,25 @@ public sealed class CaptureFileSweep
     /// <summary>How often a running server sweeps again, so a file is deleted at most this long after its retention ends.</summary>
     public static readonly TimeSpan Interval = TimeSpan.FromHours(1);
 
-    /// <summary>The attributes of a file the sweep leaves alone: the writer never gives a file any of them.</summary>
+    /// <summary>
+    /// FILE_ATTRIBUTE_RECALL_ON_OPEN (0x00040000, winnt.h), which FileAttributes has no member for: a cloud file whose
+    /// content is not on this computer (OneDrive and other sync clients set it on placeholders).
+    /// </summary>
+    private const FileAttributes RecallOnOpen = (FileAttributes)0x00040000;
+
+    /// <summary>
+    /// FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS (0x00400000, winnt.h), which FileAttributes has no member for: a cloud file whose
+    /// content is fetched when it is read.
+    /// </summary>
+    private const FileAttributes RecallOnDataAccess = (FileAttributes)0x00400000;
+
+    /// <summary>
+    /// The attributes of a file the sweep leaves alone: the writer never gives a file any of them. Offline and the two recall
+    /// attributes mark a cloud placeholder (a %TEMP% inside a synced folder), whose delete could remove the cloud copy.
+    /// </summary>
     private const FileAttributes KeptAttributes = FileAttributes.ReparsePoint | FileAttributes.Directory | FileAttributes.Device |
-                                                  FileAttributes.ReadOnly | FileAttributes.Hidden | FileAttributes.System;
+                                                  FileAttributes.ReadOnly | FileAttributes.Hidden | FileAttributes.System |
+                                                  FileAttributes.Offline | RecallOnOpen | RecallOnDataAccess;
 
     private readonly ICaptureFolderFileSystem _files;
     private readonly TimeProvider _clock;
@@ -130,7 +148,9 @@ public sealed class CaptureFileSweep
                         break;
                     }
 
-                    if (_files.GetAttributes(path) is not { } attributes || (attributes & KeptAttributes) != 0)
+                    // Read again as it is now: a file that became a link, was marked to be kept, or was written again under
+                    // the same name since the listing is not old any more and stays
+                    if (_files.GetFile(path) is not { } current || !IsExpiredOwnFile(current, before))
                     {
                         continue;
                     }
