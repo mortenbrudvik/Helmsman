@@ -94,6 +94,16 @@ What changes for you:
   ships `win-desktop-mcp.exe`, so point `command` at the new file. You may rename your server key to
   `"win-desktop-mcp"`; if you do, its tools change from `mcp__<old key>__<tool>` to `mcp__win-desktop-mcp__<tool>`,
   and the same permission rules need updating.
+- **Named debug-browser profiles.** A `launch_browser_with_debug` `profile` made with 3.x stays in
+  `%LOCALAPPDATA%\WindowsAppManagerMcp\browser-profiles\<name>` and is not copied: 4.0.0 keeps named profiles in
+  `%LOCALAPPDATA%\win-desktop-mcp\browser-profiles`, so the same name starts a new, empty profile (sign in again), and
+  `close_debug_browser` no longer counts a browser running on an old profile as one of the server's own.
+- **Temporary folders.** A capture written to a file without `outputPath` goes to `%TEMP%\win-desktop-mcp\captures`, and
+  a temporary debug-browser profile to `%TEMP%\win-desktop-mcp\browser-debug`.
+- **3.x and 4.0.0 do not share the pause.** The pause hotkey's registration and the pause the servers share have new
+  names, so a 3.x server still running beside a 4.0.0 one (for example a client whose MCP config still runs the old exe)
+  is neither paused nor resumed by the other's hotkey or confirmed `resume_input`; the one that finds the chord taken
+  reports `hotkey.state` `Failed` in `get_control_status`. Upgrade or remove every client set up with the old exe.
 - **Unchanged.** Every `WAM_*` environment variable, the `wam://` resources, the tool names and their arguments. Saved
   layout presets carry over: on first run, presets in `%LOCALAPPDATA%\WindowsAppManagerMcp\layouts` (and in the
   `layouts` folder of an older plugin version) are copied to `%LOCALAPPDATA%\win-desktop-mcp\layouts`, never moved or

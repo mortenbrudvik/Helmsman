@@ -78,6 +78,9 @@ public partial class OldProductNameTests
         new("README.md", @"3\.x shipped `WindowsAppManagerMcp\.exe`", "the upgrade notes: the 3.x exe name"),
         new("README.md", @"%LOCALAPPDATA%\\WindowsAppManagerMcp\\(layouts|audit)",
             "the 3.x AppData folders presets are copied from and old audit files stay in"),
+        // The upgrade notes tell 3.x users where their named debug-browser profiles stay, since they are not copied.
+        new("README.md", @"stays in\s+`%LOCALAPPDATA%\\WindowsAppManagerMcp\\browser-profiles\\<name>`",
+            "the upgrade notes: where 3.x kept named debug-browser profiles, which are not copied"),
 
         // /update-plugin sends someone who has only the 3.x plugin installed to the upgrade notes.
         new(".claude/commands/update-plugin.md", @"If only the 3\.x plugin, `windows-app-manager@windows-app-manager-marketplace`, is",
