@@ -215,41 +215,55 @@ Releases after 4.0.0 also carry `SHA256SUMS.txt`, with the SHA-256 of the zip an
 and run this in PowerShell in that folder, or in the folder you extracted the zip to after copying the file there:
 
 ```powershell
+$found = 0
 Get-Content .\SHA256SUMS.txt | ForEach-Object {
     $hash, $name = $_ -split '  ', 2
     if (Test-Path -LiteralPath $name) {
-        $ok = (Get-FileHash -LiteralPath $name -Algorithm SHA256).Hash -eq $hash
-        "${name}: $(if ($ok) { 'OK' } else { 'MISMATCH' })"
+        $found++
+        $actual = (Get-FileHash -LiteralPath $name -Algorithm SHA256 -ErrorAction SilentlyContinue).Hash
+        $result = if (-not $actual) { 'COULD NOT READ' } elseif ($actual -eq $hash) { 'OK' } else { 'MISMATCH' }
+        "${name}: $result"
     }
 }
+if ($found -eq 0) { 'None of the files SHA256SUMS.txt lists is in this folder.' }
 ```
 
+`COULD NOT READ` means the file could not be hashed (for example another program has it open), not that it differs.
 For one file, compare `(Get-FileHash .\helmsman.exe -Algorithm SHA256).Hash` with its line (letter case does not
-matter). With `sha256sum` (Git Bash, WSL, Linux): `sha256sum -c --ignore-missing SHA256SUMS.txt`.
+matter). With `sha256sum` (Git Bash, WSL, Linux): `sha256sum -c --ignore-missing SHA256SUMS.txt`. GitHub also shows
+each release asset's SHA-256 digest next to it on the release page, and in
+`gh release view vX.Y.Z --repo mortenbrudvik/Helmsman --json assets`, for every release, 4.0.0 included.
 
-The zip and `helmsman.exe` also have a build provenance attestation, which the
-[GitHub CLI](https://cli.github.com/) checks:
+The zip and its `helmsman.exe` also have a build provenance attestation, which the
+[GitHub CLI](https://cli.github.com/) checks. It must be signed in (`gh auth login`), since it fetches the attestation
+from GitHub:
 
 ```powershell
-gh attestation verify .\helmsman-vX.Y.Z-win-x64.zip --repo mortenbrudvik/Helmsman
-gh attestation verify .\helmsman.exe --repo mortenbrudvik/Helmsman
+gh attestation verify .\helmsman-vX.Y.Z-win-x64.zip --repo mortenbrudvik/Helmsman --signer-workflow mortenbrudvik/Helmsman/.github/workflows/build.yml
+gh attestation verify .\helmsman.exe --repo mortenbrudvik/Helmsman --signer-workflow mortenbrudvik/Helmsman/.github/workflows/build.yml
 ```
+
+Add `--source-ref refs/tags/vX.Y.Z` to also require that the run was for that release's tag; without it, a run of
+the same workflow for another tag or branch passes too.
 
 What these show, and what they do not:
 
 - **Checksums** show that a file is the one the release lists, not corrupted or swapped on the way. They are only as
   trustworthy as the place you read them from: the checksums and the zip come from the same release, so whoever could
   replace one could replace the other. A checksum is not a signature.
-- **The attestation** is signed through Sigstore with a certificate GitHub issues to the release workflow run
-  (`.github/workflows/build.yml`), so it shows which repository, workflow and commit built the file. Replacing a
-  release asset does not produce one. It says nothing about what that commit's code does.
+- **The attestation**, checked with the commands above, shows that a run of this repository's
+  `.github/workflows/build.yml` (with `--source-ref`, a run for that tag) attested the file's SHA-256, signed through
+  Sigstore with a certificate GitHub issued to that run. Replacing a release asset does not produce one. It says
+  nothing about what the code built does, and someone who can change that workflow in the repository can attest other
+  files with it.
 - **The exe is not code-signed.** Windows SmartScreen may warn when you first run it, and its file properties name no
   verified publisher.
-- **The plugin's `bin/helmsman.exe`** has neither: it is built on the maintainer's computer and committed (see
-  [Versioning and the plugin binary](#versioning-and-the-plugin-binary)). CI checks the version and commit SHA the
-  exe reports, and that no build input changed since that commit, and compares the tools it serves with the sources'.
-  That catches a stale or mislabeled exe, not one built from other code under the same label: it is not a
-  reproducible build.
+- **The plugin's `bin/helmsman.exe`** is a different build from the release's, made on the maintainer's computer and
+  committed (see [Versioning and the plugin binary](#versioning-and-the-plugin-binary)). It has no line in
+  `SHA256SUMS.txt` and no attestation, so checking it with the commands above fails; that is expected. CI checks the
+  version and commit SHA the exe reports, and that no build input changed since that commit, and compares the tools it
+  serves with the sources'. That catches a stale or mislabeled exe, not one built from other code under the same
+  label: it is not a reproducible build.
 
 <!-- tools:begin tool-table (generated from tools/list: run the tests with UPDATE_SNAPSHOTS=1, see TESTING.md) -->
 ## Available Tools (78)
