@@ -1,3 +1,6 @@
+using FluentAssertions.Execution;
+using WinDesktopMcp.Infrastructure;
+
 namespace WinDesktopMcp.Tests.Unit;
 
 /// <summary>
@@ -43,5 +46,33 @@ public class VersionConsistencyTests
             .GetProperty("command").GetString();
 
         command.Should().Be("${CLAUDE_PLUGIN_ROOT}/bin/win-desktop-mcp.exe");
+    }
+
+    /// <summary>
+    /// The product has one id, win-desktop-mcp: the plugin, its marketplace entry, the plugin's only MCP server key, the
+    /// MCP serverInfo.name, the plugin cache folder the layout migration looks for, the release scripts' plugin name and
+    /// the skill folder (using-win-desktop-mcp) all use it, and the marketplace is named after it. A rename that misses
+    /// one of them gives users two names for one product (and Set-Version.ps1 a marketplace entry it cannot find).
+    /// </summary>
+    [Fact]
+    public void ProductIds_AllAgreeOnWinDesktopMcp()
+    {
+        using var plugin = RepositoryFiles.ReadJson(".claude-plugin", "plugin.json");
+        using var marketplace = RepositoryFiles.ReadJson(".claude-plugin", "marketplace.json");
+        var releaseCommon = File.ReadAllText(RepositoryFiles.PathOf("scripts", "ReleaseCommon.ps1"));
+
+        using (new AssertionScope())
+        {
+            plugin.RootElement.GetProperty("name").GetString().Should().Be(PluginName);
+            plugin.RootElement.GetProperty("mcpServers").EnumerateObject().Select(p => p.Name).Should().Equal(PluginName);
+            marketplace.RootElement.GetProperty("name").GetString().Should().Be(PluginName + "-marketplace");
+            marketplace.RootElement.GetProperty("plugins").EnumerateArray().Select(p => p.GetProperty("name").GetString())
+                .Should().Equal(PluginName);
+            ServerIdentity.Name.Should().Be(PluginName);
+            LayoutStorageOptions.PluginFolderName.Should().Be(PluginName);
+            releaseCommon.Should().Contain($"$script:PluginName = '{PluginName}'");
+            Directory.EnumerateDirectories(RepositoryFiles.PathOf("skills")).Select(path => Path.GetFileName(path))
+                .Should().Equal("using-" + PluginName);
+        }
     }
 }
