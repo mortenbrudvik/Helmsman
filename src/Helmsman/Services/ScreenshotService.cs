@@ -835,9 +835,21 @@ public class ScreenshotService : IScreenshotService
         }
     }
 
-    /// <summary>Refuses a capture whose buffer is shorter than its size says (CaptureFailed).</summary>
+    /// <summary>
+    /// Refuses a capture over the pixel budget (<see cref="CaptureLimits"/>), before a bitmap, a crop or an image is made of it,
+    /// whatever read it: GDI refuses such a size before it reads, but the compositor's frame of a window
+    /// (Windows.Graphics.Capture) is as large as the window. Then a capture whose buffer is shorter than its size says. Both
+    /// CaptureFailed.
+    /// </summary>
     private static void ThrowIfIncomplete(CaptureResult capture)
     {
+        if (!CaptureLimits.WithinCaptureBudget(capture.Width, capture.Height))
+        {
+            throw new CaptureException(ScreenshotErrorCode.CaptureFailed,
+                $"The capture is {capture.Width}x{capture.Height} pixels, more than one capture may hold ({CaptureLimits.CaptureBudgetText}). " +
+                "No image was made. Capture a smaller window, or part of it with capture_region.");
+        }
+
         if (capture.Bgra.LongLength < (long)capture.Width * capture.Height * 4)
         {
             throw new CaptureException(ScreenshotErrorCode.CaptureFailed,

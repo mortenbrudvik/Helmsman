@@ -429,6 +429,23 @@ public sealed class CaptureSizeBoundsTests : IDisposable
         capture.Metadata.ByteSize.Should().BeGreaterThan(10L * 1024 * 1024);
     }
 
+    [Fact]
+    public void AWindowsGraphicsCaptureFrameOverThePixelBudget_IsCaptureFailed_BeforeItsImageIsMade()
+    {
+        // Arrange - the compositor's frame of a window is not read through GDI, so its size is checked on its own. The fake
+        // claims a size its buffer does not have: a real one would be 1.28 GB
+        var graphics = new Mock<IGraphicsCaptureWrapper>();
+        graphics.SetupGet(g => g.Availability).Returns(GraphicsCaptureAvailability.Available);
+        graphics.Setup(g => g.CaptureWindow(Window, true)).Returns(new CaptureResult(new byte[4], 20000, 16000, 0, 0, IGraphicsCaptureWrapper.Method));
+
+        // Act
+        var capture = CreateSut(graphics.Object).CaptureWindow(Window, includeFrame: true, new CaptureOptions { CaptureMethod = WindowCaptureMethod.Wgc });
+
+        // Assert
+        capture.Metadata.ErrorCode.Should().Be(nameof(ScreenshotErrorCode.CaptureFailed));
+        capture.Metadata.Error.Should().Contain("20000x16000").And.Contain("64 megapixels");
+    }
+
     #endregion
 
     #region The target policy comes first

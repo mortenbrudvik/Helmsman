@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Helmsman.Models;
 using Helmsman.Services.Interfaces;
 
 namespace Helmsman.Native;
@@ -256,6 +257,9 @@ public sealed unsafe class NativeGraphicsCaptureWrapper : IGraphicsCaptureWrappe
                 throw new GraphicsCaptureException("The window has no size to capture (it may be minimized).");
             }
 
+            // Before the frame pool allocates a frame of this size, and the copy below as much again
+            ThrowIfOverBudget(size.Width, size.Height);
+
             statics = Factory(FramePoolClass, IidFramePoolStatics2);
             if (statics == nint.Zero)
             {
@@ -306,6 +310,9 @@ public sealed unsafe class NativeGraphicsCaptureWrapper : IGraphicsCaptureWrappe
             {
                 throw new GraphicsCaptureException("The captured frame is empty.");
             }
+
+            // The window can grow between the size read above and its frame
+            ThrowIfOverBudget(width, height);
 
             desc.MipLevels = 1;
             desc.ArraySize = 1;
@@ -492,6 +499,19 @@ public sealed unsafe class NativeGraphicsCaptureWrapper : IGraphicsCaptureWrappe
         }
 
         Check(hr, what);
+    }
+
+    /// <summary>
+    /// Refuses a frame over the pixel budget of one capture (<see cref="CaptureLimits"/>), as GDI captures are: a window can be
+    /// made larger than any screen, and its frame and the copy of it would each take its size again in memory.
+    /// </summary>
+    private static void ThrowIfOverBudget(int width, int height)
+    {
+        if (!CaptureLimits.WithinCaptureBudget(width, height))
+        {
+            throw new GraphicsCaptureException(
+                $"The window is {width}x{height} pixels, more than one capture may hold ({CaptureLimits.CaptureBudgetText}).");
+        }
     }
 
     private static RECT Intersect(RECT a, RECT b) => new()
