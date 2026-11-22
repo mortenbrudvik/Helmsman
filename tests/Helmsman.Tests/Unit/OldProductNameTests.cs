@@ -25,8 +25,12 @@ public partial class OldProductNameTests
     [GeneratedRegex(@"win[\s_-]*desktop[\s_-]*mcp", RegexOptions.IgnoreCase)]
     private static partial Regex WinDesktopMcp();
 
-    /// <summary>A setting's name before 4.0.0: WAM_ and an upper-case letter (WAM_TOOLSETS), not the WamFixtureApp test names.</summary>
-    [GeneratedRegex(@"WAM_[A-Z]")]
+    /// <summary>
+    /// A setting's name before 4.0.0: WAM_ and a letter (WAM_TOOLSETS), in any case, since Windows reads environment names
+    /// case-insensitively ($env:wam_read_only works), and with the underscore escaped as Markdown writes it (WAM\_TOOLSETS);
+    /// not inside another word (swam_, a WAMP_ name) and not the WamFixtureApp test names.
+    /// </summary>
+    [GeneratedRegex(@"(?<![A-Za-z0-9])wam\\?_[a-z]", RegexOptions.IgnoreCase)]
     private static partial Regex OldSettingName();
 
     /// <summary>The resources' scheme before 4.0.0.</summary>
@@ -230,6 +234,10 @@ public partial class OldProductNameTests
     [InlineData(@"Local\WamTests.Gate")]
     [InlineData("WAM_ and the same suffix")]
     [InlineData("HELMSMAN_TOOLSETS")]
+    [InlineData("swam_toolsets")]
+    [InlineData("WAMP_TOOLSETS")]
+    [InlineData("SWAM_READ_ONLY")]
+    [InlineData("2wam_x")]
     public void TheOldSettingPattern_LeavesOtherNamesAlone(string text)
     {
         OldNames["WAM_"].Pattern.IsMatch(text).Should().BeFalse();
@@ -255,6 +263,10 @@ public partial class OldProductNameTests
     [InlineData("win-desktop-mcp", "Win Desktop\r\nMCP")]
     [InlineData("WAM_", "WAM_TOOLSETS")]
     [InlineData("WAM_", "$env:WAM_ALLOW_DESKTOP_TESTS")]
+    [InlineData("WAM_", "$env:wam_read_only")]
+    [InlineData("WAM_", "%Wam_Toolsets%")]
+    [InlineData("WAM_", @"WAM\_TOOLSETS")]
+    [InlineData("WAM_", "x_WAM_TOOLSETS")]
     [InlineData("wam://", "wam://monitors")]
     [InlineData("wam://", "WAM://layouts/{name}")]
     public void OldNamePatterns_FindEverySpelling(string oldName, string text)
