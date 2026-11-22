@@ -26,7 +26,9 @@ public sealed class NativeVirtualDesktopWrapper : INativeVirtualDesktopWrapper
     {
         ArgumentNullException.ThrowIfNull(windows);
         var unknown = Enumerable.Repeat(VirtualDesktopPlacement.Unknown, windows.Count).ToArray();
-        if (windows.Count == 0)
+        // Refused before the list is copied, as a stuck call refuses it: the copy is made on the caller's thread only for a
+        // call that may start (Run checks again, in case a call was abandoned meanwhile)
+        if (windows.Count == 0 || _reads.AbandonedCalls > 0)
         {
             return unknown;
         }
