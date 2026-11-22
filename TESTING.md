@@ -2217,7 +2217,7 @@ both engines in every run (see
 [Release gate: the UI Automation engines](#release-gate-the-ui-automation-engines)). The Uia3Tree unit tests never
 create the COM client: they run over Moq mocks of its interfaces. The harness finds the fixture exe from a
 path the build records in the test assembly; set `HELMSMAN_FIXTURE_APP_PATH` to use another build of
-`WamFixtureApp.exe` (for example in Windows Sandbox). The harness refuses any exe with another name.
+`WamFixtureApp.exe` (for example in Windows Sandbox; unlike the opt-ins, its name from before 4.0.0 is not read). The harness refuses any exe with another name.
 
 **Writing a scenario.** Put it in `Scenarios/`, mark it `[DesktopNoInputFact]` when it only reads or
 captures and `[DesktopFact]` when it acts, and start from `E2ESession`:
@@ -2896,7 +2896,8 @@ images). The scenarios:
 | `calculator_add` | launch_application of Calculator, element_action invoke on 1, 2, +, 3, 0, =, read_element_text of the display (42). It refuses to start while a Calculator runs, and ends the one it started by its process ID; the E2E guard lets UI Automation act on CalculatorApp's elements only for this scenario (`uiaActionProcesses`) |
 
 `ScenarioReport` (a class fixture) prints each scenario with its change since the previous run (calls, milliseconds and
-tokens), and writes the run as `scenarios-<UTC time>.json` to `HELMSMAN_SCENARIO_RESULTS`, or `%TEMP%\WamScenarios`; the previous
+tokens), and writes the run as `scenarios-<UTC time>.json` to `HELMSMAN_SCENARIO_RESULTS` (its name from before 4.0.0
+is not read), or `%TEMP%\WamScenarios`; the previous
 run is the newest file there. Run them while nobody uses the keyboard or mouse:
 
 ```powershell
@@ -3228,24 +3229,25 @@ monitors, 15 windows, 40 processes, a 120-element UI Automation tree, a 15,000-c
 presets) and holds it to a per-tool token budget. Text is estimated at 4 UTF-8 bytes per token; a capture's
 image at width × height / 750 tokens, at most 3,300 (the default 1568-pixel long edge). Each budget is about
 one and a half times the measured size, at least 100 tokens; the measured size is in a comment next to it. Every
-typical result over 300 tokens, and tools/list itself, measured in October 2026:
+typical result over 300 tokens, and tools/list itself, measured in October 2026 and again after the rename to Helmsman
+(release 4.0.0, November 2026), which changed the names on the typical desktop:
 
 | Tool | Typical result | Tokens | Budget |
 |------|----------------|-------:|-------:|
-| `get_ui_elements` | 120 elements at the default depth, each with its ref | 6,000 | 8,500 |
-| `get_browser_content` | A 15,000-character article | 3,815 | 6,000 |
-| `list_processes` | 40 processes, each with its parent, start time, integrity and up to two windows (1,328 before roadmap M6.6) | 2,976 | 4,500 |
-| `get_desktop_state` | 15 window rows, the focused element, 2 popups and 80 element lines with refs (roadmap M3.12), and `sessionLock` (issue #18; 2,129 before) | 2,135 | 3,200 |
-| `capture_with_elements` | Metadata with the legend of 120 marks, one line each, and the tags' `markPrefix` (the image is budgeted separately; roadmap M3.11, M3.F38) | 1,416 | 2,150 |
-| `read_screen_text` | The 40 lines OCR reads in a window, each with its bounds (roadmap M6.3) | 1,276 | 1,900 |
-| `find_windows` | 15 windows, each with `visibleBounds` and `monitorId`, and `zone` on the maximized ones (1,213 before issue #12) | 1,321 | 2,000 |
+| `get_browser_content` | A 15,000-character article (3,826 before the rename) | 3,822 | 6,000 |
+| `list_processes` | 40 processes, each with its parent, start time, integrity and up to two windows (2,962 before the rename; 1,328 before roadmap M6.6) | 2,941 | 4,500 |
+| `get_ui_elements` | 120 elements as text lines, each with its ref, the default format since 3.0.0 (2,412 before the rename; 6,000 as the tree before 3.0.0) | 2,342 | 2,500 |
+| `get_desktop_state` | 15 window rows, the focused element, 2 popups and 80 element lines with refs (roadmap M3.12), and `sessionLock` (issue #18; 2,081 before the rename) | 2,004 | 3,200 |
+| `capture_with_elements` | Metadata with the legend of 120 marks, one line each, and the tags' `markPrefix` (the image is budgeted separately; roadmap M3.11, M3.F38; 1,380 before the rename) | 1,329 | 2,150 |
+| `find_windows` | 15 windows, each with `visibleBounds` and `monitorId`, and `zone` on the maximized ones (1,317 before the rename; 1,213 before issue #12) | 1,310 | 2,000 |
+| `read_screen_text` | The 40 lines OCR reads in a window, each with its bounds (roadmap M6.3; 1,249 before the rename, whose sample article repeats a shorter sentence) | 1,262 | 1,900 |
 | `read_element_text` | The first page of a 3,000-character e-mail | 802 | 1,200 |
+| `get_layout` | A preset of 6 placements, each with the captured window identity, its monitor's id and name and its program (798 before the rename; 529 before M6.8) | 787 | 841 |
 | `list_installed_apps` | The first 25 of 140 Start menu apps, packaged first, desktop apps with their paths (roadmap M6.5) | 761 | 1,150 |
+| `get_server_info` | The default deny list, five host processes, two monitors, the resources and prompts (634 before roadmap M6.9) | 702 | 850 |
 | `read_table` | Task Manager's first 50 processes, 5 columns with headers | 643 | 1,000 |
-| `get_server_info` | The default deny list, five host processes, two monitors, the resources and prompts (634 before roadmap M6.9) | 707 | 850 |
-| `get_layout` | A preset of 6 placements, each with the captured window identity, its monitor's id and name and its program (529 before M6.8) | 805 | 841 |
-| tools/list | Every tool's name, title, description, schemas and annotations: 78 tools, 266,179 bytes, measured with the fixes of issues #8 to #18 merged (265,930 after issue #14, 265,209 after issues #12 and #16, 264,563 on the 3.0.0 review-fix branch after its docs pass, the follow-up to it and the fixups of their merge; `ToolList_StaysWithinItsBudget`, whose comment in ToolPayloadBudgetTests lists the steps; from M5.8 on: M5.8's six DOM bridge tools added 2,970, 936 of them their window selectors; M5.8's dialog option and the UI Automation browser_handle_dialog 199 more; M6.1a's additive consolidations 405 more: mouse_click's own click checks 249, set_window_bounds' optional pairs 87, get_browser_url's foreground sentence 41, get_monitors' virtualScreen 28; M6.1b's one-line descriptions of the nine deprecated tools and the descriptions that no longer send the agent to them 2,121 fewer; M6.6's list_processes parameters and fields 361 more and get_window_info's integrity fields 31 more; M6.2's run_steps 1,054 more; M6.4's wait_for_visual 1,072 more; M6.3's read_screen_text and find_text_on_screen in the opt-in `ocr` toolset 2,088 more; M6.7's set_window_zorder (522), the `monitor` parameters beside the deprecated monitorIndex, set_window_bounds' percent placement (233), get_monitors' identity fields and get_server_info's pinnedWindows 1,514 more; M6.5's list_installed_apps and runAsAdmin 357 more; M6.8's save_layout placements and includeMinimized and apply_layout dryRun and placements 775 more; then M7's tools and fields, 3.0.0's removal of the nine replaced tools and the monitorIndex parameters, and the 3.0.0 review's fixes, issues #8 to #10, the docs pass and its follow-up; issue #12's window row fields in find_windows' description and get_window_info's restore, and issue #16's includeMinimized, 162 more; issue #14's minimized and maximized conditions, all and count on wait_for_window, 180 more) | 66,483 | 66,497 |
-| Default tools/list | The 62 tools a server serves without HELMSMAN_TOOLSETS, HELMSMAN_EXCLUDE_TOOLS and HELMSMAN_READ_ONLY, 225,772 bytes, measured with the fixes of issues #8 to #18 merged (225,523 after issue #14, 224,802 after issues #12 and #16, 224,156 on the 3.0.0 review-fix branch after its docs pass, the follow-up to it and the fixups of their merge; `DefaultToolList_StaysWithinItsBudget`, roadmap M6.1, whose comment lists the steps; 59,627 before M6.1a, 60,032 after it with 70 tools, 9,027 fewer once M6.1b moved the nine deprecated tools and the three geometry batches to opt-in toolsets, 392 more with M6.6's list_processes and get_window_info fields, 1,055 more with M6.2's run_steps in the `steps` toolset, on by default, 1,187 more with M6.7's set_window_zorder in `windows`, the `monitor` parameters, set_window_bounds' percent placement and the get_monitors and get_server_info fields; 357 more with M6.5's list_installed_apps in the `launch` toolset and runAsAdmin; 775 more with M6.8's layout schema version 2 in the `layouts` toolset, 54,806 then; then M7's tools and fields, 3.0.0's removals and the 3.0.0 review's fixes, issues #8 to #10, the docs pass and its follow-up; issues #12 and #16, 162 more; issue #14, 180 more) | 56,381 | 56,394 |
+| tools/list | Every tool's name, title, description, schemas and annotations: 78 tools, 269,243 bytes, measured after the rename to Helmsman and the `HELMSMAN_` settings (266,179 with the fixes of issues #8 to #18 merged, 66,545 tokens, which release 4.0.0 raised by 766: the launch guard's refused programs and files 47, allowHostTarget's question to the user and the input it lets through to the host 674, Win+R and Win+X 47, the System32 consoles 4, the rename 8 fewer and the settings' names 2 more; 265,930 after issue #14, 265,209 after issues #12 and #16, 264,563 on the 3.0.0 review-fix branch after its docs pass, the follow-up to it and the fixups of their merge; `ToolList_StaysWithinItsBudget`, whose comment in ToolPayloadBudgetTests lists the steps; from M5.8 on: M5.8's six DOM bridge tools added 2,970, 936 of them their window selectors; M5.8's dialog option and the UI Automation browser_handle_dialog 199 more; M6.1a's additive consolidations 405 more: mouse_click's own click checks 249, set_window_bounds' optional pairs 87, get_browser_url's foreground sentence 41, get_monitors' virtualScreen 28; M6.1b's one-line descriptions of the nine deprecated tools and the descriptions that no longer send the agent to them 2,121 fewer; M6.6's list_processes parameters and fields 361 more and get_window_info's integrity fields 31 more; M6.2's run_steps 1,054 more; M6.4's wait_for_visual 1,072 more; M6.3's read_screen_text and find_text_on_screen in the opt-in `ocr` toolset 2,088 more; M6.7's set_window_zorder (522), the `monitor` parameters beside the deprecated monitorIndex, set_window_bounds' percent placement (233), get_monitors' identity fields and get_server_info's pinnedWindows 1,514 more; M6.5's list_installed_apps and runAsAdmin 357 more; M6.8's save_layout placements and includeMinimized and apply_layout dryRun and placements 775 more; then M7's tools and fields, 3.0.0's removal of the nine replaced tools and the monitorIndex parameters, and the 3.0.0 review's fixes, issues #8 to #10, the docs pass and its follow-up; issue #12's window row fields in find_windows' description and get_window_info's restore, and issue #16's includeMinimized, 162 more; issue #14's minimized and maximized conditions, all and count on wait_for_window, 180 more) | 67,311 | 67,322 |
+| Default tools/list | The 62 tools a server serves without HELMSMAN_TOOLSETS, HELMSMAN_EXCLUDE_TOOLS and HELMSMAN_READ_ONLY, 228,836 bytes, measured after the rename to Helmsman and the `HELMSMAN_` settings (225,772 with the fixes of issues #8 to #18 merged, 56,443 tokens, which release 4.0.0 raised by 766: the launch guard's refused programs and files 47, allowHostTarget's question to the user and the input it lets through to the host 676, Win+R and Win+X 46, the System32 consoles 4, the rename 9 fewer and the settings' names 2 more; 225,523 after issue #14, 224,802 after issues #12 and #16, 224,156 on the 3.0.0 review-fix branch after its docs pass, the follow-up to it and the fixups of their merge; `DefaultToolList_StaysWithinItsBudget`, roadmap M6.1, whose comment lists the steps; 59,627 before M6.1a, 60,032 after it with 70 tools, 9,027 fewer once M6.1b moved the nine deprecated tools and the three geometry batches to opt-in toolsets, 392 more with M6.6's list_processes and get_window_info fields, 1,055 more with M6.2's run_steps in the `steps` toolset, on by default, 1,187 more with M6.7's set_window_zorder in `windows`, the `monitor` parameters, set_window_bounds' percent placement and the get_monitors and get_server_info fields; 357 more with M6.5's list_installed_apps in the `launch` toolset and runAsAdmin; 775 more with M6.8's layout schema version 2 in the `layouts` toolset, 54,806 then; then M7's tools and fields, 3.0.0's removals and the 3.0.0 review's fixes, issues #8 to #10, the docs pass and its follow-up; issues #12 and #16, 162 more; issue #14, 180 more) | 57,209 | 57,220 |
 
 Every other typical result is at most 300 tokens. When a change makes a result larger on purpose, raise its
 budget in the same change (the failure message gives the new size); when a change shrinks one a lot, lower it.
@@ -3268,17 +3270,17 @@ after M6.1a):
 | Toolset | Default | Tools | Tokens | Budget |
 |---------|---------|------:|-------:|-------:|
 | `server` | always on | 4 | 1,085 | 1,121 |
-| `windows` | on | 14 | 11,651 | 11,687 |
+| `windows` | on | 14 | 11,683 | 11,687 |
 | `monitors` | on | 1 | 176 | 212 |
-| `capture` | on | 4 | 6,293 | 6,329 |
-| `elements` | on | 9 | 8,323 | 8,359 |
-| `input` | on | 10 | 14,915 | 14,951 |
-| `clipboard` | on | 2 | 732 | 750 |
-| `launch` | on | 3 | 3,435 | 3,471 |
+| `capture` | on | 4 | 6,281 | 6,329 |
+| `elements` | on | 9 | 8,347 | 8,359 |
+| `input` | on | 10 | 15,636 | 15,667 |
+| `clipboard` | on | 2 | 733 | 750 |
+| `launch` | on | 3 | 3,492 | 3,524 |
 | `process` | on | 3 | 2,307 | 2,343 |
-| `layouts` | on | 5 | 1,999 | 2,035 |
+| `layouts` | on | 5 | 1,997 | 2,035 |
 | `workspaces` | off | 2 | 609 | 620 |
-| `steps` | on | 1 | 1,094 | 1,130 |
+| `steps` | on | 1 | 1,100 | 1,130 |
 | `browser` | on | 6 | 4,360 | 4,396 |
 | `browser-actions` | off | 7 | 3,544 | 3,580 |
 | `browser-script` | off | 1 | 463 | 499 |
@@ -3286,8 +3288,13 @@ after M6.1a):
 | `windows-batch` | off | 3 | 2,117 | 2,153 |
 | `ocr` | off | 2 | 2,233 | 2,269 |
 
-The Tokens column is measured on the 3.0.0 review-fix branch after its docs pass, the follow-up to it and the fixups of their merge (October 2026), and the Budget column is
-ToolPayloadBudgetTests'; its comments have the sizes after any later change. The notes below say how the rows moved. M6.1b (October 2026) moved six tools out of `windows`, two out of `monitors`, three
+The Tokens column is measured after the rename to Helmsman (release 4.0.0, November 2026), and the Budget column is
+ToolPayloadBudgetTests'; its comments have the sizes after any later change. Since the 3.0.0 review-fix branch (after its
+docs pass, the follow-up to it and the fixups of their merge, October 2026), issues #17 and #18 (3.2.0) raised `windows`
+by 32 and `elements` by 24; `input` grew by 721, nearly all of it 4.0.0's allowHostTarget question to the user, the input
+it lets through to the host, and Win+R and Win+X in send_keys and press_keys; 4.0.0's refused programs and files and the
+System32 consoles raised `launch` by 57; every other row moved by less than 15. The notes below say how the rows moved
+before that. M6.1b (October 2026) moved six tools out of `windows`, two out of `monitors`, three
 out of `input` and one out of `browser` into the opt-in `windows-batch` and `deprecated` toolsets; 3.0.0 removed the
 `deprecated` toolset (9 tools, 4,925 tokens) and the monitorIndex parameters, which lowered `windows`, `capture`,
 `launch`, `browser`, `visual`, `windows-batch` and `ocr`. M7.1 raised `capture` (captureMethod, includeCursor,
