@@ -68,55 +68,91 @@ them with the next release (its version is `serverInfo.version` in the MCP hands
 
 ### Upgrading from 3.x
 
-Release 4.0.0 renamed the product from Windows App Manager to Helmsman, including the plugin, the marketplace,
-the MCP server and the skill, so Claude Code sees it as a new plugin. A 3.x plugin install does not update to it.
-Calls that worked with 3.2.0 can also be refused now: `allowHostTarget` asks you first and sends only some input, more
-programs and file types are refused at launch, and Win+R and Win+X are never sent. See [Changes for existing
+Release 4.0.0 renamed the product from Windows App Manager to Helmsman: the plugin, its marketplace and repository, the
+MCP server, the skill, the exe, the data folders, the settings and the resources. Claude Code sees it as a new plugin,
+so a 3.x install does not update to it: follow the steps below. Calls that worked with 3.2.0 can also be refused now:
+`allowHostTarget` asks you first and sends only some input, more programs and file types are refused at launch, and
+Win+R and Win+X are never sent. See release 4.0.0 under [Changes for existing
 clients](docs/TOOLS.md#changes-for-existing-clients).
+
+The steps are the same for a 3.2.0 installed from this repository's main branch after the release, whose exe was
+`win-desktop-mcp.exe`: its plugin, marketplace, skill, server name, settings and resources had the 3.x names. Where its
+files are elsewhere, the notes below say so.
+
+**1. Replace the plugin.**
 
 1. Uninstall the old plugin: `/plugin uninstall windows-app-manager@windows-app-manager-marketplace`
    (from your shell: `claude plugin uninstall windows-app-manager@windows-app-manager-marketplace`).
-2. Remove the old marketplace: `/plugin marketplace remove windows-app-manager-marketplace`. Removing a marketplace
-   also uninstalls the plugins installed from it, so this step alone covers step 1 too.
-3. Add the marketplace again. The repository is the same, but the marketplace is now called
-   `helmsman-marketplace`: `/plugin marketplace add mortenbrudvik/Helmsman`
+2. Remove the old marketplace: `/plugin marketplace remove windows-app-manager-marketplace` (from your shell:
+   `claude plugin marketplace remove windows-app-manager-marketplace`). Removing a marketplace also uninstalls the
+   plugins installed from it, so this step alone covers step 1 too.
+3. Add the new marketplace from the renamed repository: `/plugin marketplace add mortenbrudvik/Helmsman`. It is called
+   `helmsman-marketplace`.
 4. Install the plugin: `/plugin install helmsman@helmsman-marketplace`, then restart Claude Code.
 
-What changes for you:
+**2. Change what names the old plugin or server.**
 
 - **Tool names.** Claude Code names a plugin's MCP tools `mcp__plugin_<plugin>_<server>__<tool>`, and both the plugin
   and the server key changed, so `mcp__plugin_windows-app-manager_windows-app-manager__find_windows` is now
   `mcp__plugin_helmsman_helmsman__find_windows`. Update permission rules (`permissions.allow`,
   `permissions.deny`), hook matchers, subagent `tools` lists and anything else you saved that names a
-  `mcp__plugin_windows-app-manager_windows-app-manager__...` tool. The tool names after the prefix are unchanged. The
-  four prompts' slash commands (`/mcp__<server>__automate_app` and the others) change with the server name the same way.
+  `mcp__plugin_windows-app-manager_windows-app-manager__...` tool.
+- **Prompts.** The four prompts' slash commands (`/mcp__<server>__automate_app` and the others) change with the server
+  name the same way.
 - **Skill.** The plugin skill is now `using-helmsman` (shown as `/helmsman:using-helmsman`),
   not `using-windows-app-manager`.
 - **Server name.** The server now reports its name (`serverInfo.name` in the MCP handshake, `server.name` in
   `get_server_info`) as `helmsman` instead of `windows-app-manager`. Update clients or scripts that match on it.
-- **Hand-written MCP config** (Option 2). Only the exe path matters: 3.x shipped `WindowsAppManagerMcp.exe`, 4.0.0
-  ships `helmsman.exe`, so point `command` at the new file. You may rename your server key to
-  `"helmsman"`; if you do, its tools change from `mcp__<old key>__<tool>` to `mcp__helmsman__<tool>`,
-  and the same permission rules need updating.
-- **Named debug-browser profiles.** A `launch_browser_with_debug` `profile` made with 3.x stays in
-  `%LOCALAPPDATA%\WindowsAppManagerMcp\browser-profiles\<name>` and is not copied: 4.0.0 keeps named profiles in
-  `%LOCALAPPDATA%\Helmsman\browser-profiles`, so the same name starts a new, empty profile (sign in again), and
-  `close_debug_browser` no longer counts a browser running on an old profile as one of the server's own.
-- **Temporary folders.** A capture written to a file without `outputPath` goes to `%TEMP%\Helmsman\captures`, and
-  a temporary debug-browser profile to `%TEMP%\Helmsman\browser-debug`. What 3.x left in
-  `%TEMP%\WindowsAppManagerMcp` (temporary debug-browser profiles, captures) is not cleaned up by 4.0.0: delete that
-  folder by hand once no 3.x server runs.
-- **3.x and 4.0.0 do not share the pause.** The pause hotkey's registration and the pause the servers share have new
-  names, so a 3.x server still running beside a 4.0.0 one (for example a client whose MCP config still runs the old exe)
-  is neither paused nor resumed by the other's hotkey or confirmed `resume_input`; the one that finds the chord taken
-  reports `hotkey.state` `Failed` in `get_control_status`. Upgrade or remove every client set up with the old exe.
-- **Settings and resources.** The environment variables are now named `HELMSMAN_*`, and a `WAM_*` one is still read
-  when its `HELMSMAN_*` name is not set; the resources are now `helmsman://`, and `wam://` URIs are no longer served.
-- **Unchanged.** The tool names and their arguments (what some calls accept changed, as said above). Saved layout presets carry over: on first run, presets in
-  `%LOCALAPPDATA%\WindowsAppManagerMcp\layouts` (and in the `layouts` folder of an older plugin version) are copied to
-  `%LOCALAPPDATA%\Helmsman\layouts`, never moved or overwritten; with `WAM_LAYOUTS_PATH` set, that folder is used
-  as before. The audit log's default folder is now `%LOCALAPPDATA%\Helmsman\audit` (`WAM_AUDIT_PATH` still
-  overrides it); the files 3.x wrote stay in `%LOCALAPPDATA%\WindowsAppManagerMcp\audit`.
+- **Hand-written MCP config** (Option 2). Point `command` at `helmsman.exe`: 3.x shipped `WindowsAppManagerMcp.exe`,
+  and a build from main after 3.2.0 was `win-desktop-mcp.exe`. You may rename your server key to `"helmsman"`; if you
+  do, its tools change from `mcp__<old key>__<tool>` to `mcp__helmsman__<tool>`, and the same permission rules need
+  updating.
+
+**3. Rename your settings.**
+
+- The environment variables are now named `HELMSMAN_*`: `WAM_DENY_PROCESSES` is now `HELMSMAN_DENY_PROCESSES`, and
+  so on for all of them (see [Configuration](#configuration)). Rename them when it suits you.
+- Until you do, a `WAM_*` variable is still read when its `HELMSMAN_*` name is not set, so a deny list or read-only
+  mode you set under the old name keeps applying. Once the `HELMSMAN_*` name is set, even to an empty value, it wins
+  and the `WAM_*` one is ignored.
+- While an old name is in use, `get_server_info`'s `warnings` and the server's log at start (stderr) name it, never its
+  value: as read in place of its new name, or as ignored because its new name is set too.
+- Results that say where a setting came from (the `source` fields) and messages that tell you which variable to set
+  name the `HELMSMAN_*` variable, also when the value came from the `WAM_*` one.
+- The resources are now `helmsman://monitors`, `helmsman://windows` and `helmsman://layouts/{name}`. A `wam://` URI is
+  no longer served: change what still reads one.
+
+**4. What is carried over, and what is not.**
+
+- **Layout presets** are copied, never moved or overwritten, into `%LOCALAPPDATA%\Helmsman\layouts` the first time
+  Helmsman uses that folder (when several old folders hold a preset of the same name, the most recently written file):
+  - From 3.x: the presets in `%LOCALAPPDATA%\WindowsAppManagerMcp\layouts` (and in the `layouts` folder of an older
+    plugin version), and the sample presets are added again, so a sample you deleted under 3.x comes back.
+  - From a build from main: when `%LOCALAPPDATA%\win-desktop-mcp\layouts` has been used (it holds an `.initialized`
+    file), only its presets: it already holds what that build copied from 3.x, so what you deleted there stays
+    deleted, and no samples are added.
+  - With `HELMSMAN_LAYOUTS_PATH` (or still `WAM_LAYOUTS_PATH`) set, that folder is used as before.
+- **Not carried over.** Helmsman starts these afresh in its own folders, and leaves the old ones where they are (in
+  `%LOCALAPPDATA%\WindowsAppManagerMcp` and `%TEMP%\WindowsAppManagerMcp` for 3.x, in `%LOCALAPPDATA%\win-desktop-mcp`
+  and `%TEMP%\win-desktop-mcp` for a build from main):
+  - The audit log: Helmsman writes to `%LOCALAPPDATA%\Helmsman\audit` (`HELMSMAN_AUDIT_PATH` overrides it). The old
+    files stay in the old `audit` folder.
+  - Named debug-browser profiles: a `launch_browser_with_debug` `profile` made before 4.0.0 stays in the old
+    `browser-profiles\<name>`. Helmsman keeps named profiles in `%LOCALAPPDATA%\Helmsman\browser-profiles`, so the same
+    name starts a new, empty profile (sign in again), and `close_debug_browser` no longer counts a browser running on
+    an old profile as one of the server's own.
+  - Temporary folders: captures written to a file without `outputPath` go to `%TEMP%\Helmsman\captures`, and
+    temporary debug-browser profiles to `%TEMP%\Helmsman\browser-debug`. Helmsman does not clean up the old `%TEMP%`
+    folder: delete it by hand once no old server runs.
+
+**5. Do not run old and new servers side by side.** The pause hotkey's registration and the pause the servers share
+have new names, so an old server still running beside Helmsman (for example a client whose MCP config still starts
+`WindowsAppManagerMcp.exe` or `win-desktop-mcp.exe`) is neither paused nor resumed by the other's hotkey or confirmed
+`resume_input`; the one that finds the chord taken reports `hotkey.state` `Failed` in `get_control_status`. Upgrade or
+remove every setup that still starts an old exe.
+
+**Unchanged:** the tool names after the prefix, and their arguments. Some calls that 3.2.0 carried out are refused now
+(see above), and messages name Helmsman and the `HELMSMAN_*` settings.
 
 ### Option 2: Claude Desktop (Manual)
 

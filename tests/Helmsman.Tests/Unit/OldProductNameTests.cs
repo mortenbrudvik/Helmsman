@@ -90,31 +90,28 @@ public partial class OldProductNameTests
             @"renamed it to <see cref=""PluginFolderName""/>\s+///\s+\(<c>\.\.\.\\cache\\windows-app-manager-marketplace\\windows-app-manager\\&lt;version&gt;</c>\)",
             "the comment on the 3.x plugin cache folder"),
 
-        // README's "Upgrading from 3.x" must name the old ids a 3.x user has to remove or replace, and the layout
-        // section names the old AppData folder presets are copied from.
+        // README's "Upgrading from 3.x" must name the old ids a 3.x user has to remove or replace, and the folders and
+        // exe they have on disk; the layout section names the old AppData folder presets are copied from.
         new("README.md", @"renamed the product from Windows App Manager to Helmsman", "the upgrade notes' first line"),
         new("README.md", @"plugin uninstall windows-app-manager@windows-app-manager-marketplace`",
             "the upgrade notes: uninstall the 3.x plugin (in a session and from the shell)"),
-        new("README.md", @"`/plugin marketplace remove windows-app-manager-marketplace`", "the upgrade notes: remove the 3.x marketplace"),
+        new("README.md", @"plugin marketplace remove windows-app-manager-marketplace`",
+            "the upgrade notes: remove the 3.x marketplace (in a session and from the shell)"),
         new("README.md", @"so `mcp__plugin_windows-app-manager_windows-app-manager__find_windows` is now",
             "the upgrade notes: the old tool prefix, before the new one"),
         new("README.md", @"names a\s+`mcp__plugin_windows-app-manager_windows-app-manager__\.\.\.` tool",
             "the upgrade notes: the saved references to update"),
         new("README.md", @"not `using-windows-app-manager`", "the upgrade notes: the 3.x skill name"),
         new("README.md", @"as `helmsman` instead of `windows-app-manager`", "the upgrade notes: the 3.x serverInfo.name"),
-        new("README.md", @"3\.x shipped `WindowsAppManagerMcp\.exe`", "the upgrade notes: the 3.x exe name"),
-        new("README.md", @"on first run, presets in\s+`%LOCALAPPDATA%\\WindowsAppManagerMcp\\layouts` \(and in the `layouts` folder",
+        new("README.md", @"3\.x shipped `WindowsAppManagerMcp\.exe`", "the upgrade notes: the 3.x exe a hand-written config points at"),
+        new("README.md", @"From 3\.x: the presets in `%LOCALAPPDATA%\\WindowsAppManagerMcp\\layouts`",
             "the upgrade notes: the 3.x AppData folder presets are copied from"),
-        new("README.md", @"the files 3\.x wrote stay in `%LOCALAPPDATA%\\WindowsAppManagerMcp\\audit`",
-            "the upgrade notes: the 3.x AppData folder old audit files stay in"),
+        new("README.md", @"\(in\s+`%LOCALAPPDATA%\\WindowsAppManagerMcp` and `%TEMP%\\WindowsAppManagerMcp` for 3\.x,",
+            "the upgrade notes: the 3.x folders that keep what is not carried over"),
+        new("README.md", @"still starts\s+`WindowsAppManagerMcp\.exe` or `win-desktop-mcp\.exe`",
+            "the upgrade notes: the 3.x exe a client that would not share the pause still starts"),
         new("README.md", @"`%LOCALAPPDATA%\\WindowsAppManagerMcp\\layouts`\) are copied there and the originals are left in place",
             "the layout presets: the 3.x AppData folder presets are copied from"),
-        // The upgrade notes tell 3.x users where their named debug-browser profiles stay, since they are not copied.
-        new("README.md", @"stays in\s+`%LOCALAPPDATA%\\WindowsAppManagerMcp\\browser-profiles\\<name>`",
-            "the upgrade notes: where 3.x kept named debug-browser profiles, which are not copied"),
-        // The upgrade notes tell 3.x users which temporary folder 4.0.0 does not clean up.
-        new("README.md", @"What 3\.x left in\s+`%TEMP%\\WindowsAppManagerMcp`",
-            "the upgrade notes: the 3.x temporary folder, left for the user to delete"),
 
         // /update-plugin sends someone who has only the 3.x plugin installed to the upgrade notes.
         new(".claude/commands/update-plugin.md", @"If only the 3\.x plugin, `windows-app-manager@windows-app-manager-marketplace`, is",
@@ -123,7 +120,8 @@ public partial class OldProductNameTests
 
     /// <summary>
     /// Text that may keep the second name, as <see cref="WindowsAppManagerAllowList"/>. The plugin was never published
-    /// as win-desktop-mcp@win-desktop-mcp-marketplace, so only the AppData folder of the build published on main is left.
+    /// as win-desktop-mcp@win-desktop-mcp-marketplace, so only the exe and the AppData and temporary folders of the build
+    /// published on main are left, which a user of that build has on disk.
     /// </summary>
     private static readonly AllowedOldName[] WinDesktopMcpAllowList =
     [
@@ -139,10 +137,19 @@ public partial class OldProductNameTests
         new("README.md", @"or in `%LOCALAPPDATA%\\win-desktop-mcp\\layouts` or `%LOCALAPPDATA%\\WindowsAppManagerMcp\\layouts`\) " +
                          @"are copied there and the originals are left in place; once the `win-desktop-mcp` folder has had its own first run",
             "the layout presets: the AppData folder of the build published on main, which presets are copied from"),
-    ];
 
-    private const string ReadmeUpgradeNotes = "the README's upgrade notes, which task the release notes of 4.0.0 own: still true, since the " +
-                                              "server reads the old name when the new one is not set";
+        // README's "Upgrading from 3.x" tells a user of that build which exe and folders on their disk are its.
+        new("README.md", @"whose exe was\s+`win-desktop-mcp\.exe`: its plugin, marketplace",
+            "the upgrade notes: the exe of the build published on main, whose plugin had the 3.x names"),
+        new("README.md", @"and a build from main after 3\.2\.0 was `win-desktop-mcp\.exe`",
+            "the upgrade notes: the exe a hand-written config of that build points at"),
+        new("README.md", @"From a build from main: when `%LOCALAPPDATA%\\win-desktop-mcp\\layouts` has been used",
+            "the upgrade notes: the AppData folder of that build, which presets are copied from"),
+        new("README.md", @"in `%LOCALAPPDATA%\\win-desktop-mcp`\s+and `%TEMP%\\win-desktop-mcp` for a build from main",
+            "the upgrade notes: the folders of that build that keep what is not carried over"),
+        new("README.md", @"still starts\s+`WindowsAppManagerMcp\.exe` or `win-desktop-mcp\.exe`",
+            "the upgrade notes: the exe of that build, which a client that would not share the pause still starts"),
+    ];
 
     /// <summary>
     /// Text that may keep a setting's name from before 4.0.0, as <see cref="WindowsAppManagerAllowList"/>. The server's source
@@ -150,11 +157,14 @@ public partial class OldProductNameTests
     /// </summary>
     private static readonly AllowedOldName[] OldSettingNameAllowList =
     [
-        // What a 3.x user reads: the rule, and the upgrade notes
+        // What a 3.x user reads: the rule, and the upgrade notes, which name one old variable as the example of the
+        // rename and the one that still picks the layouts folder
         new("README.md", @"`WAM_` and the same suffix \(such as `WAM_DENY_PROCESSES`\)",
             "the configuration section's paragraph on the names from before 4.0.0"),
-        new("README.md", @"with `WAM_LAYOUTS_PATH` set, that folder is used", ReadmeUpgradeNotes),
-        new("README.md", @"\(`WAM_AUDIT_PATH` still\s+overrides it\)", ReadmeUpgradeNotes),
+        new("README.md", @"`WAM_DENY_PROCESSES` is now `HELMSMAN_DENY_PROCESSES`",
+            "the upgrade notes: an old name beside its new one, as the example of the rename"),
+        new("README.md", @"\(or still `WAM_LAYOUTS_PATH`\) set, that folder is used as before",
+            "the upgrade notes: the old name still picks the layouts folder while the new one is not set"),
 
         // Clearing a variable must clear its old name too, which would be read in its place
         new("scripts/Test-ToolsSnapshot.ps1", @"'WAM_EXCLUDE_TOOLS', 'WAM_READ_ONLY'",
@@ -176,7 +186,7 @@ public partial class OldProductNameTests
     /// <summary>Text that may keep the resources' scheme from before 4.0.0.</summary>
     private static readonly AllowedOldName[] OldResourceSchemeAllowList =
     [
-        new("README.md", @"and `wam://` URIs are no longer served", "the README's upgrade notes, for a 3.x user's saved resource URIs"),
+        new("README.md", @"A `wam://` URI is\s+no longer served", "the README's upgrade notes, for a 3.x user's saved resource URIs"),
     ];
 
     /// <summary>Each old name: its pattern, its allow-list, and whether TESTING.md and the Error Codes of docs/TOOLS.md are checked too.</summary>
