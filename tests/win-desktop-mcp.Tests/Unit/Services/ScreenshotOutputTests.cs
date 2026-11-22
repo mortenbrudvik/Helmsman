@@ -79,7 +79,7 @@ public sealed class ScreenshotOutputTests : IDisposable
         // Assert
         capture.Image.Should().BeNull();
         var path = capture.Metadata.FilePath!;
-        Path.GetDirectoryName(path).Should().Be(ScreenshotService.DefaultCaptureFolder);
+        Path.GetDirectoryName(path).Should().Be(CaptureFileWriter.DefaultCaptureFolder);
         Path.GetFileName(path).Should().StartWith("screenshot_").And.EndWith(".png");
         File.ReadAllBytes(path).Length.Should().Be((int)capture.Metadata.ByteSize!.Value);
     }

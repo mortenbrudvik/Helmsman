@@ -18,10 +18,6 @@ namespace WinDesktopMcp.Services;
 /// </summary>
 public class ScreenshotService : IScreenshotService
 {
-    /// <summary>Where captures go when output writes a file and no outputPath is given.</summary>
-    public static readonly string DefaultCaptureFolder =
-        Path.Combine(Path.GetTempPath(), LayoutStorageOptions.AppDataFolderName, "captures");
-
     /// <summary>
     /// The WindowMinimized message: Windows does not draw a minimized window, and its rectangle is the icon's at
     /// (-32000, -32000), so a capture would succeed with a tiny or black image.
@@ -1238,7 +1234,7 @@ public class ScreenshotService : IScreenshotService
                 $"The pixels were captured, but the {CaptureRequest.FormatName(encoding)} image could not be built: {ex.Message}");
         }
 
-        var filePath = request.WritesFile ? WriteFile(data, encoding, request) : null;
+        var filePath = request.WritesFile ? CaptureFileWriter.WriteFile(data, encoding, request) : null;
 
         return new RenderedImage(
             new EncodedImage(data, CaptureRequest.MimeType(encoding)),
@@ -1289,46 +1285,6 @@ public class ScreenshotService : IScreenshotService
             OffsetY: capture.ScreenOriginY,
             ScaleX: Math.Round((double)capture.Width / rendered.Width, 6),
             ScaleY: Math.Round((double)capture.Height / rendered.Height, 6));
-
-    /// <summary>
-    /// Writes the encoded image to the requested path, or to a new file in
-    /// <see cref="DefaultCaptureFolder"/>. An existing file is replaced only with overwrite; the
-    /// folder of an explicit path must already exist.
-    /// </summary>
-    private static string WriteFile(byte[] data, ImageEncoding encoding, CaptureRequest request)
-    {
-        var path = request.OutputPath;
-        if (path == null)
-        {
-            var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture);
-            path = Path.Combine(DefaultCaptureFolder, $"screenshot_{timestamp}_{Guid.NewGuid():N}{CaptureRequest.Extension(encoding)}");
-        }
-
-        var mode = request.Overwrite && request.OutputPath != null ? FileMode.Create : FileMode.CreateNew;
-        try
-        {
-            if (request.OutputPath == null)
-            {
-                // The server's own folder; explicit paths must name an existing folder.
-                Directory.CreateDirectory(DefaultCaptureFolder);
-            }
-
-            using var stream = new FileStream(path, mode, FileAccess.Write, FileShare.None);
-            stream.Write(data);
-        }
-        catch (IOException) when (mode == FileMode.CreateNew && File.Exists(path))
-        {
-            // Created between the check in CaptureRequest and this write.
-            throw CaptureRequest.FileExists(path);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            throw new CaptureException(ScreenshotErrorCode.FileWriteFailed, $"Could not write '{path}': {ex.Message}");
-        }
-
-        return path;
-    }
-
     private static ScreenshotResult Failure(ScreenshotErrorCode code, string error) =>
         new(
             Success: false,
