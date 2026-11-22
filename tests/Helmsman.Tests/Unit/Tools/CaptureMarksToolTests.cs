@@ -338,6 +338,35 @@ public class CaptureMarksToolTests
     }
 
     [Fact]
+    public async Task CaptureWindowRef_WhoseCropWouldBeTooLarge_IsRefusedFromTheElementsArea_BeforeThePixelsAreRead()
+    {
+        // Arrange - the image size is checked once the element's area (its bounds and padding) is known
+        _screenshots.Setup(s => s.CheckImageSize(RefWindow, true, It.IsAny<CaptureOptions>(), new BoundsDto(142, 112, 56, 36)))
+            .Returns(new CaptureRefusal(ScreenshotErrorCode.InvalidImageSize, "too large"));
+
+        // Act
+        var result = await CreateSut().CaptureWindow(@ref: Ref, maxDimension: 0);
+
+        // Assert
+        Metadata(result).GetProperty("errorCode").GetString().Should().Be(nameof(ScreenshotErrorCode.InvalidImageSize));
+        _registry.Verify(r => r.ResolveAsync(Ref, It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()), Times.Once);
+        _screenshots.Verify(s => s.CheckImageSize(RefWindow, true, It.IsAny<CaptureOptions>(), new BoundsDto(142, 112, 56, 36)), Times.Once);
+        VerifyNotCaptured();
+    }
+
+    [Fact]
+    public async Task CaptureWindowRef_OfAWindowThePolicyDenies_NeverAsksItsImageSize()
+    {
+        _windows.Setup(w => w.GetWindowInfo(RefWindow)).Returns(TestDataFactory.CreateWindowInfo((int)RefWindow, "Vault", "KeePass"));
+        _policy = new TargetPolicySettings(["keepass"], null, "test");
+
+        var result = await CreateSut().CaptureWindow(@ref: Ref, maxDimension: 0);
+
+        Metadata(result).GetProperty("errorCode").GetString().Should().Be("TargetDeniedByPolicy");
+        _screenshots.Verify(s => s.CheckImageSize(It.IsAny<nint>(), It.IsAny<bool>(), It.IsAny<CaptureOptions>(), It.IsAny<BoundsDto?>()), Times.Never);
+    }
+
+    [Fact]
     public async Task CaptureWindowRef_OfAMinimizedWindow_IsRefusedBeforeTheElementIsRead()
     {
         _screenshots.Setup(s => s.CheckWindow(RefWindow))
