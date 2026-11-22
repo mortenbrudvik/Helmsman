@@ -36,10 +36,9 @@ public sealed class NativeAppsWrapper : INativeAppsWrapper
     private const int GpsBestEffort = 0x40;
     private const ushort VtLpwstr = 31;
     private const ushort VtBstr = 8;
-    private const int Running = 0, Finished = 1, Abandoned = 2;
 
-    /// <summary>Lists that missed the deadline and have not returned yet; while one is blocked, no other is started.</summary>
-    private int _abandonedEnumerations;
+    /// <summary>Lists the Applications folder; while a list that missed the deadline is blocked, no other is started.</summary>
+    private readonly DeadlineWorker _enumerations = new("Applications folder read", ApartmentState.STA, EnumerationDeadline);
 
     public AppActivationResult ActivateApplication(string appUserModelId, string? arguments)
     {
@@ -85,56 +84,8 @@ public sealed class NativeAppsWrapper : INativeAppsWrapper
         return result;
     }
 
-    public AppsFolderListing? EnumerateAppsFolder()
-    {
-        if (Volatile.Read(ref _abandonedEnumerations) > 0)
-            return null;
-
-        AppsFolderListing? entries = null;
-        var state = Running;
-        var finished = new ManualResetEventSlim();
-        var worker = new Thread(() =>
-        {
-            try
-            {
-                entries = ReadAppsFolder();
-            }
-            catch (Exception)
-            {
-                // No Applications folder (a stripped-down Windows), or a property handler failed: the list stays unknown
-            }
-            finally
-            {
-                if (Interlocked.Exchange(ref state, Finished) == Abandoned)
-                    Interlocked.Decrement(ref _abandonedEnumerations);
-
-                finished.Set();
-            }
-        })
-        {
-            IsBackground = true,
-            Name = "Applications folder read"
-        };
-
-        try
-        {
-            worker.SetApartmentState(ApartmentState.STA);
-            worker.UnsafeStart();
-        }
-        catch (Exception)
-        {
-            return null;
-        }
-
-        // The event is not disposed: an abandoned worker still sets it when the shell answers
-        if (!finished.Wait(EnumerationDeadline) && Interlocked.CompareExchange(ref state, Abandoned, Running) == Running)
-        {
-            Interlocked.Increment(ref _abandonedEnumerations);
-            return null;
-        }
-
-        return Volatile.Read(ref entries);
-    }
+    // No Applications folder (a stripped-down Windows), or a property handler failed: the list stays unknown
+    public AppsFolderListing? EnumerateAppsFolder() => _enumerations.Run(ReadAppsFolder, fallback: null);
 
     private static AppsFolderListing? ReadAppsFolder()
     {
