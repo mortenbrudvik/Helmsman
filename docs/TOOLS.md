@@ -1,4 +1,4 @@
-# Windows App Manager - MCP Tools Reference
+# win-desktop-mcp - MCP Tools Reference
 
 <!-- tools:begin summary (generated from tools/list: run the tests with UPDATE_SNAPSHOTS=1, see TESTING.md) -->
 A comprehensive guide to all 78 MCP tools for managing Windows applications, windows, and layouts.
@@ -39,7 +39,7 @@ The input tools send real mouse and keyboard input to the user's desktop. Every 
 - To close a window, use [close_window](#close_window) or [close_windows_batch](#close_windows_batch) with the window's handle. Do not use Alt+F4. They refuse the desktop shell and the agent's own terminal or editor (`ProtectedWindow`); pass `force: true` only when the user explicitly asked to close such a window (when the client can ask, the user is asked before `force` closes a protected window; when it cannot, `force` needs `confirm: true` too). Closing more than 3 windows at once ([close_windows_batch](#close_windows_batch), [close_application](#close_application)) needs a confirmation: the user is asked when the client supports it (elicitation), otherwise pass `confirm: true` after checking the list.
 - Input that pastes (Ctrl+V, Shift+Insert, a right or middle click in a terminal) is sent only when the clipboard holds what the agent put there or copied, or what the user let it read (`PasteNotAllowed` otherwise); see [Clipboard](#clipboard).
 - The user can deny windows of chosen apps (password managers and credential prompts by default) to the agent; such calls return `TargetDeniedByPolicy`, which no tool argument overrides. See [Target policy](#target-policy).
-- The user can pause the input of every Windows App Manager server on the desktop at any time with the pause hotkey (Ctrl+Alt+Shift+Pause by default). While input is paused, every input tool and every tool that changes windows or starts or stops processes ([focus_window](#focus_window), [close_window](#close_window), [launch_application](#launch_application), ...) return `PausedByUser` and do nothing, and a running input call stops; tools that only read keep working. Then stop and ask the user; never try to resume input yourself or send the hotkey's keys. See [Input Control](#input-control).
+- The user can pause the input of every win-desktop-mcp server on the desktop at any time with the pause hotkey (Ctrl+Alt+Shift+Pause by default). While input is paused, every input tool and every tool that changes windows or starts or stops processes ([focus_window](#focus_window), [close_window](#close_window), [launch_application](#launch_application), ...) return `PausedByUser` and do nothing, and a running input call stops; tools that only read keep working. Then stop and ask the user; never try to resume input yourself or send the hotkey's keys. See [Input Control](#input-control).
 - Input is refused while a modifier key (Shift, Ctrl, Alt, Windows) is held down (`ModifiersHeld`): the user is using the keyboard, or a key is stuck. Clicks, drags and mouse moves are also refused while a mouse button is held down or another window has captured the mouse (`MouseInUse`): the user is dragging, selecting or has a menu open. No key or mouse button the server presses stays down after a call: there are no tools that press a key or button in one call and release it in another, and [drag](#drag) releases its button before it returns.
 - [element_action](#element_action), [respond_to_dialog](#respond_to_dialog) and [file_dialog](#file_dialog) act on UI elements through UI Automation patterns, without input where a pattern does it: the same pause, target policy, host and modal checks apply to the window of the element or dialog, and their mouse and keyboard paths go through the input guard like the tools above. respond_to_dialog presses a button (other than `cancel`) only in a dialog the call names, by the `dialogHandle` a read returned or by the owner window that its modal dialog disables (a read through that window warns to answer by `dialogHandle`; a dialog that leaves its owner enabled, such as a Find dialog, is pressed only by its own handle, `DialogNotFound` otherwise), and file_dialog completes only a dialog the call names.
 - After each action, check the result (`success`, `receivingWindow`, `foregroundAfter`) before the next step.
@@ -403,7 +403,7 @@ Read-only mode serves these 27 tools: [find_windows](#find_windows), [get_foregr
 ```json
 {
   "mcpServers": {
-    "windows-app-manager": {
+    "win-desktop-mcp": {
       "command": "${CLAUDE_PLUGIN_ROOT}/bin/win-desktop-mcp.exe",
       "env": { "WAM_READ_ONLY": "1" }
     }
@@ -506,7 +506,7 @@ The single-window tools report these as a tool error (`isError: true`) with `can
   "tool": "focus_window",
   "candidates": [
     { "handle": 2821181, "title": "Inbox - Gmail - Google Chrome", "processName": "chrome", "processId": 7720, "className": "Chrome_WidgetWin_1" },
-    { "handle": 3015622, "title": "Windows App Manager - GitHub - Google Chrome", "processName": "chrome", "processId": 7720, "className": "Chrome_WidgetWin_1" }
+    { "handle": 3015622, "title": "win-desktop-mcp - GitHub - Google Chrome", "processName": "chrome", "processId": 7720, "className": "Chrome_WidgetWin_1" }
   ]
 }
 ```
@@ -4338,7 +4338,7 @@ When several tabs have a title the window shows, `shownTargetId` is the one of t
 {
   "success": true,
   "tabs": [
-    { "targetId": "8F4C1D2E9A7B6C5D4E3F2A1B0C9D8E7F", "title": "Windows App Manager - GitHub", "url": "https://github.com/mortenbrudvik/WindowsAppManagerMcp", "windowId": 1, "inWindow": true },
+    { "targetId": "8F4C1D2E9A7B6C5D4E3F2A1B0C9D8E7F", "title": "win-desktop-mcp - GitHub", "url": "https://github.com/mortenbrudvik/WindowsAppManagerMcp", "windowId": 1, "inWindow": true },
     { "targetId": "2B7E4F1A9C3D5E6F7A8B9C0D1E2F3A4B", "title": "Pull requests - GitHub", "url": "https://github.com/pulls", "windowId": 1, "inWindow": true },
     { "targetId": "5C9D8E7F6A5B4C3D2E1F0A9B8C7D6E5F", "title": "Example Domain", "url": "https://example.com/", "windowId": 2, "inWindow": false }
   ],
@@ -5679,7 +5679,7 @@ The user can stop the agent's input at any moment with a system-wide hotkey, by 
 
 - **Press it once to pause.** Every input tool returns `PausedByUser` and sends nothing. So does every tool that changes windows or starts or stops processes: the [Window Control](#window-control) tools ([focus_window](#focus_window) and [close_window](#close_window) among them), the [Batch Operations](#batch-operations), [close_application](#close_application), [apply_layout](#apply_layout), [launch_application](#launch_application), [kill_process](#kill_process), [launch_browser_with_debug](#launch_browser_with_debug), [close_debug_browser](#close_debug_browser), [set_clipboard](#set_clipboard), [element_action](#element_action), [file_dialog](#file_dialog) and a [respond_to_dialog](#respond_to_dialog) that presses a button return an error result (`isError: true`) with `errorCode` `PausedByUser` without running, also when they were already waiting for another call to finish. Tools that only read (window lists, screenshots, UI Automation reads and waits, [get_desktop_state](#get_desktop_state), respond_to_dialog without `button`, browser reading, [get_control_status](#get_control_status)) keep working. A running `type_text`, `send_keys`, `press_keys` (with `delayBetweenMs` or `holdMs`) or [drag](#drag) stops between batches and returns `PausedByUser` with what it did so far. With a chord of modifiers, such as the default, the user's first modifier goes down before the chord is complete: a running `type_text`, `send_keys` or `press_keys` that sends another batch meanwhile, or a drag that has not pressed its button yet, stops with `ModifiersHeld` instead, whose error names the pause hotkey, and the pause takes effect once the chord is pressed. A window call that was already running finishes, except an activation ([focus_window](#focus_window), a `focus` placement of [apply_layout](#apply_layout) or of a launch's `placement`, or the input guard bringing a `windowHandle` target to the front), which stops at its next step and reports `PausedByUser`. Keys and mouse buttons the server holds down are released at once; keys the user holds are left alone.
 - **Press it again to resume.** The hotkey always toggles, but a press within 2 seconds of the pause is ignored, so pressing it twice to be sure does not resume. The agent can ask to resume with [resume_input](#resume_input), which resumes only when the user confirms.
-- **It pauses every server.** Each MCP client session starts its own server, and only one process can register the chord. The pause is shared by all of the user's Windows App Manager servers on the desktop: the chord pauses and resumes every one of them, whichever server registered it, and so does a confirmed [resume_input](#resume_input). A server that finds the chord held by another server reports `hotkey.state` `OtherServer`, and registers the chord itself within 2 seconds after that server stops. A server that starts while input is paused starts paused.
+- **It pauses every server.** Each MCP client session starts its own server, and only one process can register the chord. The pause is shared by all of the user's win-desktop-mcp servers on the desktop: the chord pauses and resumes every one of them, whichever server registered it, and so does a confirmed [resume_input](#resume_input). A server that finds the chord held by another server reports `hotkey.state` `OtherServer`, and registers the chord itself within 2 seconds after that server stops. A server that starts while input is paused starts paused.
 - The agent cannot resume itself: `resume_input` asks the user, and `send_keys`, `press_keys` and `type_text` refuse the hotkey's keys (`PauseChordNotAllowed`), which would reach the hotkey like a real key press. While any modifier of the chord is down, no modifier is released for the agent (`releaseHeldModifiers`), not even one outside the chord, since the user may be pressing it.
 - Holding the chord down fires it once. On most keyboards Ctrl turns the Pause key into Break; the server registers both, so the chord also works in remote sessions that send Pause.
 
@@ -5745,8 +5745,8 @@ Whether input is paused (how, by whom and since when), whether the pause hotkey 
 | `paused` | True while input is paused: by the user's hotkey, or by the server itself (`pausedBy`) |
 | `pausedBy`, `pausedAt` | How (`hotkey`; `shared_pause_unreadable` when the pause every server on the desktop shares could not be read, so the server paused itself until the user resumes) and when it was paused; left out while running. Without a resume, `shared_pause_unreadable` becomes `hotkey`, with a new `pausedAt`, when the pause becomes the user's own: at a press of the hotkey in this server, or when the server reads the shared pause set (see [Pause hotkey](#pause-hotkey)) |
 | `resumedBy`, `resumedAt` | How (`hotkey`, `resume_input` after the user confirmed, or `another_server` when another server's hotkey or confirmed `resume_input` resumed the shared pause) and when it was last resumed |
-| `hotkey` | `chord`, `state` (`Registered`; `OtherServer` when another Windows App Manager server on the desktop has registered the chord, whose presses pause this server too; `Failed`; `Disabled` when `WAM_PAUSE_HOTKEY` is `none`; `NotStarted`), `source` (`default` or `WAM_PAUSE_HOTKEY`) and `error` (why it is not registered, or why the configured chord was not used) |
-| `sharedPause` | `true` when the pause is shared by every Windows App Manager server on the desktop: any server's chord pauses and resumes this one, and so does a confirmed `resume_input` in any of them, except while this server cannot read the shared pause (see [Pause hotkey](#pause-hotkey)) |
+| `hotkey` | `chord`, `state` (`Registered`; `OtherServer` when another win-desktop-mcp server on the desktop has registered the chord, whose presses pause this server too; `Failed`; `Disabled` when `WAM_PAUSE_HOTKEY` is `none`; `NotStarted`), `source` (`default` or `WAM_PAUSE_HOTKEY`) and `error` (why it is not registered, or why the configured chord was not used) |
+| `sharedPause` | `true` when the pause is shared by every win-desktop-mcp server on the desktop: any server's chord pauses and resumes this one, and so does a confirmed `resume_input` in any of them, except while this server cannot read the shared pause (see [Pause hotkey](#pause-hotkey)) |
 | `heldInput` | `serverHeld`: keys and buttons the server pressed and could not release (normally empty); `modifiersDown`: modifier keys that are down now, the user's or stuck; `lastRelease`: the last release that sent something (`at`, `reason`, `released`, `stillHeld`) |
 | `takeover` | [Takeover detection](#takeover-detection): `mode` (`Off`, `Warn` or `Stop`), `state` (`Off`; `Ready`: on, with no operation watched, so no hook is installed; `Watching`: an operation is watched now; `Unavailable`: detection is not working, because Windows did not install the hooks (`error` has its Windows error), a hook failed, or the detection thread stopped, so nothing is detected), `source` (`default` or `WAM_TAKEOVER_DETECTION`) and `error` (why the configured value was not used, or why detection is not working) |
 | `message` | What this means for the agent. While the session is locked it adds that input tools return `SessionLocked` until the user unlocks it, since "Input is running" alone says nothing of a lock |
@@ -7267,7 +7267,7 @@ Reports the server's build and the environment its tools work in, in one read-on
 ```json
 {
   "server": {
-    "name": "windows-app-manager",
+    "name": "win-desktop-mcp",
     "version": "1.15.0+3f9c2a1e5b7d4c6f8a0b1c2d3e4f5a6b7c8d9e0f",
     "gitSha": "3f9c2a1e5b7d4c6f8a0b1c2d3e4f5a6b7c8d9e0f",
     "sdkVersion": "2.2.0",

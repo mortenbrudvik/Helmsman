@@ -1,4 +1,4 @@
-# Windows App Manager MCP Server
+# win-desktop-mcp
 
 [![Build](https://github.com/mortenbrudvik/WindowsAppManagerMcp/actions/workflows/build.yml/badge.svg)](https://github.com/mortenbrudvik/WindowsAppManagerMcp/actions/workflows/build.yml)
 [![Test](https://github.com/mortenbrudvik/WindowsAppManagerMcp/actions/workflows/test.yml/badge.svg)](https://github.com/mortenbrudvik/WindowsAppManagerMcp/actions/workflows/test.yml)
@@ -42,7 +42,7 @@ An MCP (Model Context Protocol) server that enables AI assistants like Claude to
 - [.NET 10 Desktop Runtime (x64)](https://dotnet.microsoft.com/download/dotnet/10.0) (the "Windows Desktop Runtime" download).
   The server exe is framework-dependent and uses WPF's UI Automation client (for browser reading, the close prompts and
   the `uia2` engine), so the base .NET Runtime alone is not enough:
-  without the Desktop Runtime the server exits at startup and no windows-app-manager tools appear.
+  without the Desktop Runtime the server exits at startup and no win-desktop-mcp tools appear.
   Check with `dotnet --list-runtimes`, which should list `Microsoft.WindowsDesktop.App 10.x`.
   Releases up to 2.1.0 ran on .NET 8 (end of support 2026-11-10); later releases need .NET 10, and the .NET 8
   Desktop Runtime alone no longer starts them.
@@ -56,7 +56,7 @@ Install as a Claude Code plugin:
 /plugin marketplace add mortenbrudvik/WindowsAppManagerMcp
 
 # Install the plugin
-/plugin install windows-app-manager@windows-app-manager-marketplace
+/plugin install win-desktop-mcp@win-desktop-mcp-marketplace
 ```
 
 Then restart Claude Code. The plugin includes a skill with usage guidance.
@@ -66,6 +66,39 @@ The plugin runs the pre-built `bin/win-desktop-mcp.exe` from this repository, so
 the tools and safety behaviour described here are those of the source on `main`, and the plugin gets
 them with the next release (its version is `serverInfo.version` in the MCP handshake).
 
+### Upgrading from 3.x
+
+Release 4.0.0 renamed the product from Windows App Manager to win-desktop-mcp, including the plugin, the marketplace,
+the MCP server and the skill, so Claude Code sees it as a new plugin. A 3.x plugin install does not update to it.
+
+1. Uninstall the old plugin: `/plugin uninstall windows-app-manager@windows-app-manager-marketplace`
+   (from your shell: `claude plugin uninstall windows-app-manager@windows-app-manager-marketplace`).
+2. Remove the old marketplace: `/plugin marketplace remove windows-app-manager-marketplace`. Removing a marketplace
+   also uninstalls the plugins installed from it, so this step alone covers step 1 too.
+3. Add the marketplace again. The repository is the same, but the marketplace is now called
+   `win-desktop-mcp-marketplace`: `/plugin marketplace add mortenbrudvik/WindowsAppManagerMcp`
+4. Install the plugin: `/plugin install win-desktop-mcp@win-desktop-mcp-marketplace`, then restart Claude Code.
+
+What changes for you:
+
+- **Tool names.** Claude Code names a plugin's MCP tools `mcp__plugin_<plugin>_<server>__<tool>`, and both the plugin
+  and the server key changed, so `mcp__plugin_windows-app-manager_windows-app-manager__find_windows` is now
+  `mcp__plugin_win-desktop-mcp_win-desktop-mcp__find_windows`. Update permission rules (`permissions.allow`,
+  `permissions.deny`), hook matchers, subagent `tools` lists and anything else you saved that names a
+  `mcp__plugin_windows-app-manager_windows-app-manager__...` tool. The tool names after the prefix are unchanged.
+- **Skill.** The plugin skill is now `using-win-desktop-mcp` (shown as `/win-desktop-mcp:using-win-desktop-mcp`),
+  not `using-windows-app-manager`.
+- **Hand-written MCP config** (Option 2). Only the exe path matters: 3.x shipped `WindowsAppManagerMcp.exe`, 4.0.0
+  ships `win-desktop-mcp.exe`, so point `command` at the new file. You may rename your server key to
+  `"win-desktop-mcp"`; if you do, its tools change from `mcp__<old key>__<tool>` to `mcp__win-desktop-mcp__<tool>`,
+  and the same permission rules need updating.
+- **Unchanged.** Every `WAM_*` environment variable, the `wam://` resources, the tool names and their arguments. Saved
+  layout presets carry over: on first run, presets in `%LOCALAPPDATA%\WindowsAppManagerMcp\layouts` (and in the
+  `layouts` folder of an older plugin version) are copied to `%LOCALAPPDATA%\win-desktop-mcp\layouts`, never moved or
+  overwritten; with `WAM_LAYOUTS_PATH` set, that folder is used as before. The audit log's default folder is now
+  `%LOCALAPPDATA%\win-desktop-mcp\audit` (`WAM_AUDIT_PATH` still overrides it); the files 3.x wrote stay in
+  `%LOCALAPPDATA%\WindowsAppManagerMcp\audit`.
+
 ### Option 2: Claude Desktop (Manual)
 
 Get `win-desktop-mcp.exe` from a release (Option 4) or build it (Option 3), then add it to your
@@ -74,7 +107,7 @@ Get `win-desktop-mcp.exe` from a release (Option 4) or build it (Option 3), then
 ```json
 {
   "mcpServers": {
-    "windows-app-manager": {
+    "win-desktop-mcp": {
       "command": "C:\\path\\to\\win-desktop-mcp.exe"
     }
   }
@@ -232,7 +265,7 @@ Once configured, you can ask Claude to:
 
 > **Input is guarded.** Every input tool takes an optional `windowHandle`: keys are sent only after the server has brought that window to the front and only while it (or its dialog) is in front, and clicks only when the point is on that window or a popup of it. Without `windowHandle`, input goes to the foreground window or the window at the point, but never to the agent's own terminal, editor or chat app (`TargetIsAgentHost`), to windows of apps running as administrator (`TargetElevated`) or to apps the user denies through `WAM_DENY_PROCESSES` (`TargetDeniedByPolicy`, password managers by default). Chords that close, quit or lock, such as Alt+F4, need `windowHandle`, and a chord that switches windows, such as Alt+Tab, must be the last key of a `send_keys` call. A paste (Ctrl+V, Shift+Insert, a right or middle click in a terminal) is sent only when the clipboard holds what the agent put there or copied, or what you let it read (`PasteNotAllowed`). A click is pressed exactly at the point the guard checked. Every result reports `receivingWindow` and `foregroundAfter`. Close windows with `close_window`, never with Alt+F4. See [Input guard](docs/TOOLS.md#input-guard) and the safety rules in [SKILL.md](skills/using-win-desktop-mcp/SKILL.md).
 
-> **Pause hotkey.** Press **Ctrl+Alt+Shift+Pause** at any time to pause the input of every Windows App Manager server on your desktop (each MCP client session runs its own server, and they share the pause): running input stops, keys the servers hold are released, and every input tool, element action and dialog answer and every tool that changes windows or starts or stops processes returns `PausedByUser` until you press it again (or confirm an agent's `resume_input` request, which resumes them all). A second press within 2 seconds of the pause is ignored. The agent cannot resume itself, and no input tool sends the hotkey's keys (`PauseChordNotAllowed`). A server that cannot read the pause the servers share pauses itself (`get_control_status` says so, `pausedBy` `shared_pause_unreadable`) until you resume it: confirm the agent's `resume_input`. The hotkey resumes it only at the second press (the first keeps the pause, as your own). While a server cannot read the shared pause, another server's hotkey neither resumes nor pauses it, even when you paused it yourself: confirm `resume_input` there. Once it can read it again, the hotkey works there as above, and a pause you made meanwhile is your own, so one press resumes it. Set another chord with the `WAM_PAUSE_HOTKEY` environment variable (for example `Ctrl+Alt+F12`, or `none` to turn it off). See [Pause hotkey](docs/TOOLS.md#pause-hotkey).
+> **Pause hotkey.** Press **Ctrl+Alt+Shift+Pause** at any time to pause the input of every win-desktop-mcp server on your desktop (each MCP client session runs its own server, and they share the pause): running input stops, keys the servers hold are released, and every input tool, element action and dialog answer and every tool that changes windows or starts or stops processes returns `PausedByUser` until you press it again (or confirm an agent's `resume_input` request, which resumes them all). A second press within 2 seconds of the pause is ignored. The agent cannot resume itself, and no input tool sends the hotkey's keys (`PauseChordNotAllowed`). A server that cannot read the pause the servers share pauses itself (`get_control_status` says so, `pausedBy` `shared_pause_unreadable`) until you resume it: confirm the agent's `resume_input`. The hotkey resumes it only at the second press (the first keeps the pause, as your own). While a server cannot read the shared pause, another server's hotkey neither resumes nor pauses it, even when you paused it yourself: confirm `resume_input` there. Once it can read it again, the hotkey works there as above, and a pause you made meanwhile is your own, so one press resumes it. Set another chord with the `WAM_PAUSE_HOTKEY` environment variable (for example `Ctrl+Alt+F12`, or `none` to turn it off). See [Pause hotkey](docs/TOOLS.md#pause-hotkey).
 
 ### Browser Reading
 - "What page is open in Chrome?"

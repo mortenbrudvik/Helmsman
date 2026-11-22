@@ -1,4 +1,4 @@
-# Windows App Manager MCP Server - Backlog
+# win-desktop-mcp - Backlog
 
 ## Status Legend
 - ✅ **Complete** - Task is done
@@ -325,7 +325,7 @@
    ```json
    {
      "mcpServers": {
-       "windows-app-manager": {
+       "win-desktop-mcp": {
          "command": "C:\\code\\projects\\win-desktop-mcp\\publish\\win-desktop-mcp.exe"
        }
      }
