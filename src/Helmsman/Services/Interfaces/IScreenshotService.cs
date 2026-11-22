@@ -111,10 +111,11 @@ public interface IScreenshotService
     /// <summary>
     /// Refuses, before anything of the window is read or walked, a frame capture of <paramref name="windowHandle"/> (or of
     /// <paramref name="area"/> of it) whose image <paramref name="options"/> would make too large: over the pixel budget
-    /// (CaptureFailed) or, returned in the result, over the inline bound (InvalidImageSize), with the same message the
-    /// capture would give. The size is the window's visible frame now (DWMWA_EXTENDED_FRAME_BOUNDS within its rectangle, as
-    /// the capture crops it), cut to <paramref name="area"/>. Null, leaving the check to the capture once its pixels are
-    /// read, when the size is not known exactly beforehand: a client-area capture (<paramref name="includeFrame"/> false), a
+    /// (CaptureFailed, with the same code as the capture's refusal but a message of its own, since the capture's comes from
+    /// the reader that refuses it) or, returned in the result, over the inline bound (InvalidImageSize, with the same code and
+    /// message the capture would give). The size is the window's visible frame now (DWMWA_EXTENDED_FRAME_BOUNDS within its
+    /// rectangle, as the capture crops it), cut to <paramref name="area"/>. Null, leaving the check to the capture once its
+    /// pixels are read, when the size is not known exactly beforehand: a client-area capture (<paramref name="includeFrame"/> false), a
     /// window the capture would refuse anyway (<see cref="CheckWindow"/>: minimized, hidden, cloaked, gone), a rectangle that
     /// cannot be read, or options the capture refuses itself. The capture tools call it after the target policy, so a
     /// denied window's size is never told.
