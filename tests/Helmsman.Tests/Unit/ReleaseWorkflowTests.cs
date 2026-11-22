@@ -56,18 +56,24 @@ public class ReleaseWorkflowTests
         var step = Step(Job(ReadWorkflow("build.yml"), "release"), "Compute checksums");
         var script = string.Join("\n", step);
 
-        // Assert
+        // Assert - properties of the script, not its exact lines, so renaming a variable keeps this passing
         step.Should().Contain(line => line.Trim() == "shell: pwsh", "the step is PowerShell on every runner image");
-        script.Should().Contain("Get-FileHash -LiteralPath $_.Path -Algorithm SHA256", "each file is hashed with SHA-256");
-        script.Should().Contain(".Hash.ToLowerInvariant()", "checksum files carry lower-case hex; Get-FileHash returns upper case");
-        script.Should().Contain("\"$hash  $($_.Name)\"", "sha256sum -c reads '<hex>  <name>', with two spaces");
-        script.Should().Contain("Get-ChildItem -LiteralPath $release -File -Recurse",
+        script.Should().MatchRegex(@"Get-FileHash\b[^\n]*-Algorithm\s+SHA256\b", "each file is hashed with SHA-256");
+        script.Should().MatchRegex(@"\.ToLower(Invariant)?\(\)",
+            "checksum files carry lower-case hex; Get-FileHash returns upper case");
+        script.Should().MatchRegex(@"""\$\w+ {2}\$", "sha256sum -c reads '<hex>  <name>', with two spaces");
+        script.Should().MatchRegex(@"Get-ChildItem\b[^\n]*-Recurse",
             "the files in the zip are listed too, so an extracted helmsman.exe can be checked");
-        script.Should().Contain("[IO.File]::WriteAllText((Join-Path $PWD.Path 'SHA256SUMS.txt'), ($lines -join \"`n\") + \"`n\", $utf8)",
-            "the file has LF line endings, a final line break and no BOM");
-        script.Should().Contain("$utf8 = [Text.UTF8Encoding]::new($false)", "UTF-8 without a BOM");
-        script.Should().NotContainAny(new[] { "Out-File", "Set-Content", "Add-Content", "> SHA256SUMS" },
+        script.Should().MatchRegex(@"\[(System\.)?IO\.File\]::WriteAllText\([^\n]*SHA256SUMS\.txt",
+            "the file is written as the script builds it, with no encoding or line ending added");
+        script.Should().MatchRegex(@"-join\s+""`n""", "the lines are joined with LF").And.NotContain("`r`n");
+        script.Should().MatchRegex(@"UTF8Encoding\]::new\(\s*\$false\s*\)|UTF8Encoding\s+\$false", "UTF-8 without a BOM")
+            .And.NotMatchRegex(@"UTF8Encoding\]::new\(\s*\$true|Encoding\]::UTF8\b", "those encodings write a BOM");
+        script.Should().NotContainAny(new[] { "Out-File", "Set-Content", "Add-Content" },
             "PowerShell's own file writers add a BOM or CRLF line endings on some versions, which sha256sum -c cannot read");
+        script.Should().NotMatchRegex(@">\s*['""]?[^\s'""]*SHA256SUMS", "a redirect is PowerShell's file writer too");
+        script.Should().MatchRegex(@"if\s*\([^\n]*helmsman\\?\.exe[^\n]*\)\s*\{\s*throw\b",
+            "a release folder without helmsman.exe fails the step instead of publishing checksums without the exe");
     }
 
     [Fact]
