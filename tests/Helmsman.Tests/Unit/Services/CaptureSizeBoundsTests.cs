@@ -446,6 +446,21 @@ public sealed class CaptureSizeBoundsTests : IDisposable
         capture.Metadata.Error.Should().Contain("20000x16000").And.Contain("64 megapixels");
     }
 
+    [Theory]
+    [InlineData(100, 0, int.MaxValue, 50, 100, 0, 1820, 50)]
+    [InlineData(0, 100, 50, int.MaxValue, 0, 100, 50, 980)]
+    public void ARegionWhoseFarEdgeOverflows_IsCutToTheScreen_NotRefusedAsOffIt(
+        int x, int y, int width, int height, int capturedX, int capturedY, int capturedWidth, int capturedHeight)
+    {
+        // Act - x + width is past int.MaxValue; the region covers the screen from x on
+        var metadata = CreateSut().CaptureRegion(x, y, width, height, new CaptureOptions()).Metadata;
+
+        // Assert
+        metadata.Success.Should().BeTrue(metadata.Error);
+        metadata.CapturedRegion.Should().Be(new CapturedRegion(capturedX, capturedY, capturedWidth, capturedHeight));
+        metadata.Warnings.Should().Contain(w => w.StartsWith("RegionClipped:"));
+    }
+
     #endregion
 
     #region The target policy comes first

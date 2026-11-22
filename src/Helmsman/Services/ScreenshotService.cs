@@ -353,7 +353,7 @@ public class ScreenshotService : IScreenshotService
         var requested = new Rectangle(x, y, width, height);
         var screen = _captureWrapper.GetVirtualScreenBounds();
         var virtualScreen = new Rectangle(screen.X, screen.Y, screen.Width, screen.Height);
-        var region = Rectangle.Intersect(requested, virtualScreen);
+        var region = PartOnScreen(x, y, width, height, virtualScreen);
         if (region.Width <= 0 || region.Height <= 0)
         {
             throw new CaptureException(ScreenshotErrorCode.RegionOffScreen,
@@ -797,6 +797,20 @@ public class ScreenshotService : IScreenshotService
         }
 
         return CaptureImaging.Crop(capture, visible);
+    }
+
+    /// <summary>
+    /// The part of the region asked for that lies on <paramref name="screen"/>, or an empty rectangle. Its far edges are added
+    /// as long: <see cref="Rectangle.Intersect(Rectangle, Rectangle)"/> adds them as int, so a region whose x + width passes
+    /// int.MaxValue wrapped to a negative edge and was refused as off the screen though it covers it.
+    /// </summary>
+    private static Rectangle PartOnScreen(int x, int y, int width, int height, Rectangle screen)
+    {
+        var left = Math.Max(x, screen.X);
+        var top = Math.Max(y, screen.Y);
+        var right = Math.Min((long)x + width, (long)screen.X + screen.Width);
+        var bottom = Math.Min((long)y + height, (long)screen.Y + screen.Height);
+        return right > left && bottom > top ? new Rectangle(left, top, (int)(right - left), (int)(bottom - top)) : Rectangle.Empty;
     }
 
     /// <summary>How much of <paramref name="region"/> the monitors cover, in pixels (monitors do not overlap).</summary>
