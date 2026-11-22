@@ -80,7 +80,8 @@ public sealed class ScreenshotOutputTests : IDisposable
         capture.Image.Should().BeNull();
         var path = capture.Metadata.FilePath!;
         Path.GetDirectoryName(path).Should().Be(CaptureFileWriter.DefaultCaptureFolder);
-        Path.GetFileName(path).Should().StartWith("screenshot_").And.EndWith(".png");
+        Path.GetFileName(path).Should().MatchRegex(@"^screenshot_\d{8}_\d{6}_[0-9a-f]{32}\.png$",
+            "the name is the local time of the write and a new GUID");
         File.ReadAllBytes(path).Length.Should().Be((int)capture.Metadata.ByteSize!.Value);
     }
 
@@ -96,7 +97,7 @@ public sealed class ScreenshotOutputTests : IDisposable
 
         // Assert
         capture.Metadata.ImageFormat.Should().Be("jpeg");
-        capture.Metadata.FilePath.Should().EndWith(".jpg");
+        Path.GetFileName(capture.Metadata.FilePath).Should().MatchRegex(@"^screenshot_\d{8}_\d{6}_[0-9a-f]{32}\.jpg$");
     }
 
     [Fact]
