@@ -77,7 +77,7 @@ public sealed class PauseHotkeyListener : IPauseHotkey, IDisposable
             }
 
             _pressed = pressed;
-            _thread = new Thread(Run) { IsBackground = true, Name = "WAM pause hotkey" };
+            _thread = new Thread(Run) { IsBackground = true, Name = "Helmsman pause hotkey" };
             _thread.Start();
         }
 
@@ -241,7 +241,7 @@ public sealed class PauseHotkeyListener : IPauseHotkey, IDisposable
             {
                 State = PauseHotkeyState.OtherServer,
                 Error = Join(_options.Warning,
-                    $"Another win-desktop-mcp server on this desktop has registered {chord.Text}. Pressing it pauses and resumes " +
+                    $"Another Helmsman server on this desktop has registered {chord.Text}. Pressing it pauses and resumes " +
                     "this server too, because the servers share the pause; this server registers the chord itself once that server stops.")
             };
             return false;

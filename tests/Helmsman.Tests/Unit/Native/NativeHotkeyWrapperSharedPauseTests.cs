@@ -5,7 +5,7 @@ namespace Helmsman.Tests.Unit.Native;
 /// <summary>
 /// The pause every server on a desktop shares (roadmap M1.10, review F7), over the real named event of
 /// <see cref="NativeHotkeyWrapper.OpenDesktopPause"/>: two wrappers on one name stand for two server processes. Each test
-/// uses a name of its own, never the servers' (Local\win-desktop-mcp.InputPaused), so no running server is paused or
+/// uses a name of its own, never the servers' (Local\Helmsman.InputPaused), so no running server is paused or
 /// resumed. No hotkey is registered (RegisterHotKey is never called), and the sessions' input layer is
 /// <see cref="FakeInputWrapper"/>, so nothing reaches the desktop.
 /// </summary>
@@ -30,7 +30,7 @@ public class NativeHotkeyWrapperSharedPauseTests
         var name = (string)typeof(NativeHotkeyWrapper).GetField("DesktopPauseName", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null)!;
         var used = typeof(NativeHotkeyWrapper).GetField("_desktopPauseName", BindingFlags.NonPublic | BindingFlags.Instance)!;
 
-        name.Should().Be(@"Local\win-desktop-mcp.InputPaused");
+        name.Should().Be(@"Local\Helmsman.InputPaused");
         used.GetValue(new NativeHotkeyWrapper()).Should().Be(name);
     }
 

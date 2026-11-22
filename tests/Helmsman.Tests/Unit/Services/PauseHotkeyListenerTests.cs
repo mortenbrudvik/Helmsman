@@ -107,7 +107,7 @@ public class PauseHotkeyListenerTests
 
         // Assert
         sut.Status.State.Should().Be(PauseHotkeyState.OtherServer);
-        sut.Status.Error.Should().Contain("Another win-desktop-mcp server").And.Contain("pauses and resumes this server too");
+        sut.Status.Error.Should().Contain("Another Helmsman server").And.Contain("pauses and resumes this server too");
     }
 
     [Fact]

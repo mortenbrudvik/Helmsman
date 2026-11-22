@@ -798,7 +798,7 @@ public class NativeCallGuardTests
     public void NamedWaitHandles_AreOnlyOpenedByNativeHotkeyWrapper()
     {
         // Arrange - the shared pause and the chord holder marks are named events that every server on the desktop
-        // opens (Local\win-desktop-mcp.*). Code that created, opened or set one outside the wrapper the tests
+        // opens (Local\Helmsman.*). Code that created, opened or set one outside the wrapper the tests
         // replace with a fake would pause or resume the user's running servers from an ordinary test run. So every
         // constructor of a WaitHandle type (EventWaitHandle, Mutex, Semaphore) that takes a name, every
         // OpenExisting or TryOpenExisting, and the AccessControl factories (EventWaitHandleAcl and the like) stay
@@ -822,7 +822,7 @@ public class NativeCallGuardTests
     {
         // Arrange - a const string is copied into every method that uses it (ldstr), so a helper elsewhere that
         // reused one of the names with an API the rule above does not know would show up here
-        string[] sharedNames = ["win-desktop-mcp.InputPaused", "win-desktop-mcp.PauseHotkeyHolder"];
+        string[] sharedNames = ["Helmsman.InputPaused", "Helmsman.PauseHotkeyHolder"];
 
         // Act
         var uses = ServerTypes()

@@ -141,7 +141,7 @@ public class SharedPauseUnreadableMessageTests : IDisposable
         var status = StatusWith(PauseHotkeyState.OtherServer);
 
         status.Message.Should().NotContain("Ctrl+Alt+Shift+Pause again").And.Contain("by confirming resume_input")
-            .And.Contain("The pause hotkey does not resume it").And.Contain("another win-desktop-mcp server has registered");
+            .And.Contain("The pause hotkey does not resume it").And.Contain("another Helmsman server has registered");
     }
 
     [Theory]

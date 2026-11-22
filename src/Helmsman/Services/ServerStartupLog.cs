@@ -27,7 +27,7 @@ public sealed class ServerStartupLog(
     {
         var awareness = system.GetDpiAwareness();
         logger?.LogInformation(
-            "win-desktop-mcp {Version} (MCP SDK {SdkVersion}), DPI awareness {DpiAwareness}",
+            "Helmsman {Version} (MCP SDK {SdkVersion}), DPI awareness {DpiAwareness}",
             ServerVersion.Current, ServerVersion.SdkVersion, awareness);
 
         if (!DpiAwarenessNames.GivesPhysicalPixels(awareness))

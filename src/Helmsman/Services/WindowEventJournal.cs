@@ -202,7 +202,7 @@ public sealed class WindowEventJournal : IWindowEventJournal, IDisposable
         _recording = true;
         var queue = new BlockingCollection<RawEvent>(QueueCapacity);
         _queue = queue;
-        _worker = new Thread(() => Work(queue, new Recording())) { IsBackground = true, Name = "WAM window event journal" };
+        _worker = new Thread(() => Work(queue, new Recording())) { IsBackground = true, Name = "Helmsman window event journal" };
         _worker.Start();
         try
         {

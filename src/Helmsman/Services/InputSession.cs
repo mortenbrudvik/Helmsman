@@ -251,7 +251,7 @@ public sealed class InputSession : IInputSession, IDisposable
             }
 
             SyncLocked();
-            _watcher = new Thread(() => Watch(flag, _watcherStop.Token)) { IsBackground = true, Name = "WAM shared pause" };
+            _watcher = new Thread(() => Watch(flag, _watcherStop.Token)) { IsBackground = true, Name = "Helmsman shared pause" };
             _watcher.Start();
         }
     }

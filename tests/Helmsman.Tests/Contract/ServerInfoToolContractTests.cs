@@ -47,7 +47,7 @@ public class ServerInfoToolContractTests
 
         var info = Json(await server.CallToolAsync("get_server_info"));
 
-        info.GetProperty("server").GetProperty("name").GetString().Should().Be("win-desktop-mcp");
+        info.GetProperty("server").GetProperty("name").GetString().Should().Be("helmsman");
         info.GetProperty("server").GetProperty("sdkVersion").GetString().Should().Be(ServerVersion.SdkVersion);
         info.GetProperty("process").GetProperty("integrityLevel").GetString().Should().Be("Medium");
         info.GetProperty("process").GetProperty("dpiAwareness").GetString().Should().Be("PerMonitorV2");

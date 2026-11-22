@@ -188,7 +188,7 @@ public sealed class ServerInfoService(
         }
         else if (status.State == PauseHotkeyState.OtherServer && !shared)
         {
-            warnings.Add($"Another win-desktop-mcp server has registered the pause hotkey {status.Chord}, and this server could not " +
+            warnings.Add($"Another Helmsman server has registered the pause hotkey {status.Chord}, and this server could not " +
                          "share its pause, so the hotkey does not pause this server. Tell the user.");
         }
 

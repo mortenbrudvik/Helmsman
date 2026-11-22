@@ -575,7 +575,7 @@ public sealed class InputControlToolContractTests : IDisposable
 
         await server.CallToolAsync("resume_input");
 
-        _question!.Message.Should().Contain("every win-desktop-mcp server on this desktop");
+        _question!.Message.Should().Contain("every Helmsman server on this desktop");
     }
 
     [Fact]
@@ -625,7 +625,7 @@ public sealed class InputControlToolContractTests : IDisposable
 
         // Assert - and the user learns that, after a resume, a pause made in another server does not reach this one
         _question!.Message.Should().NotContain("You paused it").And.Contain("paused it itself")
-            .And.Contain("could not read the pause it shares").And.Contain("every win-desktop-mcp server on this desktop")
+            .And.Contain("could not read the pause it shares").And.Contain("every Helmsman server on this desktop")
             .And.Contain("After a resume, Ctrl+Alt+Shift+Pause still pauses this server").And.Contain("made in another server does not");
         session.IsPaused.Should().BeTrue();
     }
@@ -670,7 +670,7 @@ public sealed class InputControlToolContractTests : IDisposable
 
         result.GetProperty("errorCode").GetString().Should().Be(nameof(InputErrorCode.ResumeNeedsUser));
         result.GetProperty("error").GetString().Should().NotContain("paused by the user").And.NotContain("pressing")
-            .And.Contain("The pause hotkey cannot resume it").And.Contain("another win-desktop-mcp server has registered")
+            .And.Contain("The pause hotkey cannot resume it").And.Contain("another Helmsman server has registered")
             .And.Contain("only restarting this server");
         session.IsPaused.Should().BeTrue();
     }
@@ -834,7 +834,7 @@ public sealed class InputControlToolContractTests : IDisposable
     }
 
     [Theory]
-    [InlineData(PauseHotkeyState.OtherServer, "another win-desktop-mcp server has registered Ctrl+Alt+Shift+Pause")]
+    [InlineData(PauseHotkeyState.OtherServer, "another Helmsman server has registered Ctrl+Alt+Shift+Pause")]
     [InlineData(PauseHotkeyState.Failed, "this server has not registered it (Failed)")]
     public async Task GetControlStatus_AUsersPause_WhileTheSharedPauseCannotBeRead_SaysTheHotkeyCannotResume(PauseHotkeyState state, string why)
     {

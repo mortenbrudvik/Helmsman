@@ -88,7 +88,7 @@ public sealed class WindowEventSource : IWindowEventSource, IDisposable
             _listeners = [.. _subscriptions];
             if (_thread == null)
             {
-                _thread = new Thread(Run) { IsBackground = true, Name = "WAM window events" };
+                _thread = new Thread(Run) { IsBackground = true, Name = "Helmsman window events" };
                 _thread.SetApartmentState(ApartmentState.STA);
                 _thread.Start();
             }

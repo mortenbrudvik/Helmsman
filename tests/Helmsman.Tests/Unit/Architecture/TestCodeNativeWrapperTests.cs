@@ -149,7 +149,7 @@ public class TestCodeNativeWrapperTests
     /// </summary>
     private static readonly string[] ServersHotkeyNames =
     [
-        "win-desktop-mcp.InputPaused", "win-desktop-mcp.PauseHotkeyHolder", "DesktopPauseName", "ChordHolderPrefix", "_desktopPauseName"
+        "Helmsman.InputPaused", "Helmsman.PauseHotkeyHolder", "DesktopPauseName", "ChordHolderPrefix", "_desktopPauseName"
     ];
 
     /// <summary>
@@ -318,7 +318,7 @@ public class TestCodeNativeWrapperTests
     [Fact]
     public void TestCode_ConstructsTheServersHotkeyWrapper_OnlyToReadIt()
     {
-        // Arrange - the parameterless constructor opens the servers' own names (Local\win-desktop-mcp.InputPaused and the
+        // Arrange - the parameterless constructor opens the servers' own names (Local\Helmsman.InputPaused and the
         // chord marks): a method that constructs it, with its lambdas and state machine, may call no hotkey wrapper member
         static IEnumerable<string> Uses(IEnumerable<MethodBase> methods) =>
             Calls(methods)
@@ -360,7 +360,7 @@ public class TestCodeNativeWrapperTests
     [Fact]
     public void TestCode_OpensSetsAndResetsTheSharedPause_OnlyOnANameOfItsOwn()
     {
-        // Arrange - a hotkey wrapper opens the pause of the name it holds, and the servers' (Local\win-desktop-mcp.InputPaused)
+        // Arrange - a hotkey wrapper opens the pause of the name it holds, and the servers' (Local\Helmsman.InputPaused)
         // pauses or resumes every server on the desktop: the pause is opened only on a wrapper built in the same method on a
         // name of the test's own, and set or reset only when it was opened so; a wrapper or pause from a field, an argument or
         // a helper, or merged from two paths (?? or ?:), is not followed, so the check fails closed
@@ -445,7 +445,7 @@ public class TestCodeNativeWrapperTests
         untraced.Where(n => !SanctionedHotkeyNames.ContainsKey((n.Owner.FullName!, SourceMethodName(n.Caller) ?? n.Caller.Name)))
             .Select(n => n.Description)
             .Should().BeEmpty(
-                "a hotkey wrapper opens the pause of the name it is built on, and the servers' (Local\\win-desktop-mcp.InputPaused) " +
+                "a hotkey wrapper opens the pause of the name it is built on, and the servers' (Local\\Helmsman.InputPaused) " +
                 "would pause or resume every server on the desktop: pass a literal of Local\\WamTests.<test>, or a test helper " +
                 "that builds one (UniqueName), directly or through a local, and not through a ?? or a ?:; or add the method to " +
                 "SanctionedHotkeyNames with why its name is its own");
@@ -1028,7 +1028,7 @@ internal static class NativeWrapperScanSamples
     // name of the test's own; and on a name of the test's own through a helper and a local
 
     public static IDesktopPauseFlag OpensTheServersPauseByItsName() =>
-        new NativeHotkeyWrapper(@"Local\win-desktop-mcp.InputPaused").OpenDesktopPause();
+        new NativeHotkeyWrapper(@"Local\Helmsman.InputPaused").OpenDesktopPause();
 
     public static IDesktopPauseFlag OpensTheServersPauseByItsField()
     {
@@ -1072,7 +1072,7 @@ internal static class NativeWrapperScanSamples
     // literal passed by the caller, or from a field
 
     public static IDesktopPauseFlag NamesThePauseThroughAParameter() =>
-        new NativeHotkeyWrapper(PauseNameOr(@"Local\win-desktop-mcp.InputPaused")).OpenDesktopPause();
+        new NativeHotkeyWrapper(PauseNameOr(@"Local\Helmsman.InputPaused")).OpenDesktopPause();
 
     public static IDesktopPauseFlag NamesThePauseThroughAField() => new NativeHotkeyWrapper(PauseNameOfAField()).OpenDesktopPause();
 
@@ -1089,7 +1089,7 @@ internal static class NativeWrapperScanSamples
         new NativeHotkeyWrapper(name ?? PauseNameOfItsOwn()).OpenDesktopPause();
 
     public static IDesktopPauseFlag NamesThePauseThroughAChoice(bool own) =>
-        new NativeHotkeyWrapper(own ? PauseNameOfItsOwn() : @"Local\win-desktop-mcp.InputPaused").OpenDesktopPause();
+        new NativeHotkeyWrapper(own ? PauseNameOfItsOwn() : @"Local\Helmsman.InputPaused").OpenDesktopPause();
 
     public static IDesktopPauseFlag NamesThePauseThroughACoalescedLocal(string? given)
     {

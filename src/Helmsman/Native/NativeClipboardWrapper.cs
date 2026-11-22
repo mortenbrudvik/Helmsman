@@ -152,7 +152,7 @@ public sealed class NativeClipboardWrapper : INativeClipboardWrapper
         })
         {
             IsBackground = true,
-            Name = "win-desktop-mcp clipboard"
+            Name = "Helmsman clipboard"
         };
         if (!TryStartThread(thread, _oneAtATime))
         {

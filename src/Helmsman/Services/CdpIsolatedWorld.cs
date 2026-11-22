@@ -20,7 +20,7 @@ namespace Helmsman.Services;
 internal static class CdpIsolatedWorld
 {
     /// <summary>The isolated world's name, which only DevTools sees.</summary>
-    public const string WorldName = "wam-isolated-read";
+    public const string WorldName = "helmsman-isolated-read";
 
     /// <summary>
     /// Evaluates <paramref name="expression"/> by value in an isolated world of the tab's main frame, all three commands

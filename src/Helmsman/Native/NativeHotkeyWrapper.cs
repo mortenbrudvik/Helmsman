@@ -21,10 +21,10 @@ public sealed class NativeHotkeyWrapper : INativeHotkeyWrapper
     /// The shared pause. Local\ is the user's logon session, the scope of the desktop the hotkey belongs to:
     /// servers of another user, or in another remote session, have their own.
     /// </summary>
-    internal const string DesktopPauseName = @"Local\win-desktop-mcp.InputPaused";
+    internal const string DesktopPauseName = @"Local\Helmsman.InputPaused";
 
     /// <summary>The prefix of the mark of the server that registered a chord.</summary>
-    internal const string ChordHolderPrefix = @"Local\win-desktop-mcp.PauseHotkeyHolder.";
+    internal const string ChordHolderPrefix = @"Local\Helmsman.PauseHotkeyHolder.";
 
     private readonly string _desktopPauseName;
 

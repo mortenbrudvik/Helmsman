@@ -127,7 +127,7 @@ public sealed class UserTakeoverMonitor : ITakeoverMonitor, IDisposable
             if (_thread == null && _starts <= MaxRestarts)
             {
                 _starts++;
-                _thread = new Thread(Run) { IsBackground = true, Name = "WAM takeover detection" };
+                _thread = new Thread(Run) { IsBackground = true, Name = "Helmsman takeover detection" };
                 _thread.SetApartmentState(ApartmentState.STA);
                 _thread.Start();
             }
