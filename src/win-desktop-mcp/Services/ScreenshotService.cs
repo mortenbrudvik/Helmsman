@@ -1,10 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.Drawing.Imaging;
 using System.Globalization;
-using System.Runtime.InteropServices;
 using WinDesktopMcp.Models;
 using WinDesktopMcp.Native;
 using WinDesktopMcp.Services.Interfaces;
@@ -476,7 +473,7 @@ public class ScreenshotService : IScreenshotService
 
             if (crop.Width != capture.Width || crop.Height != capture.Height)
             {
-                acquired = acquired with { Capture = Crop(capture, crop) };
+                acquired = acquired with { Capture = CaptureImaging.Crop(capture, crop) };
             }
 
             // A crop to a ref keeps no signature: wait_for_visual's since watches a whole window, region or monitor
@@ -887,29 +884,7 @@ public class ScreenshotService : IScreenshotService
             return capture;
         }
 
-        return Crop(capture, visible);
-    }
-
-    /// <summary>The part of <paramref name="capture"/> inside <paramref name="screenRectangle"/>, which must lie inside it.</summary>
-    private static CaptureResult Crop(CaptureResult capture, Rectangle screenRectangle)
-    {
-        var left = screenRectangle.X - capture.ScreenOriginX;
-        var top = screenRectangle.Y - capture.ScreenOriginY;
-        var rowBytes = screenRectangle.Width * 4;
-        var pixels = GC.AllocateUninitializedArray<byte>(rowBytes * screenRectangle.Height);
-        for (var row = 0; row < screenRectangle.Height; row++)
-        {
-            Buffer.BlockCopy(capture.Bgra, ((top + row) * capture.Width + left) * 4, pixels, row * rowBytes, rowBytes);
-        }
-
-        return capture with
-        {
-            Bgra = pixels,
-            Width = screenRectangle.Width,
-            Height = screenRectangle.Height,
-            ScreenOriginX = screenRectangle.X,
-            ScreenOriginY = screenRectangle.Y
-        };
+        return CaptureImaging.Crop(capture, visible);
     }
 
     /// <summary>
@@ -1246,14 +1221,15 @@ public class ScreenshotService : IScreenshotService
         byte[] data;
         try
         {
-            data = WithBitmap(capture, bitmap =>
+            data = CaptureImaging.WithBitmap(capture, bitmap =>
             {
                 // Drawn at the capture's own scale, so it is scaled with the pixels (the pointer)
                 beforeScaling?.Invoke(bitmap);
-                using var scaled = isScaled ? ResizeImage(bitmap, width, height) : null;
+                // CaptureImaging.ResizeImage returns a bitmap this rendering owns and disposes
+                using var scaled = isScaled ? CaptureImaging.ResizeImage(bitmap, width, height) : null;
                 var output = scaled ?? bitmap;
                 annotate?.Invoke(output);
-                return Encode(output, encoding, request.Quality);
+                return CaptureImaging.Encode(output, encoding, request.Quality);
             });
         }
         catch (Exception ex) when (ex is not CaptureException)
@@ -1313,75 +1289,6 @@ public class ScreenshotService : IScreenshotService
             OffsetY: capture.ScreenOriginY,
             ScaleX: Math.Round((double)capture.Width / rendered.Width, 6),
             ScaleY: Math.Round((double)capture.Height / rendered.Height, 6));
-
-    /// <summary>
-    /// Runs <paramref name="use"/> on a bitmap over the captured pixels themselves, without copying them: the pixel
-    /// array is pinned while the bitmap exists. The bitmap ignores the 4th byte (Format32bppRgb): GDI leaves that byte
-    /// undefined (often 0), so reading it as alpha would make parts of a PNG transparent. Overlays drawn on the bitmap
-    /// change <see cref="CaptureResult.Bgra"/>.
-    /// </summary>
-    private static T WithBitmap<T>(CaptureResult capture, Func<Bitmap, T> use)
-    {
-        var pinned = GCHandle.Alloc(capture.Bgra, GCHandleType.Pinned);
-        try
-        {
-            using var bitmap = new Bitmap(capture.Width, capture.Height, capture.Width * 4, PixelFormat.Format32bppRgb,
-                pinned.AddrOfPinnedObject());
-            return use(bitmap);
-        }
-        finally
-        {
-            pinned.Free();
-        }
-    }
-
-    internal static Bitmap ResizeImage(Bitmap original, int width, int height)
-    {
-        var resized = new Bitmap(width, height, PixelFormat.Format32bppRgb);
-        try
-        {
-            using var graphics = Graphics.FromImage(resized);
-            graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
-            graphics.CompositingQuality = CompositingQuality.HighQuality;
-            graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
-            graphics.SmoothingMode = SmoothingMode.HighQuality;
-
-            // Without TileFlipXY the bicubic filter samples outside the source and darkens the edges.
-            using var attributes = new ImageAttributes();
-            attributes.SetWrapMode(WrapMode.TileFlipXY);
-            graphics.DrawImage(
-                original,
-                new Rectangle(0, 0, width, height),
-                0, 0, original.Width, original.Height,
-                GraphicsUnit.Pixel,
-                attributes);
-            return resized;
-        }
-        catch
-        {
-            resized.Dispose();
-            throw;
-        }
-    }
-
-    internal static byte[] Encode(Bitmap bitmap, ImageEncoding encoding, int quality)
-    {
-        using var stream = new MemoryStream();
-
-        if (encoding == ImageEncoding.Png)
-        {
-            bitmap.Save(stream, ImageFormat.Png);
-        }
-        else
-        {
-            var encoder = ImageCodecInfo.GetImageEncoders().First(c => c.FormatID == ImageFormat.Jpeg.Guid);
-            using var encoderParameters = new EncoderParameters(1);
-            encoderParameters.Param[0] = new EncoderParameter(Encoder.Quality, (long)Math.Clamp(quality, 1, 100));
-            bitmap.Save(stream, encoder, encoderParameters);
-        }
-
-        return stream.ToArray();
-    }
 
     /// <summary>
     /// Writes the encoded image to the requested path, or to a new file in

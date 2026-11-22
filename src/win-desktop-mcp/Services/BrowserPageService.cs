@@ -233,9 +233,9 @@ public sealed class BrowserPageService : IBrowserPageService
             using var stream = new MemoryStream(shot.Png, writable: false);
             using var original = new Bitmap(stream);
             var (width, height) = ScaledSize(original.Width, original.Height, maxDimension);
-            using var scaled = width == original.Width && height == original.Height ? null : ScreenshotService.ResizeImage(original, width, height);
+            using var scaled = width == original.Width && height == original.Height ? null : CaptureImaging.ResizeImage(original, width, height);
             var encoding = Math.Max(width, height) <= PngMaxEdge ? ImageEncoding.Png : ImageEncoding.Jpeg;
-            var data = ScreenshotService.Encode(scaled ?? original, encoding, CaptureOptions.DefaultQuality);
+            var data = CaptureImaging.Encode(scaled ?? original, encoding, CaptureOptions.DefaultQuality);
             return new BrowserScreenshot(
                 new BrowserScreenshotResult(true, tab.Target!.Id, width, height, original.Width, original.Height,
                     encoding == ImageEncoding.Png ? "png" : "jpeg", shot.Activated ? true : null, Cut(shot.Url, BrowserTabService.MaxUrlLength),
