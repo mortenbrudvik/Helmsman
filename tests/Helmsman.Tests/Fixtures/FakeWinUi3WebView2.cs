@@ -2,9 +2,10 @@ namespace Helmsman.Tests.Fixtures;
 
 /// <summary>
 /// The UI Automation tree of a WinUI 3 window with a WebView2 hosted as a visual, as it was read on a real desktop (roadmap
-/// M3.F43: Windows 11 26200, WebView2 runtime 155, Windows App SDK 1.6, UIA3). The names label the fake's nodes only: the
-/// real views are nameless, and the name of the root of Chromium's views is localized ("Helmsman page - Nettinnhold"), so no
-/// code may match them.
+/// M3.F43: Windows 11 26200, WebView2 runtime 155, Windows App SDK 1.6, UIA3). The structure is what was read; the names
+/// label the fake's nodes only and are today's (the check app's window and page then carried the product's earlier
+/// initials): the real views are nameless, and the name of the root of Chromium's views is localized (the page's title
+/// and " - Nettinnhold"), so no code may match them.
 /// <code>
 /// Window "Helmsman WinUI3 WebView2 check" (Win32)
 ///   Pane "Bridge" (Win32: the Microsoft.UI.Content.DesktopChildSiteBridge window)

@@ -93,7 +93,7 @@ public class UiaEngineScenarioTests
     /// <summary>The title bar, the system menu item and a caption button as the 1.15.0 gate read them, and a fixture control.</summary>
     private static readonly (string ControlType, string? Name, BoundsDto? Bounds)[] GateElements =
     [
-        ("TitleBar", "Helmsman Fixture", new BoundsDto(493, 174, 934, 37)),
+        ("TitleBar", "WAM Fixture", new BoundsDto(493, 174, 934, 37)),
         ("MenuItem", "System", new BoundsDto(494, 182, 28, 28)),
         ("Button", "Minimize", new BoundsDto(1248, 174, 60, 37)),
         ("Button", "Save", new BoundsDto(509, 427, 170, 32))

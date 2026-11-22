@@ -1,6 +1,6 @@
 # Automation Roadmap
 
-**Names:** This roadmap is a historical record and uses the names of the time (Windows App Manager MCP, `WindowsAppManagerMcp`, `bin/WindowsAppManagerMcp.exe`, the `WAM_` settings and the `wam://` resources). The product was renamed Helmsman in release 4.0.0: the code is now under `src/Helmsman`, the exe is `bin/helmsman.exe`, and the settings and resources are `HELMSMAN_` and `helmsman://` (a `WAM_` setting is still read when its `HELMSMAN_` name is not set).
+**Names:** This roadmap is a historical record and uses the names of the time (Windows App Manager MCP, `WindowsAppManagerMcp`, `bin/WindowsAppManagerMcp.exe`, the `WAM_` settings and the `wam://` resources). The product was renamed Helmsman in release 4.0.0: the code is now under `src/Helmsman`, the exe is `bin/helmsman.exe`, and the settings and resources are `HELMSMAN_` and `helmsman://` (a `WAM_` setting is still read when its `HELMSMAN_` name is not set or is empty).
 
 This roadmap covers improving and extending the automation capabilities of Windows App Manager MCP. It comes from an automated feature review on 2026-10-10: two independent multi-agent review runs. Each run had seven subsystem reviewers, an adversarial verifier per subsystem, an external landscape scan, a roadmap synthesizer and a critic. The two runs were then merged into this document. The review was static: no tests or binaries were run.
 
