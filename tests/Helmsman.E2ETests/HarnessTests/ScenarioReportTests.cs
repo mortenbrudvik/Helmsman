@@ -6,7 +6,7 @@ namespace Helmsman.E2ETests.HarnessTests;
 /// </summary>
 public class ScenarioReportTests : IDisposable
 {
-    private readonly string _folder = Path.Combine(Path.GetTempPath(), "WamScenarioReportTests-" + Guid.NewGuid().ToString("N"));
+    private readonly string _folder = Path.Combine(Path.GetTempPath(), "HelmsmanScenarioReportTests-" + Guid.NewGuid().ToString("N"));
     private readonly string? _before = Environment.GetEnvironmentVariable(ScenarioReport.ResultsVariable);
 
     public ScenarioReportTests()

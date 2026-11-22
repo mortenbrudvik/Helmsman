@@ -1225,7 +1225,7 @@ internal static class NativeMethodsSample
 {
     internal static class Sample
     {
-        private const string NoLibrary = "WamNativeCallGuardSample-NoSuchLibrary.dll";
+        private const string NoLibrary = "HelmsmanNativeCallGuardSample-NoSuchLibrary.dll";
 
         [System.Runtime.InteropServices.DllImport(NoLibrary)]
         public static extern int Uncalled();

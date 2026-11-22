@@ -36,8 +36,8 @@
     <ProjectReference Include="..\..\src\Helmsman\Helmsman.csproj" />
     <ProjectReference Include="..\Helmsman.Tests.Infrastructure\Helmsman.Tests.Infrastructure.csproj" />
     <!--
-      Built before this project but not referenced: the harness starts WamFixtureApp.exe from the fixture's
-      own output folder (see WamFixtureAppPath below), so the fixture is never loaded into the test host
+      Built before this project but not referenced: the harness starts HelmsmanFixtureApp.exe from the fixture's
+      own output folder (see HelmsmanFixtureAppPath below), so the fixture is never loaded into the test host
       and never instrumented for coverage.
     -->
     <ProjectReference Include="..\FixtureApp\FixtureApp.csproj" ReferenceOutputAssembly="false" Private="false" />
@@ -57,21 +57,21 @@
 
   <!--
     Records where the fixture exe is, relative to this project's output folder, as
-    [assembly: AssemblyMetadata("WamFixtureAppPath", "...")]. FixtureAppLocator reads it, so the tests
+    [assembly: AssemblyMetadata("HelmsmanFixtureAppPath", "...")]. FixtureAppLocator reads it, so the tests
     start exactly the fixture built with the same configuration.
   -->
-  <Target Name="AddWamFixtureAppPathMetadata" BeforeTargets="GetAssemblyAttributes">
+  <Target Name="AddHelmsmanFixtureAppPathMetadata" BeforeTargets="GetAssemblyAttributes">
     <MSBuild Projects="..\FixtureApp\FixtureApp.csproj" Targets="GetTargetPath">
-      <Output TaskParameter="TargetOutputs" ItemName="_WamFixtureAppTargetPath" />
+      <Output TaskParameter="TargetOutputs" ItemName="_HelmsmanFixtureAppTargetPath" />
     </MSBuild>
     <PropertyGroup>
-      <_WamFixtureAppExe>@(_WamFixtureAppTargetPath->'%(RootDir)%(Directory)%(Filename).exe')</_WamFixtureAppExe>
-      <_WamFixtureAppRelativeExe>$([MSBuild]::MakeRelative('$(TargetDir)', '$(_WamFixtureAppExe)'))</_WamFixtureAppRelativeExe>
+      <_HelmsmanFixtureAppExe>@(_HelmsmanFixtureAppTargetPath->'%(RootDir)%(Directory)%(Filename).exe')</_HelmsmanFixtureAppExe>
+      <_HelmsmanFixtureAppRelativeExe>$([MSBuild]::MakeRelative('$(TargetDir)', '$(_HelmsmanFixtureAppExe)'))</_HelmsmanFixtureAppRelativeExe>
     </PropertyGroup>
     <ItemGroup>
       <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-        <_Parameter1>WamFixtureAppPath</_Parameter1>
-        <_Parameter2>$(_WamFixtureAppRelativeExe)</_Parameter2>
+        <_Parameter1>HelmsmanFixtureAppPath</_Parameter1>
+        <_Parameter2>$(_HelmsmanFixtureAppRelativeExe)</_Parameter2>
       </AssemblyAttribute>
     </ItemGroup>
   </Target>

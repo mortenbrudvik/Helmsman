@@ -124,7 +124,7 @@ jobs:
             # Each run is written beside the runner's earlier ones (its temp folder outlives the job on a self-hosted
             # runner), so the report compares it with the previous run; the new file is uploaded below
             $env:HELMSMAN_ALLOW_DESKTOP_TESTS = '1'
-            $env:HELMSMAN_SCENARIO_RESULTS = Join-Path $env:TEMP 'WamScenarios'
+            $env:HELMSMAN_SCENARIO_RESULTS = Join-Path $env:TEMP 'HelmsmanScenarios'
             $filter = 'FullyQualifiedName~ScenarioEvaluationTests'
           } else {
             $env:HELMSMAN_ALLOW_DESKTOP_NOINPUT_TESTS = '1'

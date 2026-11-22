@@ -25,7 +25,7 @@ public sealed class DebugBrowserReadinessProbeTests : IDisposable
     private readonly Mock<ICdpService> _cdp = new(MockBehavior.Strict);
     private readonly Mock<INativeProcessWrapper> _processes = new();
     private readonly List<(int Port, TimeSpan Timeout)> _asked = [];
-    private readonly string _profile = Path.Combine(Path.GetTempPath(), $"wam-m51-probe-{Guid.NewGuid():N}");
+    private readonly string _profile = Path.Combine(Path.GetTempPath(), $"helmsman-m51-probe-{Guid.NewGuid():N}");
 
     /// <summary>The started browser's start time, as each read of it finds it (then <see cref="BrowserStart"/>).</summary>
     private readonly Queue<DateTime?> _browserStartTimes = new();

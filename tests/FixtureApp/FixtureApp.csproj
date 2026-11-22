@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    WamFixtureApp: a small WPF app with known AutomationIds that the end-to-end tests
+    HelmsmanFixtureApp: a small WPF app with known AutomationIds that the end-to-end tests
     (tests/Helmsman.E2ETests) start, read, capture and type into. The suite owns this
     app, so its desktop tests never act on the developer's own windows.
 
@@ -23,7 +23,7 @@
     <UseWPF>true</UseWPF>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <AssemblyName>WamFixtureApp</AssemblyName>
+    <AssemblyName>HelmsmanFixtureApp</AssemblyName>
     <RootNamespace>Helmsman.FixtureApp</RootNamespace>
     <IsPackable>false</IsPackable>
     <IsTestProject>false</IsTestProject>

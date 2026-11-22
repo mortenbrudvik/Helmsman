@@ -28,7 +28,7 @@ public class CommandLineRedactorTests
     [InlineData(@"app.exe --pwd=abc", @"app.exe --pwd=***")]
     [InlineData(@"app.exe --passwd=abc", @"app.exe --passwd=***")]
     [InlineData(@"app.exe --PASSWORD=abc", @"app.exe --PASSWORD=***")]
-    [InlineData(@"app.exe --wam-test-token=s3cr3t", @"app.exe --wam-test-token=***")]
+    [InlineData(@"app.exe --helmsman-test-token=s3cr3t", @"app.exe --helmsman-test-token=***")]
     // Quoted values and quoted switches keep their quotes, and lose the whole value, spaces included
     [InlineData(@"app.exe --password=""hunter 2"" --verbose", @"app.exe --password=""***"" --verbose")]
     [InlineData(@"app.exe ""--password=hunter 2"" --verbose", @"app.exe ""--password=***"" --verbose")]

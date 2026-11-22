@@ -17,7 +17,7 @@ public class ServerHarnessTests : IDisposable
 {
     private const int FixturePid = FakeDesktop.FixturePid;
 
-    private readonly string _layoutsPath = Path.Combine(Path.GetTempPath(), "WamE2E-tests-" + Guid.NewGuid().ToString("N"));
+    private readonly string _layoutsPath = Path.Combine(Path.GetTempPath(), "HelmsmanE2E-tests-" + Guid.NewGuid().ToString("N"));
     private readonly Dictionary<Type, Mock> _wrappers = new();
 
     public void Dispose()

@@ -116,7 +116,7 @@ public class DialogToolsTests
     [Fact]
     public async Task FileDialog_PassesThePathActionAndOverwrite_WithTheDefaultTimeout()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"wam-{Guid.NewGuid():N}.txt");
+        var path = Path.Combine(Path.GetTempPath(), $"helmsman-{Guid.NewGuid():N}.txt");
 
         await CreateSut().FileDialog(path, FileDialogAction.Save, overwrite: true, handle: 0x5000);
 
@@ -132,7 +132,7 @@ public class DialogToolsTests
         // window out does. The real service, with nothing behind it that may be touched
         var path = action == FileDialogAction.Open
             ? typeof(DialogToolsTests).Assembly.Location
-            : Path.Combine(Path.GetTempPath(), $"wam-{Guid.NewGuid():N}.txt");
+            : Path.Combine(Path.GetTempPath(), $"helmsman-{Guid.NewGuid():N}.txt");
         var sut = new DialogTools(_dialogs.Object, Untouched.FileDialogs(), Permissive.HostConfirmation, _windows.Object);
 
         var result = await sut.FileDialog(path, action, window: new WindowSelector { Foreground = true });
@@ -146,7 +146,7 @@ public class DialogToolsTests
     [Fact]
     public async Task FileDialog_WithForegroundAndAFilter_NamesTheWindowItResolvesTo()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"wam-{Guid.NewGuid():N}.txt");
+        var path = Path.Combine(Path.GetTempPath(), $"helmsman-{Guid.NewGuid():N}.txt");
 
         await CreateSut().FileDialog(path, FileDialogAction.Save, window: new WindowSelector { Foreground = true, TitleContains = "Notepad" });
 

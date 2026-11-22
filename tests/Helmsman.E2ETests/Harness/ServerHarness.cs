@@ -133,7 +133,7 @@ public sealed class ServerHarness : IDisposable
         DesktopTestGate.ThrowIfNotAllowed(tier, readVariable);
         E2EProcess.EnsureServerDpiAwareness();
 
-        var layoutsPath = Path.Combine(Path.GetTempPath(), "WamE2E", "layouts-" + Guid.NewGuid().ToString("N"));
+        var layoutsPath = Path.Combine(Path.GetTempPath(), "HelmsmanE2E", "layouts-" + Guid.NewGuid().ToString("N"));
         var services = CreateServices(tier, fixtureProcessId, probe, layoutsPath, wrapperSubstitute: null, out var guarded, uiaEngine, agentHost,
             allowedActivations, uiaActionProcesses);
         var harness = new ServerHarness(services, layoutsPath, guarded);

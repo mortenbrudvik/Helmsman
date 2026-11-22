@@ -71,7 +71,7 @@ public sealed class FakeChromiumDialog
                 View("Pane", null, "BoxLayoutView").With(View("Text", heading, "Label")),
                 client)));
         RootView = View("Pane", heading, "BrowserRootView").With(Dialog);
-        Window = new FakeUiaNode("Window", "WAM dialog - Google Chrome")
+        Window = new FakeUiaNode("Window", "Helmsman dialog - Google Chrome")
         {
             ClassName = "Chrome_WidgetWin_1", FrameworkId = "Win32", Bounds = new UiaRect(10, 10, 1265, 1372)
         }.With(new FakeUiaNode("Pane") { ClassName = "Intermediate D3D Window", FrameworkId = "Win32" }, RootView);

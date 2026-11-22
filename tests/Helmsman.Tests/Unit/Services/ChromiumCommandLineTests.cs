@@ -63,7 +63,7 @@ public class ChromiumCommandLineTests
     [Fact]
     public void Parse_KeepsTheValuesCase()
     {
-        ChromiumCommandLine.Parse("chrome.exe \"--user-data-dir=C:\\Temp\\WamM5Check-AbC\"")
-            .Should().ContainKey("user-data-dir").WhoseValue.Should().Be(@"C:\Temp\WamM5Check-AbC");
+        ChromiumCommandLine.Parse("chrome.exe \"--user-data-dir=C:\\Temp\\HelmsmanM5Check-AbC\"")
+            .Should().ContainKey("user-data-dir").WhoseValue.Should().Be(@"C:\Temp\HelmsmanM5Check-AbC");
     }
 }

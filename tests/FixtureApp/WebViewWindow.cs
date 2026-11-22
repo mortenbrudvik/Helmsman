@@ -23,7 +23,7 @@ namespace Helmsman.FixtureApp;
 internal sealed class WebViewWindow : Window
 {
     private const string Html =
-        "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>WAM fixture web content</title></head><body>" +
+        "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>Helmsman fixture web content</title></head><body>" +
         "<h1>" + WebHeading + "</h1>" +
         "<p>Local HTML shown by NavigateToString: no network.</p>" +
         "<button id=\"" + Ids.WebButton + "\" type=\"button\">" + WebButtonName + "</button>" +
@@ -53,7 +53,7 @@ internal sealed class WebViewWindow : Window
 
     /// <summary>The browser's user data folder: in the fixture's own folder, else in the temp folder.</summary>
     private string UserDataFolder =>
-        Path.Combine(FixtureSaveFolder.For(_options) ?? Path.Combine(Path.GetTempPath(), "WamFixtureApp"), "WebView2");
+        Path.Combine(FixtureSaveFolder.For(_options) ?? Path.Combine(Path.GetTempPath(), "HelmsmanFixtureApp"), "WebView2");
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {

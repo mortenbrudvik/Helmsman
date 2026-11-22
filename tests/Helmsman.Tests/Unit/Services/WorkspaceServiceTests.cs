@@ -17,7 +17,7 @@ public class WorkspaceServiceTests : IDisposable
     private readonly Mock<IApplicationLauncher> _processes = new();
     private readonly Mock<ICdpTabService> _tabs = new();
     private readonly Mock<ITargetPolicy> _policy = new();
-    private readonly string _folder = Path.Combine(Path.GetTempPath(), "WamWorkspaceTests-" + Guid.NewGuid().ToString("N"));
+    private readonly string _folder = Path.Combine(Path.GetTempPath(), "HelmsmanWorkspaceTests-" + Guid.NewGuid().ToString("N"));
     private LayoutPreset? _saved;
 
     public WorkspaceServiceTests()

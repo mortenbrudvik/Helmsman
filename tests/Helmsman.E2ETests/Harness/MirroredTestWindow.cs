@@ -36,7 +36,7 @@ public sealed class MirroredTestWindow : IDisposable
         var handle = CreateWindowExW(
             WsExLayoutRtl | WsExToolWindow | WsExNoActivate,
             "STATIC",
-            "WAM E2E mirrored window",
+            "Helmsman E2E mirrored window",
             WsPopup,
             x, y, width, height,
             nint.Zero, nint.Zero, GetModuleHandleW(null), nint.Zero);

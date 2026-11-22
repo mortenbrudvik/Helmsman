@@ -9,7 +9,7 @@ namespace Helmsman.E2ETests.Scenarios;
 /// </summary>
 public class FixtureInputGuardTests
 {
-    private const string Text = "wam guard 7";
+    private const string Text = "helmsman guard 7";
 
     private static readonly TimeSpan SettleTimeout = TimeSpan.FromSeconds(3);
 

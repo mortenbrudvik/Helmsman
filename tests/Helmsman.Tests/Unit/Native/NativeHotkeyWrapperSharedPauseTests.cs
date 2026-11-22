@@ -13,7 +13,7 @@ public class NativeHotkeyWrapperSharedPauseTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(10);
 
-    private static string UniqueName() => $@"Local\WamTests.SharedPause.{Guid.NewGuid():N}";
+    private static string UniqueName() => $@"Local\HelmsmanTests.SharedPause.{Guid.NewGuid():N}";
 
     private static void Close(params IDesktopPauseFlag[] flags)
     {

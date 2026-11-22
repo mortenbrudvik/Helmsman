@@ -110,7 +110,7 @@ public class BrowserUrlsTests
     }
 
     [Theory]
-    [InlineData("C:/Users/me/AppData/Local/Temp/wam-m57%20local%20page.html", true)]
+    [InlineData("C:/Users/me/AppData/Local/Temp/helmsman-m57%20local%20page.html", true)]
     [InlineData("c:/page.html", true)]
     [InlineData("D:/", true)]
     [InlineData("C:\\Users\\me\\page.html", false)]

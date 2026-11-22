@@ -23,7 +23,7 @@ public class ShellWindowsTests
     public void TheShellWindowList_ReportsTheFolderAFileExplorerWindowShows()
     {
         // Arrange - a folder no other window can show
-        var folder = Path.Combine(Path.GetTempPath(), "WamShellWindows-" + Guid.NewGuid().ToString("N"));
+        var folder = Path.Combine(Path.GetTempPath(), "HelmsmanShellWindows-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(folder);
         var wrapper = new NativeShellWindowsWrapper();
         nint opened = 0;

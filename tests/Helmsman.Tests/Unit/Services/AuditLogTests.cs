@@ -11,7 +11,7 @@ namespace Helmsman.Tests.Unit.Services;
 /// </summary>
 public sealed class AuditLogTests : IDisposable
 {
-    private readonly string _folder = Path.Combine(Path.GetTempPath(), "WamAuditLogTests", Guid.NewGuid().ToString("N"), "audit");
+    private readonly string _folder = Path.Combine(Path.GetTempPath(), "HelmsmanAuditLogTests", Guid.NewGuid().ToString("N"), "audit");
     private readonly Mock<INativeWindowWrapper> _windows = new();
     private readonly UtcClock _clock = new(new DateTimeOffset(2026, 10, 10, 12, 0, 0, TimeSpan.Zero));
     private readonly RecordingLogger<AuditLog> _logger = new();

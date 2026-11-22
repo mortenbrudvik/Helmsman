@@ -28,7 +28,8 @@ public partial class OldProductNameTests
     /// <summary>
     /// A setting's name before 4.0.0: WAM_ and a letter (WAM_TOOLSETS), in any case, since Windows reads environment names
     /// case-insensitively ($env:wam_read_only works), and with the underscore escaped as Markdown writes it (WAM\_TOOLSETS);
-    /// not inside another word (swam_, a WAMP_ name) and not the WamFixtureApp test names.
+    /// not inside another word (swam_, a WAMP_ name) and not a name with no underscore after it (WamFixtureApp, the test
+    /// fixture's earlier name).
     /// </summary>
     [GeneratedRegex(@"(?<![A-Za-z0-9])wam\\?_[a-z]", RegexOptions.IgnoreCase)]
     private static partial Regex OldSettingName();

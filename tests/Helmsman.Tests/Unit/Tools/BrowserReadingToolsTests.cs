@@ -871,7 +871,7 @@ public class BrowserReadingToolsTests
     }
 
     [Theory]
-    [InlineData("wam-profile")]
+    [InlineData("helmsman-profile")]
     [InlineData(@"profiles\debug")]
     [InlineData(@"\profiles\debug")]
     [InlineData(@"C:profile")]

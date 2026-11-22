@@ -154,7 +154,7 @@ public sealed class FixtureAppSession : IDisposable
         var exePath = locateFixture();
 
         var instance = Guid.NewGuid().ToString("N")[..12];
-        var workDirectory = Path.Combine(Path.GetTempPath(), "WamE2E", instance);
+        var workDirectory = Path.Combine(Path.GetTempPath(), "HelmsmanE2E", instance);
         var options = BuildOptions(tier, launch, instance, Path.Combine(workDirectory, "events.jsonl"), Environment.ProcessId);
         Directory.CreateDirectory(workDirectory);
 

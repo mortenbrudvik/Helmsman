@@ -163,7 +163,7 @@ public sealed class ContractServices : IDisposable
     private readonly Mock<INativeWindowWrapper> _capturedWindows = new();
 
     /// <summary>The audit log's folder (roadmap M2.17), in the temporary folder; created by the first line written.</summary>
-    public string AuditFolder { get; } = Path.Combine(Path.GetTempPath(), "WamContractAudit", Guid.NewGuid().ToString("N"), "audit");
+    public string AuditFolder { get; } = Path.Combine(Path.GetTempPath(), "HelmsmanContractAudit", Guid.NewGuid().ToString("N"), "audit");
 
     /// <summary>The audit log, writing to <see cref="AuditFolder"/>, reading windows from <see cref="NativeWindows"/>.</summary>
     public IAuditLog Audit => _audit ??= new AuditLog(AuditLogOptions.ForFolder(AuditFolder), NativeWindows.Object, TimeProvider.System);

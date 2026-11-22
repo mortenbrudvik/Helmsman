@@ -88,7 +88,7 @@ public class ClipboardPasteGuardTests
     }
 
     [Fact]
-    public void CopyThenPasteInOneCall_IsRefused_AfterTheAgentsOwnCopy_AndWithWamAllowUserClipboard()
+    public void CopyThenPasteInOneCall_IsRefused_AfterTheAgentsOwnCopy_AndWithHelmsmanAllowUserClipboard()
     {
         _origin.InputSent(_origin.BeforeInput(Keys("^c"), AppProcessId, AppWindow)!);
         _clipboard.AppCopies(AppProcessId, "the selection");
@@ -254,7 +254,7 @@ public class ClipboardPasteGuardTests
     [Theory]
     [InlineData("html")]
     [InlineData("files")]
-    public void ContentNumberedAsSetClipboards_ThatCarriesHtmlOrFiles_LosesThePrivateExemption_EvenWithWamAllowUserClipboard(string extra)
+    public void ContentNumberedAsSetClipboards_ThatCarriesHtmlOrFiles_LosesThePrivateExemption_EvenWithHelmsmanAllowUserClipboard(string extra)
     {
         // Only set_clipboard's own text may be pasted although it is marked private; as anyone else's content it is never pasted
         SetClipboardsTextWith(extra);
@@ -294,7 +294,7 @@ public class ClipboardPasteGuardTests
     }
 
     [Fact]
-    public void WithWamAllowUserClipboard_TheUsersClipboardIsPasted_ButNeverPrivateContent()
+    public void WithHelmsmanAllowUserClipboard_TheUsersClipboardIsPasted_ButNeverPrivateContent()
     {
         _clipboard.UserCopies("a shared link");
         Guard(allowUserClipboard: true).Check(Keys("^v"), Editor).Should().BeNull();

@@ -282,7 +282,7 @@ public class ElementSearchTests
         // runtime ids) reached through two paths
         var buttonId = FakeUiaNode.NewRuntimeId();
         var documentId = FakeUiaNode.NewRuntimeId();
-        FakeUiaNode Page() => new FakeUiaNode("Document", "WAM page") { RuntimeId = documentId }.With(
+        FakeUiaNode Page() => new FakeUiaNode("Document", "Helmsman page") { RuntimeId = documentId }.With(
             new FakeUiaNode("Button", "Page button") { RuntimeId = buttonId });
         var window = new FakeUiaNode("Window", "App").With(
             new FakeUiaNode("Pane", "Bridge").With(new FakeUiaNode("Pane", "Web").With(Page())),

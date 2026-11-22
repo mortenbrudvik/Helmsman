@@ -101,10 +101,10 @@ public class TargetPolicyTests
     public void FromEnvironment_AllowList_IsRead()
     {
         // Act
-        var settings = Settings(allow: "notepad.exe, WamFixtureApp");
+        var settings = Settings(allow: "notepad.exe, HelmsmanFixtureApp");
 
         // Assert
-        settings.AllowedProcesses.Should().Equal("notepad", "WamFixtureApp");
+        settings.AllowedProcesses.Should().Equal("notepad", "HelmsmanFixtureApp");
     }
 
     [Theory]

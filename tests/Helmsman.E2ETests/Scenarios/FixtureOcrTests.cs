@@ -185,13 +185,13 @@ public class FixtureOcrTests
     public async Task ReadScreenText_ARegionOverACanvasThePolicyDenies_BlacksItOut()
     {
         // Arrange - the canvas in front, and an OCR service whose policy denies the canvas window (as a deny list naming
-        // WamFixtureApp would; the harness's own policy denies nothing of the fixture)
+        // HelmsmanFixtureApp would; the harness's own policy denies nothing of the fixture)
         using var e2e = E2ESession.Start(DesktopTier.Input, _output, new FixtureLaunchOptions { OpenCanvas = true });
         var canvas = OpenedCanvas(e2e);
         BringToFront(e2e, canvas.WindowHandle);
         var policy = new Mock<ICaptureTargetPolicy>();
         policy.Setup(p => p.Check(It.IsAny<nint>())).Returns((nint handle) => handle == canvas.WindowHandle
-            ? new CaptureRefusal(ScreenshotErrorCode.TargetDeniedByPolicy, "the scenario denies WamFixtureApp")
+            ? new CaptureRefusal(ScreenshotErrorCode.TargetDeniedByPolicy, "the scenario denies HelmsmanFixtureApp")
             : null);
         var ocr = new OcrService(e2e.Server.Screenshots, e2e.Server.Get<IOcrEngineWrapper>(), e2e.Server.Get<INativeWindowWrapper>(),
             policy.Object, new TargetPolicy(TargetPolicySettings.Default, Mock.Of<INativeWindowWrapper>()));

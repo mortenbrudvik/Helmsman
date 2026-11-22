@@ -3,27 +3,27 @@ namespace Helmsman.Tests.Fixtures;
 /// <summary>
 /// The UI Automation tree of a WinUI 3 window with a WebView2 hosted as a visual, as it was read on a real desktop (roadmap
 /// M3.F43: Windows 11 26200, WebView2 runtime 155, Windows App SDK 1.6, UIA3). The names label the fake's nodes only: the
-/// real views are nameless, and the name of the root of Chromium's views is localized ("WAM page - Nettinnhold"), so no
+/// real views are nameless, and the name of the root of Chromium's views is localized ("Helmsman page - Nettinnhold"), so no
 /// code may match them.
 /// <code>
-/// Window "WAM WinUI3 WebView2 check" (Win32)
+/// Window "Helmsman WinUI3 WebView2 check" (Win32)
 ///   Pane "Bridge" (Win32: the Microsoft.UI.Content.DesktopChildSiteBridge window)
-///     Pane "WAM page" (Win32: msedgewebview2's Chrome_WidgetWin_1 window)
+///     Pane "Helmsman page" (Win32: msedgewebview2's Chrome_WidgetWin_1 window)
 ///       Pane "Intermediate D3D Window" (Win32)
-///       Pane "WAM page - Web content" (Chrome: the root of Chromium's views, BrowserRootView)
+///       Pane "Helmsman page - Web content" (Chrome: the root of Chromium's views, BrowserRootView)
 ///         Pane "NonClientView"
 ///           Pane "EmbeddedBrowserTabRootView"
 ///           Pane "EmbeddedBrowserFrameView" > Pane "BrowserView"
 ///             Pane "TopContainerView"
 ///             Pane "SidebarContentsSplitView" > Pane "SidebarContentsSplitView 2" > Pane "MultiContentsView" > Pane "View"
 ///               Pane "View 2"
-///               Document "WAM page" (Chrome, level 11) > Text "WAM WinUI 3 page", Button "Page button", Table "Amounts"
+///               Document "Helmsman page" (Chrome, level 11) > Text "Helmsman WinUI 3 page", Button "Page button", Table "Amounts"
 ///             Pane "EmbeddedBrowserDownloadView"
 ///         Pane "TopContainerOverlayView"
 ///     Pane "XAML" (XAML: the InputSiteWindowClass window)
 ///       Button "Native button"
 ///       Pane "WebView2" (Win32: the Chrome_WidgetWin_0 window)
-///         Pane "WAM page" again, with its whole subtree (the same runtime ids)
+///         Pane "Helmsman page" again, with its whole subtree (the same runtime ids)
 ///         Pane "XAML" again (the same runtime id: a loop back to its own ancestor), with Button "Native button" and an
 ///           empty Pane "WebView2"
 /// </code>
@@ -44,7 +44,7 @@ public sealed class FakeWinUi3WebView2
         ViewsRoot = viewsRoot;
         DocumentParent = documentParent;
         Document = documentParent.Children.FirstOrDefault(c => c.ControlType == "Document");
-        Window = new FakeUiaNode("Window", "WAM WinUI3 WebView2 check") { FrameworkId = "Win32", RuntimeId = Id("window") }.With(
+        Window = new FakeUiaNode("Window", "Helmsman WinUI3 WebView2 check") { FrameworkId = "Win32", RuntimeId = Id("window") }.With(
             Node("Pane", "Bridge", "Win32").With(
                 page,
                 Xaml(Node("Pane", "WebView2", "Win32").With(
@@ -65,10 +65,10 @@ public sealed class FakeWinUi3WebView2
     public FakeUiaNode? Document { get; private set; }
 
     /// <summary>The runtime id of the root of Chromium's views.</summary>
-    public IReadOnlyList<int> ViewsRootId => Id("WAM page - Web content");
+    public IReadOnlyList<int> ViewsRootId => Id("Helmsman page - Web content");
 
     /// <summary>
-    /// Gives every element of the WebView2's part (each copy of the "WAM page" window, Chromium's views and the page) the
+    /// Gives every element of the WebView2's part (each copy of the "Helmsman page" window, Chromium's views and the page) the
     /// process that serves it, as on a real desktop: msedgewebview2.exe's, not the app's. Without it they report none (an
     /// element of the window's process, as every other node of the fixture).
     /// </summary>
@@ -111,7 +111,7 @@ public sealed class FakeWinUi3WebView2
             documentParent.With(NewDocument(3));
         }
 
-        viewsRoot = Node("Pane", "WAM page - Web content", "Chrome").With(
+        viewsRoot = Node("Pane", "Helmsman page - Web content", "Chrome").With(
             Node("Pane", "NonClientView", "Chrome").With(
                 Node("Pane", "EmbeddedBrowserTabRootView", "Chrome"),
                 Node("Pane", "EmbeddedBrowserFrameView", "Chrome").With(
@@ -122,17 +122,17 @@ public sealed class FakeWinUi3WebView2
                                 Node("Pane", "MultiContentsView", "Chrome").With(documentParent))),
                         Node("Pane", "EmbeddedBrowserDownloadView", "Chrome")))),
             Node("Pane", "TopContainerOverlayView", "Chrome"));
-        var host = Node("Pane", "WAM page", "Win32", "host").With(Node("Pane", "Intermediate D3D Window", "Win32"), viewsRoot);
+        var host = Node("Pane", "Helmsman page", "Win32", "host").With(Node("Pane", "Intermediate D3D Window", "Win32"), viewsRoot);
         _hosts.Add(host);
         return host;
     }
 
     private FakeUiaNode NewDocument(int children)
     {
-        var document = Node("Document", "WAM page", "Chrome", "document");
+        var document = Node("Document", "Helmsman page", "Chrome", "document");
         var elements = new[]
         {
-            new FakeUiaNode("Text", "WAM WinUI 3 page") { FrameworkId = "Chrome", RuntimeId = Id("heading") },
+            new FakeUiaNode("Text", "Helmsman WinUI 3 page") { FrameworkId = "Chrome", RuntimeId = Id("heading") },
             new FakeUiaNode("Button", "Page button")
             {
                 FrameworkId = "Chrome", RuntimeId = Id("button"), ActionPatterns = ["Invoke"], Bounds = new UiaRect(40, 120, 90, 24)

@@ -1869,7 +1869,7 @@ public class UIElementServiceTests
     /// <summary>
     /// A WPF window hosting a WebView2 as runtime 155 shows it on a real desktop (roadmap M3.F33). Win32: the render widget of
     /// msedgewebview2.exe in a Chrome_WidgetWin_1 window inside the WPF window. UI Automation, from the window:
-    ///   Pane "HwndHost" > Pane "WAM fixture web content" (the Chrome_WidgetWin_1 window) > Group "BrowserRootView" >
+    ///   Pane "HwndHost" > Pane "Helmsman fixture web content" (the Chrome_WidgetWin_1 window) > Group "BrowserRootView" >
     ///     Pane "NonClientView" > Pane "EmbeddedBrowserFrameView" > Pane "BrowserView" > ... (Chromium's views, the page far
     ///     below)
     ///   Button "Native"
@@ -1879,7 +1879,7 @@ public class UIElementServiceTests
     {
         _win32[WebViewHost] = new Win32Window("Chrome_WidgetWin_1", Handle, WebViewProcess);
         _win32[RenderWidget] = new Win32Window("Chrome_RenderWidgetHostHWND", WebViewHost, WebViewProcess, visible);
-        var host = new FakeUiaNode("Pane", "WAM fixture web content") { FrameworkId = "Win32", NativeWindowHandle = WebViewHost }.With(
+        var host = new FakeUiaNode("Pane", "Helmsman fixture web content") { FrameworkId = "Win32", NativeWindowHandle = WebViewHost }.With(
             new FakeUiaNode("Group", "BrowserRootView") { FrameworkId = "Chrome" }.With(
                 new FakeUiaNode("Pane", "NonClientView") { FrameworkId = "Chrome" }.With(
                     new FakeUiaNode("Pane", "EmbeddedBrowserFrameView") { FrameworkId = "Chrome" }.With(
@@ -1911,7 +1911,7 @@ public class UIElementServiceTests
         // Assert - the page at level 3, its elements at level 4; Chromium's own views after it, as far as maxDepth reaches
         result.Success.Should().BeTrue(result.Error);
         Shape(result.Elements).Should().Be(
-            "HwndHost(WAM fixture web content(Chrome Legacy Window(Heading,Web button)," +
+            "HwndHost(Helmsman fixture web content(Chrome Legacy Window(Heading,Web button)," +
             "BrowserRootView(NonClientView(EmbeddedBrowserFrameView)))),Native");
         result.DepthReached.Should().Be(5);
         result.AccessibilityWarmup.Should().NotBeNull();
@@ -1990,12 +1990,12 @@ public class UIElementServiceTests
 
         // Assert
         Shape(result.Elements).Should().Be(
-            "HwndHost(WAM fixture web content(BrowserRootView(NonClientView(EmbeddedBrowserFrameView)))),Native");
+            "HwndHost(Helmsman fixture web content(BrowserRootView(NonClientView(EmbeddedBrowserFrameView)))),Native");
     }
 
     [Theory]
-    [InlineData(2, "HwndHost(WAM fixture web content),Native")]
-    [InlineData(3, "HwndHost(WAM fixture web content(Chrome Legacy Window,BrowserRootView)),Native")]
+    [InlineData(2, "HwndHost(Helmsman fixture web content),Native")]
+    [InlineData(3, "HwndHost(Helmsman fixture web content(Chrome Legacy Window,BrowserRootView)),Native")]
     public async Task GetUIElements_CountsThePageTowardMaxDepth_AtTheLevelBelowItsHost(int maxDepth, string shape)
     {
         // Arrange
@@ -2021,7 +2021,7 @@ public class UIElementServiceTests
         var result = await sut.GetUIElementsAsync(Handle, maxDepth: 5, filter: new UIElementFilter(MaxElements: 4));
 
         // Assert - breadth first: the host's level, then the page ahead of Chromium's views
-        Shape(result.Elements).Should().Be("HwndHost(WAM fixture web content(Chrome Legacy Window)),Native");
+        Shape(result.Elements).Should().Be("HwndHost(Helmsman fixture web content(Chrome Legacy Window)),Native");
         result.TotalElementCount.Should().Be(4);
         result.TruncationReason.Should().Be(UIElementTruncationReason.MaxElements);
     }
@@ -2039,7 +2039,7 @@ public class UIElementServiceTests
 
         // Assert
         Shape(result.Elements).Should().Be(
-            "HwndHost(WAM fixture web content(Chrome Legacy Window(Heading,Web button),BrowserRootView(NonClientView))),Native");
+            "HwndHost(Helmsman fixture web content(Chrome Legacy Window(Heading,Web button),BrowserRootView(NonClientView))),Native");
     }
 
     [Fact]
@@ -2083,11 +2083,11 @@ public class UIElementServiceTests
         var app = new FakeWinUi3WebView2(withDocument);
         _tree.WithWindow(Handle, app.Window);
         var windows = Win32Windows();
-        windows.Setup(w => w.GetProcessName(AppProcess)).Returns("WamWebCheck");
+        windows.Setup(w => w.GetProcessName(AppProcess)).Returns("HelmsmanWebCheck");
         var processes = new Mock<INativeProcessWrapper>();
         processes.Setup(p => p.GetProcessList()).Returns(new Dictionary<int, (int ParentProcessId, string ImageName)>
         {
-            [(int)AppProcess] = (1, "WamWebCheck.exe"),
+            [(int)AppProcess] = (1, "HelmsmanWebCheck.exe"),
             [(int)WebViewProcess] = ((int)AppProcess, "msedgewebview2.exe")
         });
         var warmup = new AccessibilityWarmup(_tree, windows.Object, processes.Object, wait: (_, _) => { },
@@ -2097,7 +2097,7 @@ public class UIElementServiceTests
     }
 
     private const string WinUi3Shape =
-        "Bridge(WAM page(Intermediate D3D Window,WAM page - Web content(WAM page(WAM WinUI 3 page,Page button,Amounts)))," +
+        "Bridge(Helmsman page(Intermediate D3D Window,Helmsman page - Web content(Helmsman page(Helmsman WinUI 3 page,Page button,Amounts)))," +
         "XAML(Native button,WebView2))";
 
     [Fact]
@@ -2162,7 +2162,7 @@ public class UIElementServiceTests
 
         // Assert
         Shape(result.Elements).Should().Be(
-            "Bridge(WAM page(Intermediate D3D Window,WAM page - Web content(NonClientView,TopContainerOverlayView))," +
+            "Bridge(Helmsman page(Intermediate D3D Window,Helmsman page - Web content(NonClientView,TopContainerOverlayView))," +
             "XAML(Native button,WebView2))");
         result.AccessibilityWarmup!.Status.Should().Be(AccessibilityWarmupStatus.NotReady);
     }
@@ -2217,7 +2217,7 @@ public class UIElementServiceTests
     private UIElementService PolicySut(ITargetPolicy policy, Action<Mock<INativeWindowWrapper>>? setup = null, bool warmupChecksPolicy = false)
     {
         var windows = Win32Windows();
-        windows.Setup(w => w.GetProcessName(AppProcess)).Returns("WamFixture");
+        windows.Setup(w => w.GetProcessName(AppProcess)).Returns("HelmsmanFixture");
         setup?.Invoke(windows);
         var warmup = new AccessibilityWarmup(_tree, windows.Object, new Mock<INativeProcessWrapper>().Object, wait: (_, _) => { },
             policy: warmupChecksPolicy ? policy : Permissive.TargetPolicy);
@@ -2278,7 +2278,7 @@ public class UIElementServiceTests
         var result = await PolicySut(new TargetPolicy(TargetPolicySettings.Default, Permissive.Windows)).GetUIElementsAsync(Handle, maxDepth: 5);
 
         Shape(result.Elements).Should().Be(
-            "HwndHost(WAM fixture web content(Chrome Legacy Window(Heading,Web button)," +
+            "HwndHost(Helmsman fixture web content(Chrome Legacy Window(Heading,Web button)," +
             "BrowserRootView(NonClientView(EmbeddedBrowserFrameView)))),Native");
         result.SkippedElementCount.Should().Be(0);
         result.Warnings.Should().BeNull();
@@ -2322,7 +2322,7 @@ public class UIElementServiceTests
         result.Warnings.Should().ContainSingle(w => w.StartsWith("TargetDeniedByPolicy: ") && w.Contains("msedgewebview2"));
         result.SkippedElementCount.Should().BeGreaterThan(0);
         var json = System.Text.Json.JsonSerializer.Serialize(result.Elements);
-        json.Should().NotContain("WAM page").And.NotContain("Page button").And.NotContain("NonClientView");
+        json.Should().NotContain("Helmsman page").And.NotContain("Page button").And.NotContain("NonClientView");
     }
 
     [Fact]
@@ -2342,9 +2342,9 @@ public class UIElementServiceTests
         result.AccessibilityWarmup.Should().BeNull();
         result.Warnings.Should().ContainSingle(w => w.StartsWith("TargetDeniedByPolicy: ") && w.Contains("msedgewebview2"));
         _tree.CachedFetches.Concat(_tree.ChildListings).Should().NotContain(
-            ["WAM page", "WAM page - Web content", "NonClientView", "View"]);
+            ["Helmsman page", "Helmsman page - Web content", "NonClientView", "View"]);
         var json = System.Text.Json.JsonSerializer.Serialize(result.Elements);
-        json.Should().NotContain("WAM page").And.NotContain("Page button").And.NotContain("NonClientView");
+        json.Should().NotContain("Helmsman page").And.NotContain("Page button").And.NotContain("NonClientView");
     }
 
     [Fact]

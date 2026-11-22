@@ -16,7 +16,7 @@ public class FixtureOptionsTests
         // Arrange
         var options = new FixtureOptions(
             Instance: "a1b2-c3",
-            EventLogPath: @"C:\Temp\Wam E2E\events.jsonl",
+            EventLogPath: @"C:\Temp\Helmsman E2E\events.jsonl",
             ParentProcessId: 4242,
             MaxLifetime: TimeSpan.FromSeconds(90),
             NoActivate: true,
@@ -122,7 +122,7 @@ public class FixtureOptionsTests
         var args = new[]
         {
             "--instance", "abc", "--no-activate",
-            FixtureOptions.EndOfOptions, "--wam-test-token=s3cr3t", "http://u:p@host/", "--instance", "--unknown"
+            FixtureOptions.EndOfOptions, "--helmsman-test-token=s3cr3t", "http://u:p@host/", "--instance", "--unknown"
         };
 
         // Act
@@ -144,7 +144,7 @@ public class FixtureOptionsTests
     public void Parse_NamesTheEndOfOptions_WhenAnOptionIsUnknown()
     {
         // Arrange - an unknown option before "--" is still refused, so a misspelt option cannot be silently ignored
-        var act = () => FixtureOptions.Parse(["--wam-test-token=s3cr3t"]);
+        var act = () => FixtureOptions.Parse(["--helmsman-test-token=s3cr3t"]);
 
         // Assert
         act.Should().Throw<ArgumentException>().WithMessage("*Unknown option*--*");
@@ -175,7 +175,7 @@ public class FixtureOptionsTests
     [InlineData("--animate-for-ms", "-1")]
     [InlineData("--animate-for-ms", "3600001")]
     [InlineData("--animate-for-ms", "--open-canvas")]
-    [InlineData("--wam-test-token=s3cr3t", "--")]
+    [InlineData("--helmsman-test-token=s3cr3t", "--")]
     public void Parse_RejectsInvalidCommandLines(params string[] args)
     {
         var act = () => FixtureOptions.Parse(args);

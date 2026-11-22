@@ -1019,14 +1019,14 @@ public class ElementSearchServiceTests
     {
         var ids = new Dictionary<string, IReadOnlyList<int>>();
         IReadOnlyList<int> Id(string name) => ids.TryGetValue(name, out var id) ? id : ids[name] = FakeUiaNode.NewRuntimeId();
-        FakeUiaNode Page() => new FakeUiaNode("Pane", "WAM page") { FrameworkId = "Win32", RuntimeId = Id("host") }.With(
-            new FakeUiaNode("Pane", "WAM page - Web content") { FrameworkId = "Chrome", RuntimeId = Id("views") }.With(
-                new FakeUiaNode("Document", "WAM page") { FrameworkId = "Chrome", RuntimeId = Id("document") }.With(
+        FakeUiaNode Page() => new FakeUiaNode("Pane", "Helmsman page") { FrameworkId = "Win32", RuntimeId = Id("host") }.With(
+            new FakeUiaNode("Pane", "Helmsman page - Web content") { FrameworkId = "Chrome", RuntimeId = Id("views") }.With(
+                new FakeUiaNode("Document", "Helmsman page") { FrameworkId = "Chrome", RuntimeId = Id("document") }.With(
                     new FakeUiaNode("Button", "Page button")
                     {
                         FrameworkId = "Chrome", RuntimeId = Id("button"), ActionPatterns = ["Invoke"], Bounds = new UiaRect(40, 120, 90, 24)
                     })));
-        _tree.WithWindow(Handle, new FakeUiaNode("Window", "WAM WinUI3 WebView2 check") { FrameworkId = "Win32" }.With(
+        _tree.WithWindow(Handle, new FakeUiaNode("Window", "Helmsman WinUI3 WebView2 check") { FrameworkId = "Win32" }.With(
             new FakeUiaNode("Pane", "Bridge") { FrameworkId = "Win32" }.With(
                 Page(),
                 new FakeUiaNode("Pane", "XAML") { FrameworkId = "XAML" }.With(
@@ -1036,7 +1036,7 @@ public class ElementSearchServiceTests
 
     [Theory]
     [InlineData("Page button", "Button")]
-    [InlineData("WAM page", "Document")]
+    [InlineData("Helmsman page", "Document")]
     public async Task Find_OfAPageListedTwice_FindsEachElementOnce_SoCriteriaAreNotAmbiguous(string name, string controlType)
     {
         // Arrange - element_action's criteria search keeps two matches, to tell one from several

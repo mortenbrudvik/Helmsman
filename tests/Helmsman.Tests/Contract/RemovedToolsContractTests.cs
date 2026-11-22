@@ -141,7 +141,7 @@ public class RemovedToolsContractTests
     [InlineData("+deprecated")]
     [InlineData("all,-deprecated")]
     [InlineData("windows,monitors,deprecated")]
-    public void TheDeprecatedToolset_InWamToolsets_IsIgnoredWithAWarning_AndDoesNotFailClosed(string toolsets)
+    public void TheDeprecatedToolset_InHelmsmanToolsets_IsIgnoredWithAWarning_AndDoesNotFailClosed(string toolsets)
     {
         var selection = Select(toolsets);
 
@@ -153,7 +153,7 @@ public class RemovedToolsContractTests
     [Theory]
     [InlineData("+click", "click")]
     [InlineData("all,-Move_Window", "Move_Window")]
-    public void ARemovedToolsName_InWamToolsets_IsIgnoredWithAWarningThatSaysItIsATool(string toolsets, string name)
+    public void ARemovedToolsName_InHelmsmanToolsets_IsIgnoredWithAWarningThatSaysItIsATool(string toolsets, string name)
     {
         // Comment review item 10: '+click' names a tool 3.0.0 removed, not a toolset that was removed
         var selection = Select(toolsets);

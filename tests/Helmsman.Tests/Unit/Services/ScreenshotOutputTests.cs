@@ -16,7 +16,7 @@ public sealed class ScreenshotOutputTests : IDisposable
     {
         _mockCaptureWrapper = TestDataFactory.CreateMockScreenCaptureWrapper();
         _mockMonitorService = TestDataFactory.CreateMockMonitorService();
-        _folder = Path.Combine(Path.GetTempPath(), "wam-screenshot-tests", Guid.NewGuid().ToString("N"));
+        _folder = Path.Combine(Path.GetTempPath(), "helmsman-screenshot-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_folder);
     }
 

@@ -252,7 +252,7 @@ public class AccessibilityWarmupTests
         _desktop[Browser] = new FakeWindow("Chrome_WidgetWin_1", BrowserProcess, 0);
         _desktop[RenderWidget] = new FakeWindow(AccessibilityWarmup.RenderWidgetHostClass, BrowserProcess, Browser);
         _tree.WithWindow(RenderWidget, new FakeUiaNode("Pane", "Chrome Legacy Window") { FrameworkId = "Win32" }.With(
-            new FakeUiaNode("Text", "WAM fixture web content") { FrameworkId = "Chrome" },
+            new FakeUiaNode("Text", "Helmsman fixture web content") { FrameworkId = "Chrome" },
             new FakeUiaNode("Text", "Local HTML") { FrameworkId = "Chrome" },
             new FakeUiaNode("Button", "Web button") { FrameworkId = "Chrome" }));
 
@@ -924,7 +924,7 @@ public class AccessibilityWarmupTests
 
         // Assert - the window's own containers are searched only down to the root of Chromium's views
         info.Should().Be(new AccessibilityWarmupInfo(AccessibilityWarmupStatus.Ready, WebContentHost.WebView2, 0, 1, 3));
-        _tree.CachedFetches.Should().StartWith(["WAM WinUI3 WebView2 check", "Bridge", "WAM page", "WAM page - Web content"])
+        _tree.CachedFetches.Should().StartWith(["Helmsman WinUI3 WebView2 check", "Bridge", "Helmsman page", "Helmsman page - Web content"])
             .And.NotContain("XAML");
         _tree.CachedFetches.Count.Should().BeLessThanOrEqualTo(3 + AccessibilityWarmup.ChromeViewsSearchListings);
         _waits.Should().BeEmpty();

@@ -195,7 +195,7 @@ public class BrowserUiaReaderTests
     public void ReadUrl_TakesAFilePagesAddress_FromItsDocument_WhileTheAddressBarShowsItsPath(BrowserNames names)
     {
         // Arrange - Chrome and Edge show a file: page's address as its path, without file:///
-        var browser = new FakeBrowserWindow(names, pageTitle: "WAM file page", committedUrl: FileUrl, addressBarText: FilePath);
+        var browser = new FakeBrowserWindow(names, pageTitle: "Helmsman file page", committedUrl: FileUrl, addressBarText: FilePath);
 
         // Act
         var front = ReadUrl(browser);
@@ -223,7 +223,7 @@ public class BrowserUiaReaderTests
         behind.Error.Should().Contain("foreground").And.NotContain("not a URL");
     }
 
-    private const string FilePath = "C:/Users/me/AppData/Local/Temp/wam-m57%20local%20page.html";
+    private const string FilePath = "C:/Users/me/AppData/Local/Temp/helmsman-m57%20local%20page.html";
     private const string FileUrl = "file:///" + FilePath;
 
     [Theory]

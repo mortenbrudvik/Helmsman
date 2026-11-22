@@ -6,7 +6,7 @@ namespace Helmsman.E2ETests.HarnessTests;
 /// </summary>
 public class FixtureSaveFolderTests
 {
-    private const string Folder = @"C:\Temp\WamE2E\abc123";
+    private const string Folder = @"C:\Temp\HelmsmanE2E\abc123";
 
     private static string Same(string path) => path;
 
@@ -26,7 +26,7 @@ public class FixtureSaveFolderTests
 
     [Theory]
     [InlineData(Folder + @"\saved.txt")]
-    [InlineData(@"c:\temp\wame2e\ABC123\Saved.TXT")]
+    [InlineData(@"c:\temp\helmsmane2e\ABC123\Saved.TXT")]
     [InlineData(Folder + @"\sub\..\saved.txt")]
     public void Allows_AFileDirectlyInTheFolder(string path)
     {
@@ -34,11 +34,11 @@ public class FixtureSaveFolderTests
     }
 
     [Theory]
-    [InlineData(@"C:\Temp\WamE2E\saved.txt")]
+    [InlineData(@"C:\Temp\HelmsmanE2E\saved.txt")]
     [InlineData(Folder + @"\sub\saved.txt")]
     [InlineData(Folder + @"\..\saved.txt")]
     [InlineData(Folder + @"4\saved.txt")]
-    [InlineData(@"D:\Temp\WamE2E\abc123\saved.txt")]
+    [InlineData(@"D:\Temp\HelmsmanE2E\abc123\saved.txt")]
     [InlineData(@"\\server\share\saved.txt")]
     [InlineData(@"saved.txt")]
     [InlineData(Folder + @"\saved.txt:stream")]

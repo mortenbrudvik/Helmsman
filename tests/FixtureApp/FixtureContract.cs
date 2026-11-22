@@ -14,52 +14,52 @@ namespace Helmsman.FixtureApp;
 public static class FixtureContract
 {
     /// <summary>The fixture's process name (its AssemblyName).</summary>
-    public const string ProcessName = "WamFixtureApp";
+    public const string ProcessName = "HelmsmanFixtureApp";
 
     /// <summary>Start of the main window's title.</summary>
-    public const string MainTitlePrefix = "WAM Fixture Main";
+    public const string MainTitlePrefix = "Helmsman Fixture Main";
 
     /// <summary>Start of the modal dialog's title.</summary>
-    public const string ModalTitlePrefix = "WAM Fixture Modal";
+    public const string ModalTitlePrefix = "Helmsman Fixture Modal";
 
     /// <summary>Start of the document window's title.</summary>
-    public const string DocumentTitlePrefix = "WAM Fixture Document";
+    public const string DocumentTitlePrefix = "Helmsman Fixture Document";
 
     /// <summary>Start of the title of the save prompt the document shows when it is closed with unsaved changes.</summary>
-    public const string SavePromptTitlePrefix = "WAM Fixture Save Prompt";
+    public const string SavePromptTitlePrefix = "Helmsman Fixture Save Prompt";
 
     /// <summary>Start of the title of the Save As dialog the main window's Save As button shows.</summary>
-    public const string SaveAsTitlePrefix = "WAM Fixture Save As";
+    public const string SaveAsTitlePrefix = "Helmsman Fixture Save As";
 
     /// <summary>Start of the title of the task dialog the main window's Task dialog button shows.</summary>
-    public const string TaskDialogTitlePrefix = "WAM Fixture Task Dialog";
+    public const string TaskDialogTitlePrefix = "Helmsman Fixture Task Dialog";
 
     /// <summary>The task dialog's main instruction.</summary>
     public const string TaskDialogInstruction = "Keep the fixture's draft?";
 
     /// <summary>What the fixture writes into the file its Save As dialog returns.</summary>
-    public const string SavedFileText = "Saved by the WAM fixture's Save As dialog.";
+    public const string SavedFileText = "Saved by the Helmsman fixture's Save As dialog.";
 
     /// <summary>Start of the table window's title.</summary>
-    public const string TableTitlePrefix = "WAM Fixture Table";
+    public const string TableTitlePrefix = "Helmsman Fixture Table";
 
     /// <summary>Start of the menu window's title.</summary>
-    public const string MenuTitlePrefix = "WAM Fixture Menu";
+    public const string MenuTitlePrefix = "Helmsman Fixture Menu";
 
     /// <summary>Start of the WebView2 window's title.</summary>
-    public const string WebTitlePrefix = "WAM Fixture Web";
+    public const string WebTitlePrefix = "Helmsman Fixture Web";
 
     /// <summary>The heading of the WebView2 pane's page.</summary>
-    public const string WebHeading = "WAM fixture web content";
+    public const string WebHeading = "Helmsman fixture web content";
 
     /// <summary>The text of the button on the WebView2 pane's page (its HTML id is <see cref="Ids.WebButton"/>).</summary>
     public const string WebButtonName = "Web button";
 
     /// <summary>Start of the canvas window's title (roadmap M6.3).</summary>
-    public const string CanvasTitlePrefix = "WAM Fixture Canvas";
+    public const string CanvasTitlePrefix = "Helmsman Fixture Canvas";
 
     /// <summary>Start of the overlay's title (roadmap M6.7).</summary>
-    public const string OverlayTitlePrefix = "WAM Fixture Overlay";
+    public const string OverlayTitlePrefix = "Helmsman Fixture Overlay";
 
     /// <summary>Number of items in the virtualized list.</summary>
     public const int VirtualListItemCount = 10_000;

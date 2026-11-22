@@ -11,7 +11,7 @@ namespace Helmsman.Tests.Integration;
 /// </summary>
 public class OcrEngineWrapperIntegrationTests
 {
-    private const string DrawnText = "WAM OCR 4711 Canvas";
+    private const string DrawnText = "Helmsman OCR 4711 Canvas";
 
     [Fact]
     public void GetCapabilities_ReportsTheInstalledLanguagesAndTheImageLimit()

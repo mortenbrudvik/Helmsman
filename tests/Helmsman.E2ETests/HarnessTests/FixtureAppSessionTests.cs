@@ -192,7 +192,7 @@ public class FixtureAppSessionTests
     {
         // Arrange - M6.6's redaction check: arguments that only the server's list_processes should see
         var options = new FixtureOptions("abc", EventLogPath: @"C:\t\events.jsonl", ParentProcessId: 7, NoActivate: true);
-        string[] planted = ["--wam-test-token=s3cr3t", "http://u:p@host/", "--instance"];
+        string[] planted = ["--helmsman-test-token=s3cr3t", "http://u:p@host/", "--instance"];
 
         // Act
         var commandLine = FixtureAppSession.CommandLine(options, planted);

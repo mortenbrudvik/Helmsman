@@ -37,8 +37,8 @@ public class DebugPortLocatorTests
     [Fact]
     public void Find_ReadsDevToolsActivePort_ForPortZero()
     {
-        CommandLine(@"""C:\Edge\msedge.exe"" --remote-debugging-port=0 ""--user-data-dir=C:\Temp\WamM5Check-1""");
-        _portFiles[@"C:\Temp\WamM5Check-1"] = 51874;
+        CommandLine(@"""C:\Edge\msedge.exe"" --remote-debugging-port=0 ""--user-data-dir=C:\Temp\HelmsmanM5Check-1""");
+        _portFiles[@"C:\Temp\HelmsmanM5Check-1"] = 51874;
         Listener(51874, BrowserPid);
 
         var lookup = CreateSut().Find(BrowserPid);
@@ -135,7 +135,7 @@ public class DebugPortLocatorTests
     public void DevToolsActivePortFile_ReadsThePort_OfAFileLargerThanItReads()
     {
         // The read is bounded: the port is on the first line, whatever follows it
-        var dir = Path.Combine(Path.GetTempPath(), "WamPortFile-" + Guid.NewGuid().ToString("N"));
+        var dir = Path.Combine(Path.GetTempPath(), "HelmsmanPortFile-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {

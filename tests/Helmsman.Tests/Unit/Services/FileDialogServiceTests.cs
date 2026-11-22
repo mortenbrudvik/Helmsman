@@ -11,7 +11,7 @@ public sealed class FileDialogServiceTests : IDisposable
     private static readonly nint Dialog = 0x5000;
     private static readonly nint Prompt = 0x6000;
 
-    private readonly string _folder = Path.Combine(Path.GetTempPath(), "WamFileDialog", Guid.NewGuid().ToString("N"));
+    private readonly string _folder = Path.Combine(Path.GetTempPath(), "HelmsmanFileDialog", Guid.NewGuid().ToString("N"));
     private readonly Mock<IDialogService> _dialogs = new();
     private readonly Mock<IElementSearchService> _search = new();
     private readonly Mock<IElementActionService> _actions = new();

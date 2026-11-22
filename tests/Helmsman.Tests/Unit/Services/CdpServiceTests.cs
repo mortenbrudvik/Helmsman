@@ -369,7 +369,7 @@ public class CdpServiceTests
             .Tab("A", "c=true", 1);
         var sut = CreateSut(browser);
 
-        var result = await sut.FindTargetForWindowAsync(Port, At("WAM dlg - Google Chrome", 400, 300, 1200, 800), LongTimeout);
+        var result = await sut.FindTargetForWindowAsync(Port, At("Helmsman dlg - Google Chrome", 400, 300, 1200, 800), LongTimeout);
 
         result.Success.Should().BeTrue(result.Error);
         result.Value!.Id.Should().Be("A");
@@ -394,7 +394,7 @@ public class CdpServiceTests
     {
         var sut = CreateSut(FakeCdpHttpHandler.Targets(("A", "c=true", "https://example.test/")));
 
-        var result = await sut.FindTargetForWindowAsync(Port, TitleOnly("WAM dlg - Google Chrome"), LongTimeout);
+        var result = await sut.FindTargetForWindowAsync(Port, TitleOnly("Helmsman dlg - Google Chrome"), LongTimeout);
 
         result.ErrorCode.Should().Be(BrowserErrorCode.CdpTargetNotFound);
     }
@@ -409,7 +409,7 @@ public class CdpServiceTests
             .Tab("B", "c=true", 2);
         var sut = CreateSut(browser);
 
-        var result = await sut.FindTargetForWindowAsync(Port, At("WAM dlg - Google Chrome", 400, 300, 1200, 800), LongTimeout);
+        var result = await sut.FindTargetForWindowAsync(Port, At("Helmsman dlg - Google Chrome", 400, 300, 1200, 800), LongTimeout);
 
         result.Success.Should().BeTrue(result.Error);
         result.Value!.Id.Should().Be("B");

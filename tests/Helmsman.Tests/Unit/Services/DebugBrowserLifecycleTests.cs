@@ -18,7 +18,7 @@ public sealed class DebugBrowserLifecycleTests : IDisposable
 
     private static readonly DateTime DebugStart = new(2026, 10, 15, 9, 0, 0, DateTimeKind.Utc);
 
-    private readonly string _root = Path.Combine(Path.GetTempPath(), $"wam-m54-lifecycle-{Guid.NewGuid():N}");
+    private readonly string _root = Path.Combine(Path.GetTempPath(), $"helmsman-m54-lifecycle-{Guid.NewGuid():N}");
     private readonly DebugBrowserProfiles _profiles;
     private readonly Mock<IDebugBrowserLauncher> _processes = new();
     private readonly Mock<INativeProcessWrapper> _native = new();

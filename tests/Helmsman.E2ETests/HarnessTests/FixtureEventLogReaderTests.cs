@@ -6,9 +6,9 @@ namespace Helmsman.E2ETests.HarnessTests;
 public class FixtureEventLogReaderTests : IDisposable
 {
     private const string ReadyLine =
-        """{"seq":1,"event":"ready","time":"2026-10-10T12:00:00+02:00","pid":4242,"hwnd":4096,"title":"WAM Fixture Main abc","dpi":144,"dpiAwareness":"perMonitorV2","windowRect":{"x":-1913,"y":100,"width":1140,"height":810},"clientRect":{"x":-1902,"y":145,"width":1118,"height":754},"elements":{"editBox":{"x":-1884,"y":190,"width":480,"height":33},"swatchRed":{"x":-1884,"y":600,"width":96,"height":60}}}""";
+        """{"seq":1,"event":"ready","time":"2026-10-10T12:00:00+02:00","pid":4242,"hwnd":4096,"title":"Helmsman Fixture Main abc","dpi":144,"dpiAwareness":"perMonitorV2","windowRect":{"x":-1913,"y":100,"width":1140,"height":810},"clientRect":{"x":-1902,"y":145,"width":1118,"height":754},"elements":{"editBox":{"x":-1884,"y":190,"width":480,"height":33},"swatchRed":{"x":-1884,"y":600,"width":96,"height":60}}}""";
 
-    private readonly string _directory = Path.Combine(Path.GetTempPath(), "WamE2E-tests-" + Guid.NewGuid().ToString("N"));
+    private readonly string _directory = Path.Combine(Path.GetTempPath(), "HelmsmanE2E-tests-" + Guid.NewGuid().ToString("N"));
     private readonly string _path;
 
     public FixtureEventLogReaderTests()
@@ -110,7 +110,7 @@ public class FixtureEventLogReaderTests : IDisposable
         // Assert - negative coordinates are normal on a monitor left of the primary one
         parsed.ProcessId.Should().Be(4242);
         parsed.MainWindowHandle.Should().Be((nint)4096);
-        parsed.Title.Should().Be("WAM Fixture Main abc");
+        parsed.Title.Should().Be("Helmsman Fixture Main abc");
         parsed.Dpi.Should().Be(144);
         parsed.DpiAwareness.Should().Be("perMonitorV2");
         parsed.WindowRect.Should().Be(new ScreenRect(-1913, 100, 1140, 810));
@@ -133,7 +133,7 @@ public class FixtureEventLogReaderTests : IDisposable
         // Arrange - the canvas window's report (M6.3): where each line and word is on the screen
         var opened = FixtureEvent.Parse(
             """
-            {"seq":5,"event":"canvasOpened","hwnd":8192,"title":"WAM Fixture Canvas abc","dpi":96,
+            {"seq":5,"event":"canvasOpened","hwnd":8192,"title":"Helmsman Fixture Canvas abc","dpi":96,
              "lines":[{"text":"Glyph quartz 4711km","rect":{"x":-500,"y":40,"width":300,"height":38},
                        "words":[{"text":"Glyph","rect":{"x":-500,"y":40,"width":80,"height":38}},
                                 {"text":"quartz","rect":{"x":-410,"y":40,"width":90,"height":38}}]}]}
@@ -144,7 +144,7 @@ public class FixtureEventLogReaderTests : IDisposable
 
         // Assert
         canvas.WindowHandle.Should().Be((nint)8192);
-        canvas.Title.Should().Be("WAM Fixture Canvas abc");
+        canvas.Title.Should().Be("Helmsman Fixture Canvas abc");
         canvas.Dpi.Should().Be(96);
         canvas.Lines.Should().ContainSingle().Which.Text.Should().Be("Glyph quartz 4711km");
         canvas.Lines[0].Rect.Should().Be(new ScreenRect(-500, 40, 300, 38));

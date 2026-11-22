@@ -27,7 +27,7 @@ namespace Helmsman.Tests.Unit.Architecture;
 /// interface may hold the real one. The hotkey wrapper's parameterless constructor names the servers' own pause and chord
 /// marks, so a method that constructs it calls nothing on a hotkey wrapper, and the wrapper goes straight into a reflection
 /// read of a field (never kept, returned or passed on); the constructor that takes a name opens the pause of any name, so test
-/// code passes it only a name visibly of its own (Local\WamTests., traced through the IL; a naming helper takes no parameter,
+/// code passes it only a name visibly of its own (Local\HelmsmanTests., traced through the IL; a naming helper takes no parameter,
 /// loads no field and calls no test or server code; a value merged from two paths, as by a ?? or a ?:, is not traced). The
 /// shared pause is opened only on a wrapper built so in the same method, and set or reset only when it was opened so.</item>
 /// <item>Server code that a test hands a real wrapper to (a constructor called in the same method) calls only those read members
@@ -84,7 +84,7 @@ public class TestCodeNativeWrapperTests
         [("Helmsman.Tests.Integration.SecurityProbeIntegrationTests", typeof(NativeProcessWrapper))] =
             "reads the test host's ancestors and start time, and records the agent's host with HostGuard, which only reads processes",
         [("Helmsman.Tests.Unit.Native.NativeHotkeyWrapperSharedPauseTests", typeof(NativeHotkeyWrapper))] =
-            @"opens only named events of its own (Local\WamTests.SharedPause.<guid>), never the servers' pause, and registers no hotkey; " +
+            @"opens only named events of its own (Local\HelmsmanTests.SharedPause.<guid>), never the servers' pause, and registers no hotkey; " +
             "the server's parameterless wrapper is only constructed to read the name it would open (held: ReadOnlyMembers, " +
             "TestCode_ConstructsTheServersHotkeyWrapper_OnlyToReadIt, TestCode_NamesAHotkeyWrapper_OnlyWithANameOfItsOwn for the names, " +
             "and TestCode_OpensSetsAndResetsTheSharedPause_OnlyOnANameOfItsOwn for the pauses it opens, sets and resets)",
@@ -141,7 +141,7 @@ public class TestCodeNativeWrapperTests
     };
 
     /// <summary>The prefix of the names of the shared pause test code may build a hotkey wrapper on.</summary>
-    private const string TestPausePrefix = @"Local\WamTests.";
+    private const string TestPausePrefix = @"Local\HelmsmanTests.";
 
     /// <summary>
     /// What names the servers' own shared objects: the pause and the chord marks, and the hotkey wrapper's fields that hold
@@ -341,7 +341,7 @@ public class TestCodeNativeWrapperTests
             "the scan must see a sample open the servers' pause");
         uses.Should().BeEmpty(
             "the server's hotkey wrapper opens the pause and chord marks every server on the desktop shares: construct the wrapper " +
-            "with a name of the test's own (Local\\WamTests.<test>.<guid>) to call it");
+            "with a name of the test's own (Local\\HelmsmanTests.<test>.<guid>) to call it");
 
         // A method that constructs it calls nothing on it, but a helper could hand it back, or a field keep it, for another
         // method to call: the wrapper goes straight into a reflection read of the name it would open, or the test fails
@@ -354,7 +354,7 @@ public class TestCodeNativeWrapperTests
         ServersHotkeyWrappersKept(TestCode()).Should().BeEmpty(
             "the server's hotkey wrapper holds the servers' own pause and chord marks: construct it only to read a field " +
             "(FieldInfo.GetValue(new NativeHotkeyWrapper())), never to keep, return or pass it; for a pause or chord to use, " +
-            "construct the wrapper with a name of the test's own (Local\\WamTests.<test>.<guid>)");
+            "construct the wrapper with a name of the test's own (Local\\HelmsmanTests.<test>.<guid>)");
     }
 
     [Fact]
@@ -399,7 +399,7 @@ public class TestCodeNativeWrapperTests
             ], "a pause opened on a wrapper of a name of the test's own, and set through a local, is its own");
         uses.Where(u => !u.OfItsOwn).Select(u => u.Description).Should().BeEmpty(
             "the shared pause of the servers' name pauses or resumes every server on the desktop: open it only on " +
-            "new NativeHotkeyWrapper(<a name of the test's own>) in the same method (a Local\\WamTests.<test> literal, a helper " +
+            "new NativeHotkeyWrapper(<a name of the test's own>) in the same method (a Local\\HelmsmanTests.<test> literal, a helper " +
             "that builds one such as UniqueName, or a local only those set), and set or reset only the pause it returns, directly " +
             "or through a local; a wrapper or pause kept in a field, passed in, handed back by a helper or merged by a ?? or a ?: " +
             "is not traced");
@@ -409,7 +409,7 @@ public class TestCodeNativeWrapperTests
     public void TestCode_NamesAHotkeyWrapper_OnlyWithANameOfItsOwn()
     {
         // Arrange - the constructor that takes a name opens the pause of any name it is given, the servers' own too: the name
-        // must visibly be the test's own (Local\WamTests.), a literal, a test helper that builds it from one, or a local only
+        // must visibly be the test's own (Local\HelmsmanTests.), a literal, a test helper that builds it from one, or a local only
         // those set
         static string Key(HotkeyNaming n) => $"{n.Owner.Name}.{SourceMethodName(n.Caller) ?? n.Caller.Name}";
 
@@ -446,7 +446,7 @@ public class TestCodeNativeWrapperTests
             .Select(n => n.Description)
             .Should().BeEmpty(
                 "a hotkey wrapper opens the pause of the name it is built on, and the servers' (Local\\Helmsman.InputPaused) " +
-                "would pause or resume every server on the desktop: pass a literal of Local\\WamTests.<test>, or a test helper " +
+                "would pause or resume every server on the desktop: pass a literal of Local\\HelmsmanTests.<test>, or a test helper " +
                 "that builds one (UniqueName), directly or through a local, and not through a ?? or a ?:; or add the method to " +
                 "SanctionedHotkeyNames with why its name is its own");
         SanctionedHotkeyNames.Keys.Should().BeSubsetOf(untraced.Select(n => (n.Owner.FullName!, SourceMethodName(n.Caller) ?? n.Caller.Name)),
@@ -1012,11 +1012,11 @@ internal static class NativeWrapperScanSamples
 
     public static bool RegistersAHotkeyThroughItsInterface()
     {
-        INativeHotkeyWrapper hotkeys = new NativeHotkeyWrapper(@"Local\WamTests.ScanSample");
+        INativeHotkeyWrapper hotkeys = new NativeHotkeyWrapper(@"Local\HelmsmanTests.ScanSample");
         return hotkeys.RegisterHotKey(1, 0x0002, 0x13).Succeeded;
     }
 
-    public static IDisposable MarksAChord() => new NativeHotkeyWrapper(@"Local\WamTests.ScanSample").MarkChordHolder("sample");
+    public static IDisposable MarksAChord() => new NativeHotkeyWrapper(@"Local\HelmsmanTests.ScanSample").MarkChordHolder("sample");
 
     public static IDesktopPauseFlag OpensTheServersPause()
     {
@@ -1046,9 +1046,9 @@ internal static class NativeWrapperScanSamples
 
     private static string ServersPauseName() =>
         typeof(NativeHotkeyWrapper).GetField("DesktopPauseName", BindingFlags.NonPublic | BindingFlags.Static)?.GetValue(null) as string ??
-        @"Local\WamTests.ScanSample";
+        @"Local\HelmsmanTests.ScanSample";
 
-    private static string PauseNameOfItsOwn() => $@"Local\WamTests.ScanSample.{Guid.NewGuid():N}";
+    private static string PauseNameOfItsOwn() => $@"Local\HelmsmanTests.ScanSample.{Guid.NewGuid():N}";
 
     // The servers' wrapper handed back by a helper or kept in a field, and its pause set or reset in another method; and a
     // pause of the test's own set through a local
@@ -1076,11 +1076,11 @@ internal static class NativeWrapperScanSamples
 
     public static IDesktopPauseFlag NamesThePauseThroughAField() => new NativeHotkeyWrapper(PauseNameOfAField()).OpenDesktopPause();
 
-    private static string PauseNameOr(string? name) => name ?? @"Local\WamTests.ScanSample";
+    private static string PauseNameOr(string? name) => name ?? @"Local\HelmsmanTests.ScanSample";
 
     private static string? s_pauseName = null;
 
-    private static string PauseNameOfAField() => s_pauseName ?? @"Local\WamTests.ScanSample";
+    private static string PauseNameOfAField() => s_pauseName ?? @"Local\HelmsmanTests.ScanSample";
 
     // A name, a wrapper or a pause merged from two paths (?? or ?:) in the method itself: the instruction that takes it is a
     // branch target, so the value the instruction before it pushes (a name of the test's own here) may not be the one it gets

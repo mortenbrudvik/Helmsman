@@ -7,7 +7,7 @@ namespace Helmsman.Tests.Unit.Services;
 /// </summary>
 public sealed class DebugBrowserProfilesTests : IDisposable
 {
-    private readonly string _root = Path.Combine(Path.GetTempPath(), $"wam-m54-profiles-{Guid.NewGuid():N}");
+    private readonly string _root = Path.Combine(Path.GetTempPath(), $"helmsman-m54-profiles-{Guid.NewGuid():N}");
     private readonly string _named;
     private readonly string _temporary;
     private DateTime _now = DateTime.UtcNow;

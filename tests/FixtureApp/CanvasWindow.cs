@@ -205,7 +205,7 @@ internal sealed class CanvasWindow : Window
     {
         protected override AutomationControlType GetAutomationControlTypeCore() => AutomationControlType.Pane;
 
-        protected override string GetClassNameCore() => "WamFixtureTextCanvas";
+        protected override string GetClassNameCore() => "HelmsmanFixtureTextCanvas";
 
         protected override string GetNameCore() => "";
 

@@ -8,7 +8,7 @@ namespace Helmsman.E2ETests.Scenarios;
 /// </summary>
 public class FixtureTypingTests
 {
-    private const string Text = "wam e2e 42";
+    private const string Text = "helmsman e2e 42";
 
     private static readonly TimeSpan SettleTimeout = TimeSpan.FromSeconds(3);
 

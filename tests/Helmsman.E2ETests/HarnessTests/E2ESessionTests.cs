@@ -31,7 +31,7 @@ public class E2ESessionTests
     }
 
     private static WindowInfo MainWindow(bool isAgentHost) =>
-        new(FixtureWindow, "WAM Fixture Main abc", FixtureContract.ProcessName, FixturePid, new WindowRect(0, 0, 800, 600),
+        new(FixtureWindow, "Helmsman Fixture Main abc", FixtureContract.ProcessName, FixturePid, new WindowRect(0, 0, 800, 600),
             WindowState.Normal, IsVisible: true, MonitorIndex: 0)
         {
             IsAgentHost = isAgentHost

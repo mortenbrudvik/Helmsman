@@ -28,7 +28,7 @@ public sealed class NativeFakedServer : IDisposable
     private readonly Dictionary<Type, object> _fakes = new();
     private readonly List<ServiceDescriptor> _registrations;
     private readonly ServiceProvider _provider;
-    private readonly string _folder = Path.Combine(Path.GetTempPath(), "WamNativeFaked", Guid.NewGuid().ToString("N"));
+    private readonly string _folder = Path.Combine(Path.GetTempPath(), "HelmsmanNativeFaked", Guid.NewGuid().ToString("N"));
 
     /// <param name="policy">The user's target policy.</param>
     public NativeFakedServer(TargetPolicySettings policy)

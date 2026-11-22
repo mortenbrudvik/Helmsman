@@ -6,7 +6,7 @@ using System.Windows.Threading;
 namespace Helmsman.FixtureApp;
 
 /// <summary>
-/// Entry point of WamFixtureApp. See <see cref="FixtureOptions"/> for the command line and
+/// Entry point of HelmsmanFixtureApp. See <see cref="FixtureOptions"/> for the command line and
 /// <see cref="FixtureContract"/> for what the tests can rely on.
 /// </summary>
 internal static class Program

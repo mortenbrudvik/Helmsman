@@ -26,12 +26,12 @@ public sealed class DebugBrowserLaunchTests : IDisposable
     private readonly Mock<IWindowWaitService> _windowWait = new();
     private readonly List<ProcessStartInfo> _started = [];
     private readonly List<Func<WindowCandidate, bool>> _owners = [];
-    private readonly string _profile = Path.Combine(Path.GetTempPath(), $"wam-m51-test-{Guid.NewGuid():N}");
+    private readonly string _profile = Path.Combine(Path.GetTempPath(), $"helmsman-m51-test-{Guid.NewGuid():N}");
 
     /// <summary>The server's profile folders (roadmap M5.4), under a folder of this test's own.</summary>
     private readonly DebugBrowserProfiles _profiles = new(
-        Path.Combine(Path.GetTempPath(), $"wam-m54-roots-{Guid.NewGuid():N}", "named"),
-        Path.Combine(Path.GetTempPath(), $"wam-m54-roots-{Guid.NewGuid():N}", "temp"));
+        Path.Combine(Path.GetTempPath(), $"helmsman-m54-roots-{Guid.NewGuid():N}", "named"),
+        Path.Combine(Path.GetTempPath(), $"helmsman-m54-roots-{Guid.NewGuid():N}", "temp"));
     private Action? _whenStarted;
 
     /// <summary>The started browser's start time, as each read of it finds it (then <see cref="BrowserStart"/>).</summary>
@@ -426,7 +426,7 @@ public sealed class DebugBrowserLaunchTests : IDisposable
     }
 
     [Theory]
-    [InlineData("wam-profile")]
+    [InlineData("helmsman-profile")]
     [InlineData(@"profiles\debug")]
     [InlineData(@"\profiles\debug")]
     [InlineData(@"C:profile")]

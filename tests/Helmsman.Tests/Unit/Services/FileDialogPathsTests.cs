@@ -9,7 +9,7 @@ namespace Helmsman.Tests.Unit.Services;
 /// </summary>
 public sealed class FileDialogPathsTests : IDisposable
 {
-    private readonly string _folder = Path.Combine(Path.GetTempPath(), "WamFileDialogPaths", Guid.NewGuid().ToString("N"));
+    private readonly string _folder = Path.Combine(Path.GetTempPath(), "HelmsmanFileDialogPaths", Guid.NewGuid().ToString("N"));
 
     public FileDialogPathsTests()
     {
