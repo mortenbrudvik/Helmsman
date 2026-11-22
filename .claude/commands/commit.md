@@ -1,6 +1,6 @@
 # Commit
 
-Create a versioned release commit with tag for the Windows App Manager plugin.
+Create a versioned release commit with tag for the win-desktop-mcp plugin.
 
 ## Usage
 

@@ -1,6 +1,6 @@
 # Update Plugin
 
-Update the installed Windows App Manager plugin from development source.
+Update the installed win-desktop-mcp plugin from development source.
 
 ## Usage
 
@@ -18,7 +18,7 @@ repository location or the user name:
 ```powershell
 $repo = git rev-parse --show-toplevel
 $version = (Get-Content "$repo\.claude-plugin\plugin.json" -Raw | ConvertFrom-Json).version
-$dest = Join-Path $env:USERPROFILE ".claude\plugins\cache\windows-app-manager-marketplace\windows-app-manager\$version"
+$dest = Join-Path $env:USERPROFILE ".claude\plugins\cache\win-desktop-mcp-marketplace\win-desktop-mcp\$version"
 ```
 
 The installed plugin runs `${CLAUDE_PLUGIN_ROOT}/bin/win-desktop-mcp.exe`, which is
@@ -30,13 +30,15 @@ Read and display:
 - **Development version**: `$version` (from `.claude-plugin/plugin.json`)
 - **Installed version**: from `~/.claude/plugins/installed_plugins.json`. In that file (format
   `"version": 2`), `plugins` maps `"<plugin>@<marketplace>"` keys to arrays of install entries. Use
-  the `version` of the entry under `plugins["windows-app-manager@windows-app-manager-marketplace"]`
+  the `version` of the entry under `plugins["win-desktop-mcp@win-desktop-mcp-marketplace"]`
   (the one with `"scope": "user"` if there are several).
 
 If that key is missing, the plugin is not installed. Stop and ask the user to install it first
 (`/plugin marketplace add mortenbrudvik/WindowsAppManagerMcp`, then
-`/plugin install windows-app-manager@windows-app-manager-marketplace`). This command only updates an
-existing install.
+`/plugin install win-desktop-mcp@win-desktop-mcp-marketplace`). This command only updates an
+existing install. If only the 3.x plugin, `windows-app-manager@windows-app-manager-marketplace`, is
+installed, do not update that entry: point the user to "Upgrading from 3.x" in README.md, which
+replaces it with the renamed plugin.
 
 Show the user the version comparison before proceeding.
 
@@ -78,7 +80,7 @@ if (Test-Path "$dest\.claude-plugin\bin") { Remove-Item -Recurse -Force "$dest\.
 ### 4. Update installed_plugins.json
 
 Read `~/.claude/plugins/installed_plugins.json` and update the entry found in step 1, under
-`plugins["windows-app-manager@windows-app-manager-marketplace"]`:
+`plugins["win-desktop-mcp@win-desktop-mcp-marketplace"]`:
 
 - `version`: `$version`
 - `installPath`: `$dest`
@@ -106,7 +108,7 @@ Versions:
   Installed:   1.11.0
 
 Building release binary...
-✓ Published ...\windows-app-manager\1.12.0\bin\win-desktop-mcp.exe (1.12.0+3f2a9c1...)
+✓ Published ...\win-desktop-mcp\1.12.0\bin\win-desktop-mcp.exe (1.12.0+3f2a9c1...)
 
 Copying files to cache...
 ✓ .claude-plugin/ copied
