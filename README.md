@@ -115,8 +115,8 @@ files are elsewhere, the notes below say so.
 - Until you do, a `WAM_*` variable is still read when its `HELMSMAN_*` name is not set or is empty, so a deny list or
   read-only mode you set under the old name keeps applying, also when your MCP client passes the new name empty. Once
   the `HELMSMAN_*` name holds a value, it wins and the `WAM_*` one is ignored.
-- While an old name is in use, `get_server_info`'s `warnings` and the server's log at start (stderr) name it, never its
-  value: as read in place of its new name, or as ignored because its new name holds a value too.
+- While an old name holds a value, `get_server_info`'s `warnings` and the server's log at start (stderr) name it, never
+  its value: as read in place of its new name, or as ignored because its new name holds a value too.
 - Results that say where a setting came from (the `source` fields) and messages that tell you which variable to set
   name the `HELMSMAN_*` variable, also when the value came from the `WAM_*` one.
 - The resources are now `helmsman://monitors`, `helmsman://windows` and `helmsman://layouts/{name}`. A `wam://` URI is
@@ -128,12 +128,19 @@ files are elsewhere, the notes below say so.
   Helmsman uses that folder (when several old folders hold a preset of the same name, the most recently written file):
   - From a build from main: when `%LOCALAPPDATA%\win-desktop-mcp\layouts` has been used (it holds an `.initialized`
     file), only its presets: it already holds what that build copied from 3.x, so what you deleted there stays
-    deleted, and no samples are added.
+    deleted, and no samples are added. A preset changed or added in `%LOCALAPPDATA%\WindowsAppManagerMcp\layouts` after
+    that build's first run is not copied (that build's copy is used); the file stays there, and you can copy it into
+    the new folder by hand.
   - From 3.x: otherwise, when `%LOCALAPPDATA%\WindowsAppManagerMcp\layouts` has been used (it holds an `.initialized`
     file), its presets but not those in the `layouts` folder of an older plugin version: it already holds what 3.x
     copied from them, so here too what you deleted stays deleted, and no samples are added.
-  - When neither folder has been used: the presets in both and in the `layouts` folder of an older plugin version, and
-    the sample presets.
+  - When neither folder has been used: the presets in both, and, when Helmsman runs as the Claude Code plugin, those in
+    the `layouts` folder of an older plugin version; and the sample presets.
+  - If your presets are only in an older plugin version's `layouts` folder (versions 1.11 and older kept them next to
+    the exe, with no `%LOCALAPPDATA%` folder): they are copied only when Helmsman first uses its layouts folder, which a
+    layout tool does (as do reading a `helmsman://layouts/{name}` resource, completing a layout name and the workspace
+    tools), and Claude Code deletes an uninstalled plugin version's folder 14 days after you uninstall it, so run
+    `list_layouts` soon after installing Helmsman.
   - With `HELMSMAN_LAYOUTS_PATH` (or still `WAM_LAYOUTS_PATH`) set, that folder is used as before.
 - **Not carried over.** Helmsman starts these afresh in its own folders, and leaves the old ones where they are (in
   `%LOCALAPPDATA%\WindowsAppManagerMcp` and `%TEMP%\WindowsAppManagerMcp` for 3.x, in `%LOCALAPPDATA%\win-desktop-mcp`
@@ -242,7 +249,7 @@ server configuration). No tool argument can change them.
 A variable set under its name from before release 4.0.0, `WAM_` and the same suffix (such as `WAM_DENY_PROCESSES`), is
 still read when its `HELMSMAN_` name is not set or is empty (white space only counts as empty); when both hold a value,
 the `HELMSMAN_` one wins.
-`get_server_info` and the log at start warn about every old name in use, so rename them when you can.
+`get_server_info` and the log at start warn about every old name that holds a value, so rename them when you can.
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
@@ -366,7 +373,7 @@ The `config/layouts/` folder contains example presets. They are built into the s
 - `dual-monitor.json` - Multi-monitor configuration
 - `focus-mode.json` - Single centered window
 
-Presets are stored in `%LOCALAPPDATA%\Helmsman\layouts`, outside the plugin folder, so they survive plugin updates. To use another folder, set the `HELMSMAN_LAYOUTS_PATH` environment variable to an absolute path. On first run, presets saved by older versions (in a `layouts` folder next to the executable, or in `%LOCALAPPDATA%\win-desktop-mcp\layouts` or `%LOCALAPPDATA%\WindowsAppManagerMcp\layouts`) are copied there and the originals are left in place; the newer of those two folders that has had its own first run (it holds an `.initialized` file) stands for the versions before it: presets are copied from it and not from theirs, and no samples are added, so what you deleted there stays deleted. Existing presets are never overwritten, and a sample you delete is not added back. A file in the folder that is not a valid preset is listed by `list_layouts` with its error (`InvalidPresetFile`) and cannot be applied; fix or delete it there, since the layout tools never change it (`delete_layout` of its name deletes a valid preset of the same name, not that file).
+Presets are stored in `%LOCALAPPDATA%\Helmsman\layouts`, outside the plugin folder, so they survive plugin updates. To use another folder, set the `HELMSMAN_LAYOUTS_PATH` environment variable to an absolute path. On first run, presets saved by older versions (in a `layouts` folder next to the executable, or next to an older plugin version's when Helmsman runs as the Claude Code plugin, or in `%LOCALAPPDATA%\win-desktop-mcp\layouts` or `%LOCALAPPDATA%\WindowsAppManagerMcp\layouts`) are copied there and the originals are left in place; the newer of those two folders that has had its own first run (it holds an `.initialized` file) stands for the versions before it: presets are copied from it and not from theirs, and no samples are added, so what you deleted there stays deleted. Existing presets are never overwritten, and a sample you delete is not added back. A file in the folder that is not a valid preset is listed by `list_layouts` with its error (`InvalidPresetFile`) and cannot be applied; fix or delete it there, since the layout tools never change it (`delete_layout` of its name deletes a valid preset of the same name, not that file).
 
 ## Building
 

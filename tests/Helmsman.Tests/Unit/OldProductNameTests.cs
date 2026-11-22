@@ -108,6 +108,8 @@ public partial class OldProductNameTests
         new("README.md", @"not `using-windows-app-manager`", "the upgrade notes: the 3.x skill name"),
         new("README.md", @"as `helmsman` instead of `windows-app-manager`", "the upgrade notes: the 3.x serverInfo.name"),
         new("README.md", @"3\.x shipped `WindowsAppManagerMcp\.exe`", "the upgrade notes: the 3.x exe a hand-written config points at"),
+        new("README.md", @"A preset changed or added in `%LOCALAPPDATA%\\WindowsAppManagerMcp\\layouts` after\s+that build's first run",
+            "the upgrade notes: the 3.x AppData folder, whose later changes are not copied when the build from main's folder is used"),
         new("README.md", @"From 3\.x: otherwise, when `%LOCALAPPDATA%\\WindowsAppManagerMcp\\layouts` has been used",
             "the upgrade notes: the 3.x AppData folder presets are copied from"),
         new("README.md", @"\(in\s+`%LOCALAPPDATA%\\WindowsAppManagerMcp` and `%TEMP%\\WindowsAppManagerMcp` for 3\.x,",
