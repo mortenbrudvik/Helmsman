@@ -17,9 +17,10 @@ upgrade as [Upgrading from 3.x](README.md#upgrading-from-3x) describes. The Clau
 
 ## Reporting a vulnerability
 
-Do not open a public issue, pull request or discussion for a vulnerability. Report it privately through GitHub: on the
-repository's **Security** tab choose **Report a vulnerability**, or go to
-<https://github.com/mortenbrudvik/Helmsman/security/advisories/new>.
+Do not describe a vulnerability in a public issue, pull request or discussion. Report it privately through GitHub: on
+the repository's **Security** tab choose **Report a vulnerability**, or go to
+<https://github.com/mortenbrudvik/Helmsman/security/advisories/new>. If the Security tab shows no **Report a
+vulnerability** button, open an issue that only asks for a private channel, with no details of the problem.
 
 Please include:
 
@@ -72,9 +73,13 @@ welcome as ordinary issues.
   list, or a command typed into a console is not caught ([Commands and scripts](docs/TOOLS.md#commands-and-scripts)).
   Nor is the input guard: Start search, Task Manager's Run new task and File Explorer's address bar stay open
   ([Input safety](docs/TOOLS.md#input-safety)).
-- What the allow/deny list does not filter, listed under "Not enforced" in
-  [What the process allow/deny list covers](README.md#what-the-process-allowdeny-list-covers): `take_screenshot` and
-  `capture_region`, window titles, the launch tools, and the browser reading tools with an explicit `cdpPort`.
+- What the allow/deny list does not filter. The full list is under "Not enforced" in
+  [What the process allow/deny list covers](README.md#what-the-process-allowdeny-list-covers) and in the Target Policy
+  entry of README's [Security](README.md#security). It includes, among others: `take_screenshot` and `capture_region`;
+  a window capture whose `captureMethod` is `ScreenBitBlt` or `BitBltFallback`, which can show a denied window that
+  covers the captured one; `get_browser_content` and `get_browser_url` with an explicit `cdpPort`; the launch tools;
+  a denied app's window titles in the window lists and in the audit log; and a denied app's content inside an allowed
+  app's window (an embedded WebView2, a preview), which input, window captures and OCR still reach.
 - With `allowHostTarget`, the question shows the user the keys and text that will be sent, not what the host
   application does with them: in a terminal, a confirmed Enter runs the line.
 - The debug browser's DevTools port has no authentication: any program on the computer can control that browser while
