@@ -1,5 +1,6 @@
 using WinDesktopMcp.Models;
 using WinDesktopMcp.Services.Interfaces;
+using static WinDesktopMcp.Services.ProcessHelpers;
 
 namespace WinDesktopMcp.Services;
 
@@ -306,7 +307,4 @@ public sealed class LaunchWindowOwner
 
         return name;
     }
-
-    private static string StripExe(string name) =>
-        name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? name[..^4] : name;
 }
