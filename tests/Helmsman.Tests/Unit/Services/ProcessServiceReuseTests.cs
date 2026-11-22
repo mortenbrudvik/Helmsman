@@ -564,6 +564,24 @@ public class ProcessServiceReuseTests
         result.Window.Should().Be(word);
     }
 
+    [Theory]
+    [InlineData(".exe")]
+    [InlineData("\" .exe \"")]
+    public async Task ExpectWindowProcessName_ThatIsBlank_ReusesNoWindow(string processName)
+    {
+        // 4.0.0 read '.exe' as "", part of every name, so any open window of the app (here any window at all: the
+        // document's app is not known) was reused
+        _resolver.Setup(r => r.Resolve(It.IsAny<string>(), It.IsAny<string?>()))
+            .Returns<string, string?>((exe, _) => new ResolvedLaunchTarget(exe, LaunchTargetKind.Other));
+        Open(0x10, "WINWORD", "report.docx - Word");
+        Open(0x11, "msedge", "report.docx - Microsoft Edge");
+
+        var result = await LaunchAsync(@"C:\docs\report.docx", expectWindow: new LaunchWindowHint(ProcessName: processName));
+
+        result.Status.Should().Be(LaunchStatus.Started);
+        VerifyStarted();
+    }
+
     [Fact]
     public async Task ExpectWindowProcessName_NarrowsTheProgramsWindows()
     {

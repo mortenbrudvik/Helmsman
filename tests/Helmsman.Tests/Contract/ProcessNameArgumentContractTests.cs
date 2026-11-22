@@ -53,6 +53,23 @@ public class ProcessNameArgumentContractTests
         ParsePayload(result).EnumerateArray().Select(w => w.GetProperty("handle").GetInt64()).Should().Equal(_notepad.ToInt64());
     }
 
+    [Theory]
+    [InlineData(".exe")]
+    [InlineData("\" .EXE \"")]
+    public async Task FindWindows_WithABlankProcessNameAndProcessNameContains_ListsNoWindow(string processName)
+    {
+        // 4.0.0 read '.exe' as "", which is part of every name, so it listed every window
+        await using var server = await StartServerAsync();
+
+        var result = await server.CallToolAsync("find_windows", new Dictionary<string, object?>
+        {
+            ["processName"] = processName, ["processNameContains"] = true
+        });
+
+        result.IsError.Should().NotBe(true);
+        ParsePayload(result).EnumerateArray().Should().BeEmpty();
+    }
+
     [Fact]
     public async Task AWindowSelectorWithAPathAsProcessName_IsInvalidArguments()
     {

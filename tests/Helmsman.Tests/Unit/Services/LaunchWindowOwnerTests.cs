@@ -188,6 +188,22 @@ public class LaunchWindowOwnerTests
         owner.Matches(Window(8000, "report.docx - Word")).Should().BeTrue();
     }
 
+    [Theory]
+    [InlineData(".exe")]
+    [InlineData("\".EXE\"")]
+    public void AHintsProcessNameThatIsBlank_MatchesNoWindow(string processName)
+    {
+        // 4.0.0 read '.exe' as "", part of every name, so the hint matched every new window, another process's too, and the
+        // launch could claim it
+        AddProcess(8000, 4, "WINWORD.EXE", LaunchedAt.AddHours(-1));
+        AddProcess(8100, 4, "mspaint.exe", LaunchedAt.AddHours(-1));
+        var owner = OwnerOf(@"C:\Docs\report.docx", LaunchTargetKind.Other, launchedProcessId: null,
+            hint: new LaunchWindowHint(ProcessName: processName));
+
+        owner.Matches(Window(8000, "report.docx - Word")).Should().BeFalse();
+        owner.Matches(Window(8100, "Untitled - Paint")).Should().BeFalse();
+    }
+
     [Fact]
     public void AHintsProcessNameThatIsAPath_MatchesNoWindow()
     {
