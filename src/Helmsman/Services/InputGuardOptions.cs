@@ -100,13 +100,14 @@ public sealed record InputGuardOptions(
     public static InputGuardOptions Default { get; } = FromEnvironment(_ => null);
 
     /// <summary>Reads the options from the server's environment.</summary>
-    public static InputGuardOptions FromEnvironment() => FromEnvironment(SettingNames.ProcessEnvironment);
+    public static InputGuardOptions FromEnvironment() => FromEnvironment(null);
 
-    /// <summary>Reads the options from <paramref name="readVariable"/>; an unset or empty variable keeps the defaults.</summary>
-    public static InputGuardOptions FromEnvironment(Func<string, string?> readVariable)
+    /// <summary>
+    /// Reads the options from <paramref name="readVariable"/> (the server's environment when null); an unset or empty
+    /// variable keeps the defaults.
+    /// </summary>
+    public static InputGuardOptions FromEnvironment(Func<string, string?>? readVariable)
     {
-        ArgumentNullException.ThrowIfNull(readVariable);
-
         var entries = (SettingNames.Read(readVariable, DestructiveChordsVariable) ?? string.Empty)
             .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
         if (entries.Length == 0)

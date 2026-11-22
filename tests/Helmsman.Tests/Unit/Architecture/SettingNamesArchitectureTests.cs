@@ -6,10 +6,12 @@ namespace Helmsman.Tests.Unit.Architecture;
 
 /// <summary>
 /// Keeps every setting on SettingNames' rule (a HELMSMAN_ name, and its WAM_ name from before release 4.0.0 read when the
-/// new one is not set): no server type but SettingNames reads an environment variable by name, apart from ExecutableResolver's
-/// PATH and PATHEXT, so an options class cannot read its variable without the fallback; and every HELMSMAN_ name in the
+/// new one is not set or empty): no server type but SettingNames calls Environment.GetEnvironmentVariable(s), directly or
+/// as a delegate, apart from ExecutableResolver's PATH and PATHEXT, and SettingNames hands out no public delegate over the
+/// environment, so an options class reads its variable through SettingNames.Read. Other ways to reach the environment
+/// (Environment.ExpandEnvironmentVariables, a ProcessStartInfo's Environment) are not checked. Every HELMSMAN_ name in the
 /// server's source is one of SettingNames.All, so a setting added later cannot be read, documented or named in a message
-/// without being registered there. These tests read the server's IL and its source files only.
+/// without being registered there. These tests read the server's IL, its public members and its source files only.
 /// </summary>
 public sealed partial class SettingNamesArchitectureTests
 {
@@ -48,6 +50,23 @@ public sealed partial class SettingNamesArchitectureTests
         readers.Should().BeEquivalentTo(AllowedReaders.Keys,
             "an options class reads its variable through SettingNames.Read (passing a reader to test with), so a setting is " +
             "always read under its HELMSMAN_ name and then its old WAM_ name");
+    }
+
+    [Fact]
+    public void SettingNames_HandsOutNoEnvironmentReader()
+    {
+        // A public delegate over the process environment would let an options class read its HELMSMAN_ name with no
+        // fallback, and the check above would not see it: it finds only calls of Environment.GetEnvironmentVariable(s).
+        var readers = typeof(SettingNames).GetMembers(BindingFlags.Public | BindingFlags.Static)
+            .Where(member => member switch
+            {
+                PropertyInfo property => typeof(Delegate).IsAssignableFrom(property.PropertyType),
+                FieldInfo field => typeof(Delegate).IsAssignableFrom(field.FieldType),
+                _ => false
+            })
+            .Select(member => member.Name);
+
+        readers.Should().BeEmpty("a caller passes null to SettingNames.Read for the process environment");
     }
 
     [Fact]

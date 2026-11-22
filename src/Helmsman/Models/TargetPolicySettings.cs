@@ -78,15 +78,14 @@ public sealed record TargetPolicySettings(
     public static TargetPolicySettings Default { get; } = new(DefaultDeniedProcesses, null, DefaultSource);
 
     /// <summary>Reads the policy from the server's environment.</summary>
-    public static TargetPolicySettings FromEnvironment() => FromEnvironment(SettingNames.ProcessEnvironment);
+    public static TargetPolicySettings FromEnvironment() => FromEnvironment(null);
 
     /// <summary>
-    /// Reads the policy from <paramref name="readVariable"/>. An unset or empty variable keeps the default.
+    /// Reads the policy from <paramref name="readVariable"/> (the server's environment when null). An unset or empty
+    /// variable keeps the default.
     /// </summary>
-    public static TargetPolicySettings FromEnvironment(Func<string, string?> readVariable)
+    public static TargetPolicySettings FromEnvironment(Func<string, string?>? readVariable)
     {
-        ArgumentNullException.ThrowIfNull(readVariable);
-
         var denyTokens = Tokens(SettingNames.Read(readVariable, DenyVariable));
         IReadOnlyList<string> denied;
         string source;

@@ -148,12 +148,14 @@ public sealed class ToolsetSelection
     }
 
     /// <summary>The selection the server's environment makes from <see cref="Toolsets.Server"/>.</summary>
-    public static ToolsetSelection FromEnvironment() => FromEnvironment(SettingNames.ProcessEnvironment, Toolsets.Server);
+    public static ToolsetSelection FromEnvironment() => FromEnvironment(null, Toolsets.Server);
 
-    /// <summary>The selection the variables <paramref name="environment"/> returns make from <paramref name="catalog"/>.</summary>
-    public static ToolsetSelection FromEnvironment(Func<string, string?> environment, ToolsetCatalog catalog)
+    /// <summary>
+    /// The selection the variables <paramref name="environment"/> returns (the server's environment when null) make from
+    /// <paramref name="catalog"/>.
+    /// </summary>
+    public static ToolsetSelection FromEnvironment(Func<string, string?>? environment, ToolsetCatalog catalog)
     {
-        ArgumentNullException.ThrowIfNull(environment);
         ArgumentNullException.ThrowIfNull(catalog);
 
         var warnings = new List<string>();

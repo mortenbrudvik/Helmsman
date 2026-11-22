@@ -8,10 +8,10 @@ namespace Helmsman.Models;
 /// exactly as before, so a deny list, read-only mode or any other safety setting given under its old name keeps applying
 /// even beside an empty new name (an MCP client's env block that expands an unset variable passes one). Every setting
 /// treats an empty or white-space value as not set, so nothing is lost by reading the old name then. Every options class
-/// reads its variable through <see cref="Read"/>; get_server_info and the
-/// log at start warn about every old name in use (<see cref="FindOld"/>). SettingNamesArchitectureTests keeps every
-/// HELMSMAN_ name in the server's source listed in <see cref="All"/>, and keeps the options classes from reading the
-/// environment themselves.
+/// reads its variable through <see cref="Read"/>; get_server_info and the log at start warn about every old name in use
+/// (<see cref="FindOld"/>). SettingNamesArchitectureTests keeps every HELMSMAN_ name in the server's source listed in
+/// <see cref="All"/>, keeps every other server type (but ExecutableResolver, for PATH and PATHEXT) from calling
+/// Environment.GetEnvironmentVariable(s), and keeps this class from handing out a public delegate over the environment.
 /// </summary>
 public static class SettingNames
 {
@@ -44,10 +44,11 @@ public static class SettingNames
     ];
 
     /// <summary>
-    /// The server process's environment: the reader the options classes pass to <see cref="Read"/> by default. The only
-    /// place in the server that reads an environment variable by name, apart from PATH and PATHEXT (ExecutableResolver).
+    /// The server process's environment, which <see cref="Read"/> and <see cref="FindOld"/> use when given no reader. The
+    /// only place in the server that reads an environment variable by name, apart from PATH and PATHEXT (ExecutableResolver).
+    /// Private, so a caller cannot read a HELMSMAN_ name past the fallback: it passes null instead.
     /// </summary>
-    public static Func<string, string?> ProcessEnvironment { get; } = Environment.GetEnvironmentVariable;
+    private static readonly Func<string, string?> ProcessEnvironment = Environment.GetEnvironmentVariable;
 
     /// <summary>The name <paramref name="name"/> had before release 4.0.0: <c>WAM_</c> and the same suffix.</summary>
     /// <exception cref="ArgumentException"><paramref name="name"/> is not one of <see cref="All"/>.</exception>
