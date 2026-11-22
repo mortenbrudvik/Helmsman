@@ -8,8 +8,11 @@ namespace WinDesktopMcp.Native;
 /// per call. A call that throws, or whose thread cannot be started, also returns the fallback.
 /// </summary>
 /// <remarks>
-/// Each instance counts its own abandoned calls: the wrapper that owns it is refused while its own call is stuck, and others
-/// are not. The call's own cleanup (releasing the COM objects it made) runs on its thread when it returns, abandoned or not.
+/// <para>Each instance counts its own abandoned calls: the wrapper that owns it is refused while its own call is stuck, and others
+/// are not. The call's own cleanup (releasing the COM objects it made) runs on its thread when it returns, abandoned or not.</para>
+/// <para>The contract on the result: a result that arrives after its call was abandoned is dropped, and nothing releases it. So
+/// <c>T</c> must own no unmanaged resource (no IDisposable, COM object or handle): <c>work</c> releases everything it made
+/// before it returns, and returns managed data only, as the shell, virtual desktop, Applications folder and capture reads do.</para>
 /// </remarks>
 public sealed class DeadlineWorker
 {
