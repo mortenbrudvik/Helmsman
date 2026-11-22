@@ -966,7 +966,7 @@ public class ScreenshotService : IScreenshotService
     /// file. A failure to build, scale or encode the image is <see cref="ScreenshotErrorCode.EncodeFailed"/>; the file
     /// write reports its own codes. An image over the budget (a zoom), or one for the result over the inline bound
     /// (<see cref="CaptureRequest.ThrowIfOutputTooLarge"/>), is refused before its bitmap is allocated, whatever captured the
-    /// pixels; an image for the result that encodes to more bytes than the inline bound
+    /// pixels; an image for the result whose base64 would be longer than the inline bound
     /// (<see cref="CaptureRequest.ThrowIfEncodedTooLarge"/>) is refused before anything is returned or written.
     /// </summary>
     private static RenderedImage Render(CaptureResult capture, CaptureRequest request, Action<Bitmap>? annotate,

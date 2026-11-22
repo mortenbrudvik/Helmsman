@@ -211,32 +211,48 @@ public sealed record CaptureRequest(
 
         if (ReturnsImage && !CaptureLimits.FitsInline(outputWidth, outputHeight))
         {
+            var fitting = SuggestedMaxDimension(width, height);
+            var advice = fitting is { } largest
+                ? $"For this capture pass a maxDimension of at most {largest}"
+                : "Pass a smaller maxDimension";
             throw new CaptureException(ScreenshotErrorCode.InvalidImageSize,
                 $"The {width}x{height} capture would be a {outputWidth}x{outputHeight} image, more than an image returned in the " +
-                $"result may be ({CaptureLimits.InlineBoundText}). No image was made. Pass a maxDimension of at most " +
-                $"{CaptureLimits.MaxInlineEdge} (the default, {CaptureOptions.DefaultMaxDimension}, is the size vision models work at), " +
-                $"use output 'file' for the full size (a file may hold {CaptureLimits.CaptureBudgetText}), or capture a smaller area.");
+                $"result may be ({CaptureLimits.InlineBoundText}). No image was made. {advice} (the default, " +
+                $"{CaptureOptions.DefaultMaxDimension}, is the size vision models work at), capture a smaller area, or, called " +
+                $"directly rather than as a run_steps step, use output 'file' for the full size (a file may hold " +
+                $"{CaptureLimits.CaptureBudgetText}).");
         }
     }
 
     /// <summary>
-    /// Refuses an image returned in the result (<see cref="ReturnsImage"/>) that encoded to more than
-    /// <see cref="CaptureLimits.MaxInlineBytes"/>, before it is returned or a file of output both is written. Only an image
-    /// larger than the default size can: see <see cref="CaptureLimits.MaxInlineBytes"/>.
+    /// The largest maxDimension with which a <paramref name="width"/> x <paramref name="height"/> capture's image fits the
+    /// inline pixel bound, everything else asked kept (maxWidth, zoom): found with <see cref="OutputSize"/> itself, so the
+    /// value, passed back, passes <see cref="ThrowIfOutputTooLarge"/>. Null when none does.
+    /// </summary>
+    public int? SuggestedMaxDimension(int width, int height) =>
+        CaptureLimits.LargestFittingMaxDimension(maxDimension => (this with { MaxDimension = maxDimension }).OutputSize(width, height));
+
+    /// <summary>
+    /// Refuses an image returned in the result (<see cref="ReturnsImage"/>) whose base64 would be longer than
+    /// <see cref="CaptureLimits.MaxInlineBase64Length"/>, before it is returned or a file of output both is written. With the
+    /// default format only an image larger than the default size can be: see <see cref="CaptureLimits.MaxInlineBase64Length"/>.
     /// </summary>
     /// <exception cref="CaptureException">InvalidImageSize: the encoded image is over the inline bound.</exception>
     public void ThrowIfEncodedTooLarge(long byteCount, ImageEncoding encoding, int width, int height)
     {
-        if (!ReturnsImage || byteCount <= CaptureLimits.MaxInlineBytes)
+        if (!ReturnsImage || CaptureLimits.FitsInlineBase64(byteCount))
         {
             return;
         }
 
-        var megabytes = (byteCount / (1024.0 * 1024)).ToString("0.0", CultureInfo.InvariantCulture);
+        var smaller = encoding == ImageEncoding.Png ? "format 'jpeg'" : "a lower quality";
         throw new CaptureException(ScreenshotErrorCode.InvalidImageSize,
-            $"The {width}x{height} {FormatName(encoding)} image is {megabytes} MB ({byteCount} bytes), more than an image returned " +
-            $"in the result may be ({CaptureLimits.InlineBytesText}). Nothing was returned or written. Pass a smaller maxDimension, " +
-            "format 'jpeg' or a lower quality, or use output 'file' for the full image.");
+            $"The {width}x{height} {FormatName(encoding)} image is {byteCount.ToString("N0", CultureInfo.InvariantCulture)} bytes, " +
+            $"{CaptureLimits.Base64Length(byteCount).ToString("N0", CultureInfo.InvariantCulture)} characters of base64: its pixels are " +
+            $"within the bound, but it encodes to more than an image returned in the result may take " +
+            $"({CaptureLimits.InlineBase64Text}). Nothing was returned or written. Pass a maxDimension below " +
+            $"{Math.Max(width, height)}, or {smaller}, or, called directly rather than as a run_steps step, use output 'file' " +
+            "for the full image.");
     }
 
     /// <summary>The encoding for an output image of this size: <see cref="Format"/>, or the "auto" choice.</summary>

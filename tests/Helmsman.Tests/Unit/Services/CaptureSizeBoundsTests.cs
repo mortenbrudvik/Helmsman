@@ -128,19 +128,39 @@ public sealed class CaptureSizeBoundsTests : IDisposable
         capture.Image.Should().NotBeNull();
     }
 
-    [Fact]
-    public void TheLargestImageAtTheDefaultSize_AnExplicitPngOfNoise_ComesBackInline()
+    [Theory]
+    [InlineData(80)] // the default quality: about 1.6 MB
+    [InlineData(100)] // the largest JPEG there is: about 4.9 MB, 6.5 million characters of base64
+    public void TheLargestImageOfTheDefaultFormatAtTheDefaultSize_JpegOfNoise_ComesBackInline(int quality)
     {
-        // Arrange - pure noise does not compress: about 8.4 MB as PNG at 1568 x 1568, the most a default-size image can be
+        // Arrange - pure noise does not compress; at 1568 pixels the default format is JPEG
+        UseNoise(1568, 1568);
+
+        // Act
+        var capture = CreateSut().CaptureRegion(0, 0, 1568, 1568, new CaptureOptions { Quality = quality });
+
+        // Assert
+        capture.Metadata.Success.Should().BeTrue(capture.Metadata.Error);
+        capture.Metadata.ImageFormat.Should().Be("jpeg");
+        capture.Metadata.ByteSize.Should().BeGreaterThan(quality == 100 ? 4_000_000 : 1_000_000);
+        CaptureLimits.Base64Length(capture.Metadata.ByteSize!.Value).Should().BeLessThan(CaptureLimits.MaxInlineBase64Length);
+        capture.Image!.Data.LongLength.Should().Be(capture.Metadata.ByteSize);
+    }
+
+    [Fact]
+    public void ThePngOfNoiseAtTheDefaultSize_DecodesToMoreThan10MillionCharactersOfBase64_AndIsRefused()
+    {
+        // Arrange - an explicit PNG of pure noise at 1568 x 1568 is about 8.4 MB, 11.2 million characters of base64
         UseNoise(1568, 1568);
 
         // Act
         var capture = CreateSut().CaptureRegion(0, 0, 1568, 1568, new CaptureOptions { Format = CaptureFormat.Png });
 
         // Assert
-        capture.Metadata.Success.Should().BeTrue(capture.Metadata.Error);
-        capture.Metadata.ByteSize.Should().BeGreaterThan(8_000_000);
-        capture.Image!.Data.LongLength.Should().Be(capture.Metadata.ByteSize);
+        capture.Metadata.ErrorCode.Should().Be(nameof(ScreenshotErrorCode.InvalidImageSize));
+        capture.Metadata.Error.Should().Contain("10,000,000 characters of base64").And.Contain("format 'jpeg'")
+            .And.Contain("maxDimension below 1568").And.Contain("run_steps");
+        capture.Image.Should().BeNull();
     }
 
     [Fact]
@@ -377,18 +397,20 @@ public sealed class CaptureSizeBoundsTests : IDisposable
     }
 
     [Fact]
-    public void AnInlineImageOverTheByteBound_IsInvalidImageSize_WithoutAnImage()
+    public void AnInlineJpegOverTheBase64Bound_IsInvalidImageSize_AndAdvisesALowerQuality()
     {
-        // Arrange - a PNG of noise at 1900 x 1900 is about 12 MB, over the 10 MB an inline image may be
-        UseNoise(1900, 1900);
+        // Arrange - a JPEG of noise at 2000 x 2000 and quality 100 is about 7.9 MB, 10.5 million characters of base64
+        UseNoise(2000, 2000);
 
         // Act
-        var capture = CreateSut().CaptureRegion(0, 0, 1900, 1900, FullResolution() with { Format = CaptureFormat.Png });
+        var capture = CreateSut().CaptureRegion(0, 0, 2000, 2000, FullResolution() with { Format = CaptureFormat.Jpeg, Quality = 100 });
 
         // Assert
         capture.Metadata.Success.Should().BeFalse();
         capture.Metadata.ErrorCode.Should().Be(nameof(ScreenshotErrorCode.InvalidImageSize));
-        capture.Metadata.Error.Should().Contain("10 MB").And.Contain("1900x1900").And.Contain("output 'file'");
+        capture.Metadata.Error.Should().Contain("10,000,000 characters of base64").And.Contain("2000x2000 jpeg")
+            .And.Contain("a lower quality").And.Contain("maxDimension below 2000").And.Contain("output 'file'")
+            .And.NotContain("format 'jpeg'");
         capture.Image.Should().BeNull();
     }
 
@@ -426,7 +448,7 @@ public sealed class CaptureSizeBoundsTests : IDisposable
 
         // Assert
         capture.Metadata.Success.Should().BeTrue(capture.Metadata.Error);
-        capture.Metadata.ByteSize.Should().BeGreaterThan(10L * 1024 * 1024);
+        capture.Metadata.ByteSize.Should().BeGreaterThan(CaptureLimits.MaxInlineEncodedBytes);
     }
 
     [Fact]

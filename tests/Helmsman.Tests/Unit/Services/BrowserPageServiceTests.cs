@@ -546,7 +546,7 @@ public class BrowserPageServiceTests
         // Assert
         capture.Metadata.Success.Should().BeFalse();
         capture.Metadata.ErrorCode.Should().Be(nameof(ScreenshotErrorCode.InvalidImageSize));
-        capture.Metadata.Error.Should().Contain("8001x2").And.Contain("maxDimension");
+        capture.Metadata.Error.Should().Contain("8001x2").And.Contain("maxDimension of at most 8000");
         capture.Image.Should().BeNull();
     }
 

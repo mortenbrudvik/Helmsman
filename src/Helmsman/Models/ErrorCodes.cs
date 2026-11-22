@@ -458,7 +458,7 @@ public enum ScreenshotErrorCode
 
     /// <summary>
     /// maxDimension or maxWidth is out of range, zoom or gridSpacing is, zoom would make the image larger than a capture may
-    /// be, or an image returned in the result would be over the inline bound (CaptureLimits: pixels, or encoded bytes).
+    /// be, or an image returned in the result would be over the inline bound (CaptureLimits: pixels, or base64 length).
     /// </summary>
     InvalidImageSize = 2,
 

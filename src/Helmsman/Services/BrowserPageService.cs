@@ -246,21 +246,25 @@ public sealed class BrowserPageService : IBrowserPageService
             var (width, height) = ScaledSize(original.Width, original.Height, maxDimension);
             if (!CaptureLimits.FitsInline(width, height))
             {
+                var (originalWidth, originalHeight) = (original.Width, original.Height);
+                var largest = CaptureLimits.LargestFittingMaxDimension(m => ScaledSize(originalWidth, originalHeight, m));
                 return new BrowserScreenshot(BrowserScreenshotResult.Failed(nameof(ScreenshotErrorCode.InvalidImageSize),
                     $"The page's {original.Width}x{original.Height} image would be {width}x{height} pixels, more than an image returned " +
-                    $"in the result may be ({CaptureLimits.InlineBoundText}). Nothing was returned. Pass a maxDimension of at most " +
-                    $"{CaptureLimits.MaxInlineEdge}, or leave it at the default ({CaptureOptions.DefaultMaxDimension}).", tab.Port,
-                    tab.Target!.Id), null);
+                    $"in the result may be ({CaptureLimits.InlineBoundText}). Nothing was returned. For this page pass a maxDimension " +
+                    $"of at most {largest}, or leave it at the default ({CaptureOptions.DefaultMaxDimension}).",
+                    tab.Port, tab.Target!.Id), null);
             }
 
             using var scaled = width == original.Width && height == original.Height ? null : CaptureImaging.ResizeImage(original, width, height);
             var encoding = Math.Max(width, height) <= PngMaxEdge ? ImageEncoding.Png : ImageEncoding.Jpeg;
             var data = CaptureImaging.Encode(scaled ?? original, encoding, CaptureOptions.DefaultQuality);
-            if (data.LongLength > CaptureLimits.MaxInlineBytes)
+            if (!CaptureLimits.FitsInlineBase64(data.LongLength))
             {
                 return new BrowserScreenshot(BrowserScreenshotResult.Failed(nameof(ScreenshotErrorCode.InvalidImageSize),
-                    $"The page's {width}x{height} image is {data.LongLength} bytes, more than an image returned in the result may be " +
-                    $"({CaptureLimits.InlineBytesText}). Nothing was returned. Pass a smaller maxDimension.", tab.Port, tab.Target!.Id), null);
+                    $"The page's {width}x{height} image is {data.LongLength} bytes, {CaptureLimits.Base64Length(data.LongLength)} characters " +
+                    $"of base64: its pixels are within the bound, but it encodes to more than an image returned in the result may take " +
+                    $"({CaptureLimits.InlineBase64Text}). Nothing was returned. Pass a maxDimension below {Math.Max(width, height)}.",
+                    tab.Port, tab.Target!.Id), null);
             }
 
             return new BrowserScreenshot(
