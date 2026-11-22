@@ -108,7 +108,7 @@ public partial class OldProductNameTests
         new("README.md", @"not `using-windows-app-manager`", "the upgrade notes: the 3.x skill name"),
         new("README.md", @"as `helmsman` instead of `windows-app-manager`", "the upgrade notes: the 3.x serverInfo.name"),
         new("README.md", @"3\.x shipped `WindowsAppManagerMcp\.exe`", "the upgrade notes: the 3.x exe a hand-written config points at"),
-        new("README.md", @"From 3\.x: the presets in `%LOCALAPPDATA%\\WindowsAppManagerMcp\\layouts`",
+        new("README.md", @"From 3\.x: otherwise, when `%LOCALAPPDATA%\\WindowsAppManagerMcp\\layouts` has been used",
             "the upgrade notes: the 3.x AppData folder presets are copied from"),
         new("README.md", @"\(in\s+`%LOCALAPPDATA%\\WindowsAppManagerMcp` and `%TEMP%\\WindowsAppManagerMcp` for 3\.x,",
             "the upgrade notes: the 3.x folders that keep what is not carried over"),
@@ -137,9 +137,9 @@ public partial class OldProductNameTests
         new(LayoutStorageOptionsFile, @"plugin whose exe was win-desktop-mcp\.exe\.",
             "the comment on the AppData folder of the build published on main"),
 
-        // The layout section names the earlier AppData folders presets are copied from, and when the newer one is the only one.
+        // The layout section names the earlier AppData folders presets are copied from.
         new("README.md", @"or in `%LOCALAPPDATA%\\win-desktop-mcp\\layouts` or `%LOCALAPPDATA%\\WindowsAppManagerMcp\\layouts`\) " +
-                         @"are copied there and the originals are left in place; once the `win-desktop-mcp` folder has had its own first run",
+                         @"are copied there and the originals are left in place",
             "the layout presets: the AppData folder of the build published on main, which presets are copied from"),
 
         // README's "Upgrading from 3.x" tells a user of that build which exe and folders on their disk are its.

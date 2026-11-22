@@ -112,11 +112,11 @@ files are elsewhere, the notes below say so.
 
 - The environment variables are now named `HELMSMAN_*`: `WAM_DENY_PROCESSES` is now `HELMSMAN_DENY_PROCESSES`, and
   so on for all of them (see [Configuration](#configuration)). Rename them when it suits you.
-- Until you do, a `WAM_*` variable is still read when its `HELMSMAN_*` name is not set, so a deny list or read-only
-  mode you set under the old name keeps applying. Once the `HELMSMAN_*` name is set, even to an empty value, it wins
-  and the `WAM_*` one is ignored.
+- Until you do, a `WAM_*` variable is still read when its `HELMSMAN_*` name is not set or is empty, so a deny list or
+  read-only mode you set under the old name keeps applying, also when your MCP client passes the new name empty. Once
+  the `HELMSMAN_*` name holds a value, it wins and the `WAM_*` one is ignored.
 - While an old name is in use, `get_server_info`'s `warnings` and the server's log at start (stderr) name it, never its
-  value: as read in place of its new name, or as ignored because its new name is set too.
+  value: as read in place of its new name, or as ignored because its new name holds a value too.
 - Results that say where a setting came from (the `source` fields) and messages that tell you which variable to set
   name the `HELMSMAN_*` variable, also when the value came from the `WAM_*` one.
 - The resources are now `helmsman://monitors`, `helmsman://windows` and `helmsman://layouts/{name}`. A `wam://` URI is
@@ -126,11 +126,14 @@ files are elsewhere, the notes below say so.
 
 - **Layout presets** are copied, never moved or overwritten, into `%LOCALAPPDATA%\Helmsman\layouts` the first time
   Helmsman uses that folder (when several old folders hold a preset of the same name, the most recently written file):
-  - From 3.x: the presets in `%LOCALAPPDATA%\WindowsAppManagerMcp\layouts` (and in the `layouts` folder of an older
-    plugin version), and the sample presets are added again, so a sample you deleted under 3.x comes back.
   - From a build from main: when `%LOCALAPPDATA%\win-desktop-mcp\layouts` has been used (it holds an `.initialized`
     file), only its presets: it already holds what that build copied from 3.x, so what you deleted there stays
     deleted, and no samples are added.
+  - From 3.x: otherwise, when `%LOCALAPPDATA%\WindowsAppManagerMcp\layouts` has been used (it holds an `.initialized`
+    file), its presets but not those in the `layouts` folder of an older plugin version: it already holds what 3.x
+    copied from them, so here too what you deleted stays deleted, and no samples are added.
+  - When neither folder has been used: the presets in both and in the `layouts` folder of an older plugin version, and
+    the sample presets.
   - With `HELMSMAN_LAYOUTS_PATH` (or still `WAM_LAYOUTS_PATH`) set, that folder is used as before.
 - **Not carried over.** Helmsman starts these afresh in its own folders, and leaves the old ones where they are (in
   `%LOCALAPPDATA%\WindowsAppManagerMcp` and `%TEMP%\WindowsAppManagerMcp` for 3.x, in `%LOCALAPPDATA%\win-desktop-mcp`
@@ -237,7 +240,8 @@ The server reads these environment variables when it starts (for example in the 
 server configuration). No tool argument can change them.
 
 A variable set under its name from before release 4.0.0, `WAM_` and the same suffix (such as `WAM_DENY_PROCESSES`), is
-still read when its `HELMSMAN_` name is not set; when both are set, the `HELMSMAN_` one wins, even if it is empty.
+still read when its `HELMSMAN_` name is not set or is empty (white space only counts as empty); when both hold a value,
+the `HELMSMAN_` one wins.
 `get_server_info` and the log at start warn about every old name in use, so rename them when you can.
 
 | Variable | Default | Purpose |
@@ -362,7 +366,7 @@ The `config/layouts/` folder contains example presets. They are built into the s
 - `dual-monitor.json` - Multi-monitor configuration
 - `focus-mode.json` - Single centered window
 
-Presets are stored in `%LOCALAPPDATA%\Helmsman\layouts`, outside the plugin folder, so they survive plugin updates. To use another folder, set the `HELMSMAN_LAYOUTS_PATH` environment variable to an absolute path. On first run, presets saved by older versions (in a `layouts` folder next to the executable, or in `%LOCALAPPDATA%\win-desktop-mcp\layouts` or `%LOCALAPPDATA%\WindowsAppManagerMcp\layouts`) are copied there and the originals are left in place; once the `win-desktop-mcp` folder has had its own first run (it holds an `.initialized` file), it stands for the versions before it: presets are copied from it and not from theirs, and no samples are added, so what you deleted there stays deleted. Existing presets are never overwritten, and a sample you delete is not added back. A file in the folder that is not a valid preset is listed by `list_layouts` with its error (`InvalidPresetFile`) and cannot be applied; fix or delete it there, since the layout tools never change it (`delete_layout` of its name deletes a valid preset of the same name, not that file).
+Presets are stored in `%LOCALAPPDATA%\Helmsman\layouts`, outside the plugin folder, so they survive plugin updates. To use another folder, set the `HELMSMAN_LAYOUTS_PATH` environment variable to an absolute path. On first run, presets saved by older versions (in a `layouts` folder next to the executable, or in `%LOCALAPPDATA%\win-desktop-mcp\layouts` or `%LOCALAPPDATA%\WindowsAppManagerMcp\layouts`) are copied there and the originals are left in place; the newer of those two folders that has had its own first run (it holds an `.initialized` file) stands for the versions before it: presets are copied from it and not from theirs, and no samples are added, so what you deleted there stays deleted. Existing presets are never overwritten, and a sample you delete is not added back. A file in the folder that is not a valid preset is listed by `list_layouts` with its error (`InvalidPresetFile`) and cannot be applied; fix or delete it there, since the layout tools never change it (`delete_layout` of its name deletes a valid preset of the same name, not that file).
 
 ## Building
 
