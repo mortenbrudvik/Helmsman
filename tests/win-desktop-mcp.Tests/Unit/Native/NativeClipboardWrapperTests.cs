@@ -177,4 +177,56 @@ public class NativeClipboardWrapperTests
 
         HasOtherFormats(Formats()).Should().BeTrue();
     }
+
+    /// <summary>
+    /// The start of a call's thread, through the seam the wrapper uses (TryStartThread; internal, so reached by reflection,
+    /// and it takes the thread and the permit, so no wrapper is built and no clipboard is touched). A thread that cannot be
+    /// started never ends, so nothing else would give the one-at-a-time permit back: every later call would wait out its
+    /// timeout and fail until the server restarts.
+    /// </summary>
+    [Fact]
+    public void AThreadThatCannotBeStarted_GivesThePermitBack()
+    {
+        // Arrange - the permit is taken, as RunOnClipboardThread takes it; the thread already ran, so it cannot start again
+        using var oneAtATime = new SemaphoreSlim(1, 1);
+        oneAtATime.Wait(0).Should().BeTrue();
+        var spent = new Thread(() => { });
+        spent.Start();
+        spent.Join();
+
+        // Act
+        var started = TryStartThread(spent, oneAtATime);
+
+        // Assert
+        started.Should().BeFalse();
+        oneAtATime.CurrentCount.Should().Be(1, "the next call must not wait for a thread that never ran");
+    }
+
+    [Fact]
+    public void AThreadThatStarts_KeepsThePermit_ForTheThreadToGiveBack()
+    {
+        using var oneAtATime = new SemaphoreSlim(1, 1);
+        oneAtATime.Wait(0).Should().BeTrue();
+        using var ran = new ManualResetEventSlim();
+        var apartment = ApartmentState.Unknown;
+        var thread = new Thread(() =>
+        {
+            apartment = Thread.CurrentThread.GetApartmentState();
+            ran.Set();
+        });
+
+        TryStartThread(thread, oneAtATime).Should().BeTrue();
+
+        ran.Wait(TimeSpan.FromSeconds(10)).Should().BeTrue();
+        thread.Join();
+        apartment.Should().Be(ApartmentState.STA, "the clipboard is opened on an STA thread");
+        oneAtATime.CurrentCount.Should().Be(0, "the call's thread gives it back when it ends");
+    }
+
+    private static bool TryStartThread(Thread thread, SemaphoreSlim oneAtATime)
+    {
+        var method = typeof(NativeClipboardWrapper).GetMethod("TryStartThread",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+        return (bool)method.Invoke(null, [thread, oneAtATime])!;
+    }
 }

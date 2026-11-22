@@ -112,7 +112,8 @@ public sealed class NativeClipboardWrapper : INativeClipboardWrapper
     /// <summary>
     /// Runs <paramref name="work"/> on a new STA thread with a new message-only window as its argument (zero when the
     /// window could not be created), and returns its result: <paramref name="notStarted"/> when the call before it did
-    /// not finish within <see cref="CallTimeout"/>, so this one never started; <paramref name="timedOut"/> when this one
+    /// not finish within <see cref="CallTimeout"/>, or its thread could not be started, so this one never started (the
+    /// clipboard was not opened); <paramref name="timedOut"/> when this one
     /// did not finish in that time (it goes on, and its result is lost); <paramref name="failed"/> when it threw.
     /// </summary>
     private T RunOnClipboardThread<T>(Func<nint, T> work, T notStarted, T timedOut, Func<Exception, T> failed)
@@ -153,11 +154,34 @@ public sealed class NativeClipboardWrapper : INativeClipboardWrapper
             IsBackground = true,
             Name = "win-desktop-mcp clipboard"
         };
-        thread.SetApartmentState(ApartmentState.STA);
-        thread.Start();
+        if (!TryStartThread(thread, _oneAtATime))
+        {
+            return notStarted;
+        }
 
         var remaining = deadline - DateTime.UtcNow;
         return done.Wait(remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero) ? result.Value! : timedOut;
+    }
+
+    /// <summary>
+    /// Starts a call's STA thread, which gives <paramref name="oneAtATime"/> back when it ends. A thread that cannot be started
+    /// (no memory for its stack) never ends, so this gives the permit back itself and returns false: otherwise every later call
+    /// would wait out its timeout and fail until the server restarts. Takes the thread and the permit, so the tests check it
+    /// without a wrapper or the clipboard.
+    /// </summary>
+    internal static bool TryStartThread(Thread thread, SemaphoreSlim oneAtATime)
+    {
+        try
+        {
+            thread.SetApartmentState(ApartmentState.STA);
+            thread.Start();
+            return true;
+        }
+        catch (Exception)
+        {
+            oneAtATime.Release();
+            return false;
+        }
     }
 
     private static bool Open(nint owner)
