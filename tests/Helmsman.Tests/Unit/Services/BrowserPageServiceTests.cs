@@ -522,14 +522,46 @@ public class BrowserPageServiceTests
     }
 
     [Fact]
-    public async Task Capture_AnImageThatCannotBeRead_IsCdpProtocolError_WithoutAnImage()
+    public async Task Capture_APngWhoseDataCannotBeRead_IsCdpProtocolError_WithoutAnImage()
     {
+        // Arrange - a PNG header with a readable size, then data the decoder refuses
+        var png = Png(40, 20);
+        var broken = png.Take(33).Concat(Enumerable.Repeat((byte)0xAB, 64)).ToArray();
         _pages.Setup(p => p.CaptureAsync(Shown, It.IsAny<CdpGate>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CdpPageResult<CdpScreenshot>.Ok(new CdpScreenshot([1, 2, 3], Shown.Url, "Form", false)));
+            .ReturnsAsync(CdpPageResult<CdpScreenshot>.Ok(new CdpScreenshot(broken, Shown.Url, "Form", false)));
 
+        // Act
         var capture = await CreateSut().CaptureAsync(ByWindow(), 1568);
 
+        // Assert
         capture.Metadata.ErrorCode.Should().Be(nameof(BrowserErrorCode.CdpProtocolError));
+        capture.Image.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("jpeg")] // a valid image, but not the PNG asked for: its header is not read here, so it is not decoded
+    [InlineData("truncated")] // the PNG signature, cut off inside its header
+    [InlineData("empty")]
+    [InlineData("garbage")]
+    public async Task Capture_DataThatIsNotAPngWithAReadableSize_IsCaptureFailed_BeforeItIsDecoded(string kind)
+    {
+        // Arrange
+        var data = kind switch
+        {
+            "jpeg" => Jpeg(40, 20),
+            "truncated" => Png(40, 20).Take(20).ToArray(),
+            "empty" => [],
+            _ => new byte[] { 1, 2, 3 }
+        };
+        _pages.Setup(p => p.CaptureAsync(Shown, It.IsAny<CdpGate>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CdpPageResult<CdpScreenshot>.Ok(new CdpScreenshot(data, Shown.Url, "Form", false)));
+
+        // Act
+        var capture = await CreateSut().CaptureAsync(ByWindow(), 1568);
+
+        // Assert
+        capture.Metadata.ErrorCode.Should().Be(nameof(ScreenshotErrorCode.CaptureFailed));
+        capture.Metadata.Error.Should().Contain("not a PNG image").And.Contain($"({data.Length} bytes)");
         capture.Image.Should().BeNull();
     }
 
@@ -579,6 +611,14 @@ public class BrowserPageServiceTests
         capture.Metadata.ErrorCode.Should().Be(nameof(ScreenshotErrorCode.CaptureFailed));
         capture.Metadata.Error.Should().Contain("16385x1").And.Contain("16384");
         capture.Image.Should().BeNull();
+    }
+
+    private static byte[] Jpeg(int width, int height)
+    {
+        using var bitmap = new Bitmap(width, height);
+        using var stream = new MemoryStream();
+        bitmap.Save(stream, ImageFormat.Jpeg);
+        return stream.ToArray();
     }
 
     private static byte[] Png(int width, int height)
