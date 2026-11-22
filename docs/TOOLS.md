@@ -5679,7 +5679,7 @@ The user can stop the agent's input at any moment with a system-wide hotkey, by 
 
 - **Press it once to pause.** Every input tool returns `PausedByUser` and sends nothing. So does every tool that changes windows or starts or stops processes: the [Window Control](#window-control) tools ([focus_window](#focus_window) and [close_window](#close_window) among them), the [Batch Operations](#batch-operations), [close_application](#close_application), [apply_layout](#apply_layout), [launch_application](#launch_application), [kill_process](#kill_process), [launch_browser_with_debug](#launch_browser_with_debug), [close_debug_browser](#close_debug_browser), [set_clipboard](#set_clipboard), [element_action](#element_action), [file_dialog](#file_dialog) and a [respond_to_dialog](#respond_to_dialog) that presses a button return an error result (`isError: true`) with `errorCode` `PausedByUser` without running, also when they were already waiting for another call to finish. Tools that only read (window lists, screenshots, UI Automation reads and waits, [get_desktop_state](#get_desktop_state), respond_to_dialog without `button`, browser reading, [get_control_status](#get_control_status)) keep working. A running `type_text`, `send_keys`, `press_keys` (with `delayBetweenMs` or `holdMs`) or [drag](#drag) stops between batches and returns `PausedByUser` with what it did so far. With a chord of modifiers, such as the default, the user's first modifier goes down before the chord is complete: a running `type_text`, `send_keys` or `press_keys` that sends another batch meanwhile, or a drag that has not pressed its button yet, stops with `ModifiersHeld` instead, whose error names the pause hotkey, and the pause takes effect once the chord is pressed. A window call that was already running finishes, except an activation ([focus_window](#focus_window), a `focus` placement of [apply_layout](#apply_layout) or of a launch's `placement`, or the input guard bringing a `windowHandle` target to the front), which stops at its next step and reports `PausedByUser`. Keys and mouse buttons the server holds down are released at once; keys the user holds are left alone.
 - **Press it again to resume.** The hotkey always toggles, but a press within 2 seconds of the pause is ignored, so pressing it twice to be sure does not resume. The agent can ask to resume with [resume_input](#resume_input), which resumes only when the user confirms.
-- **It pauses every server.** Each MCP client session starts its own server, and only one process can register the chord. The pause is shared by all of the user's Helmsman servers on the desktop: the chord pauses and resumes every one of them, whichever server registered it, and so does a confirmed [resume_input](#resume_input). A server that finds the chord held by another server reports `hotkey.state` `OtherServer`, and registers the chord itself within 2 seconds after that server stops. A server that starts while input is paused starts paused.
+- **It pauses every server.** Each MCP client session starts its own server, and only one process can register the chord. The pause is shared by all of the user's Helmsman servers on the desktop: the chord pauses and resumes every one of them, whichever server registered it, and so does a confirmed [resume_input](#resume_input). A server that finds the chord held by another server reports `hotkey.state` `OtherServer`, and registers the chord itself within 2 seconds after that server stops. A server that starts while input is paused starts paused. Servers of versions before 4.0.0 name the shared pause and the holder's mark otherwise, so they do not share the pause with Helmsman servers, and a Helmsman server that finds the chord held by one reports `Failed`, not `OtherServer` (see [Upgrading from 3.x](../README.md#upgrading-from-3x)).
 - The agent cannot resume itself: `resume_input` asks the user, and `send_keys`, `press_keys` and `type_text` refuse the hotkey's keys (`PauseChordNotAllowed`), which would reach the hotkey like a real key press. While any modifier of the chord is down, no modifier is released for the agent (`releaseHeldModifiers`), not even one outside the chord, since the user may be pressing it.
 - Holding the chord down fires it once. On most keyboards Ctrl turns the Pause key into Break; the server registers both, so the chord also works in remote sessions that send Pause.
 
@@ -6679,10 +6679,10 @@ Tools for saving and restoring window arrangements.
 **Where presets are stored:** each preset is a JSON file in `%LOCALAPPDATA%\Helmsman\layouts`. To use another folder, set the `HELMSMAN_LAYOUTS_PATH` environment variable to an absolute folder path. The folder is outside the plugin install, so presets survive plugin updates.
 
 The first time a layout tool runs, the server:
-- copies presets saved by older versions into this folder. Older versions kept them in a `layouts` folder next to the executable, inside the versioned plugin folder. The original files are left in place.
+- copies presets saved by older versions into this folder: from the `layouts` folders under `%LOCALAPPDATA%` of the versions before 4.0.0 (not when `HELMSMAN_LAYOUTS_PATH` is set), and from a `layouts` folder next to the executable, inside the versioned plugin folder, where early versions kept them. When several hold a preset of the same name, the most recently written file is copied. The original files are left in place.
 - adds the sample presets `work-setup`, `dual-monitor` and `focus-mode`.
 
-Neither step overwrites an existing preset, and a preset you delete is not added back on the next start. Preset files you add or edit by hand are picked up on the next layout tool call, without a restart.
+When the newest of the earlier `%LOCALAPPDATA%` folders has had this first-time setup itself (it holds an `.initialized` file), it stands for the folders before it: presets are copied from it and not from them, and no samples are added, so a preset or sample deleted there stays deleted. [Upgrading from 3.x](../README.md#upgrading-from-3x) names the folders. Neither step overwrites an existing preset, and a preset you delete is not added back on the next start. Preset files you add or edit by hand are picked up on the next layout tool call, without a restart.
 
 If the folder cannot be created or used (for example, `HELMSMAN_LAYOUTS_PATH` points to a read-only location), the layout tools fail with `StorageUnavailable` and a message naming the folder. The other tools keep working. The server checks this when a layout tool first uses the folder, by listing it and creating and deleting a temporary file in it, and checks again on every call until the folder is usable. If the folder stops being writable later, `save_layout` fails with `SaveFailed` and a message naming the file.
 
@@ -7341,7 +7341,7 @@ Reports the server's build and the environment its tools work in, in one read-on
 | `toolsets` | The [toolsets](#toolsets) served (`enabled`) and not served (`disabled`), where the choice came from (`source`: `default`, `HELMSMAN_TOOLSETS`, `all`, or `HELMSMAN_EXCLUDE_TOOLS` when an entry it could not read left only the `server` toolset on), `readOnly` mode, the `excludedTools`, how many tools are served (`servedTools`), and `moved`: where the tools that moved out of a toolset in force went (roadmap M6.1), one sentence per toolset that is off, each tool with its replacement, if any (see [Removed and moved tools](#removed-and-moved-tools)). A tool the user excluded, or whose former toolset is off too, is left out; `moved` is left out when nothing is out of reach; `resources` and `prompts` name the [resources and prompts](#resources-and-prompts) served (roadmap M6.9), each left out when none is |
 | `uiAutomation` | The [UI Automation](#ui-automation) engine of the element tools: `engine` is `Uia3` (the COM client, the default) or `Uia2` (the managed client, `HELMSMAN_UIA_ENGINE=uia2`), `source` is `default` or `HELMSMAN_UIA_ENGINE`, and `connectionTimeoutMs` and `transactionTimeoutMs` are the per-call limits of the Uia3 engine (left out for Uia2, which has none) |
 | `pinnedWindows` | The windows [set_window_zorder](#set_window_zorder) made topmost that still are, each with `handle`, `title` and `processName` (roadmap M6.7). A topmost window stays in front of the user's work until it is unpinned (`mode: "notopmost"`) or closes; the server never unpins one itself. A window that closed, whose handle another window got, or that its app or the user unpinned is dropped. Left out when there are none |
-| `warnings` | One sentence for each thing that will make tools fail or coordinates wrong: a DPI awareness that can scale coordinates (anything but `PerMonitorV2` or `PerMonitor`), a locked session (input tools return `SessionLocked`; captures are not refused, and may show the lock screen) or unreachable input desktop, a server below medium integrity, input that is paused (and why), a pause hotkey that is not registered or does not pause this server, an [audit log](#audit-log) that cannot be written, every `HELMSMAN_TOOLSETS`, `HELMSMAN_EXCLUDE_TOOLS` or `HELMSMAN_READ_ONLY` entry that was ignored, moved tools that their toolset holds but does not serve because the toolset they came from is off, a removed toolset (`deprecated`) that `HELMSMAN_TOOLSETS` names, a `HELMSMAN_ALLOW_USER_CLIPBOARD` value that was not understood, a `HELMSMAN_UIA_ENGINE` value that is not `uia3` or `uia2`, the `HELMSMAN_ALLOWED_PROTOCOLS` entries that were ignored, and ancestors of the server that cannot be read (until they can, every window of a program that started before the server counts as the host's, and kill_process and close_debug_browser refuse with `ProcessTreeUnreadable`). Left out when there is nothing to warn about |
+| `warnings` | One sentence for each thing that will make tools fail or coordinates wrong: a DPI awareness that can scale coordinates (anything but `PerMonitorV2` or `PerMonitor`), a locked session (input tools return `SessionLocked`; captures are not refused, and may show the lock screen) or unreachable input desktop, a server below medium integrity, input that is paused (and why), a pause hotkey that is not registered or does not pause this server, an [audit log](#audit-log) that cannot be written, every `HELMSMAN_TOOLSETS`, `HELMSMAN_EXCLUDE_TOOLS` or `HELMSMAN_READ_ONLY` entry that was ignored, moved tools that their toolset holds but does not serve because the toolset they came from is off, a removed toolset (`deprecated`) that `HELMSMAN_TOOLSETS` names, a `HELMSMAN_ALLOW_USER_CLIPBOARD` value that was not understood, a `HELMSMAN_UIA_ENGINE` value that is not `uia3` or `uia2`, the `HELMSMAN_ALLOWED_PROTOCOLS` entries that were ignored, every setting given under its name from before release 4.0.0 (`WAM_` and the same suffix), named without its value: read in place of its `HELMSMAN_` name, which is not set, or ignored because that name is set too, and ancestors of the server that cannot be read (until they can, every window of a program that started before the server counts as the host's, and kill_process and close_debug_browser refuse with `ProcessTreeUnreadable`). Left out when there is nothing to warn about |
 
 A value that cannot be read is `Unknown`, null or left out, and a warning says what that means. If a source the report reads throws instead (the monitor list or the layouts folder, say), the call fails with a tool error, as any tool does.
 
@@ -7613,7 +7613,7 @@ the old behavior sees now. The plugin's committed exe has them since release 1.1
   `WAM_TOOLSETS`, or an unknown name in `WAM_EXCLUDE_TOOLS` (which also takes toolset names), serves only the `server`
   toolset, and get_server_info reports the `source` and a warning.
 - **Audit log.** The server now appends one JSON line per call of an input, close, kill, launch, layout-write (apply, save,
-  delete) or clipboard tool to `%LOCALAPPDATA%\win-desktop-mcp\audit\<yyyy-MM-dd>.jsonl` (or `WAM_AUDIT_PATH`), with the target
+  delete) or clipboard tool to `%LOCALAPPDATA%\WindowsAppManagerMcp\audit\<yyyy-MM-dd>.jsonl` (or `WAM_AUDIT_PATH`), with the target
   window's title, process name and PID, the window the input went to, a launch's program path, the outcome and the
   error code, and keeps 7 days of files. Typed text, keys, clipboard content, URL paths and command-line arguments
   are recorded only as lengths. It cannot be turned off; see [Audit log](#audit-log).
@@ -8282,10 +8282,10 @@ the new tools; their sections have the rest.
   `processId` or `cdpPort` with Browser.close, ends what is left, and deletes its temporary profile; it closes only a
   browser this server started or whose command line shows a debug port and a profile in the server's own folders, and
   refuses anything else with the new code `NotADebugBrowser`. launch_browser_with_debug adds `profile` (a named profile
-  kept under `%LOCALAPPDATA%\win-desktop-mcp\browser-profiles`), `reuseIfRunning` (the debug browser running with
+  kept under `%LOCALAPPDATA%\WindowsAppManagerMcp\browser-profiles`), `reuseIfRunning` (the debug browser running with
   the profile is returned with the new `launchStatus` `alreadyRunning` instead of `DebugLaunchFailed`) and `placement`
   (launch_application's), and its result adds `placement`. **Changed:** a new temporary profile is now
-  `%TEMP%\win-desktop-mcp\browser-debug\<32 hex digits>` (it was `%TEMP%\browser-debug-<guid>`); it is deleted when
+  `%TEMP%\WindowsAppManagerMcp\browser-debug\<32 hex digits>` (it was `%TEMP%\browser-debug-<guid>`); it is deleted when
   the browser did not start (the failure's `userDataDir` is then null), and leftovers older than 10 minutes that no
   browser holds are deleted by the next launch with a temporary profile. A call cancelled after the start now ends the
   browser it started and deletes its temporary profile (it kept running with an open port no result named), also when
@@ -8828,49 +8828,70 @@ tools/list grows by about 400 tokens (56,039 to 56,443), and every tool together
   every error code's entry, `MonitorNotFound` and `InvalidPresetFile` included (issue #11). The take_screenshot example
   passes `monitor`, not the removed `monitorIndex`.
 
-Release 4.0.0 (the rename to Helmsman, and tighter rules for launches and for input to the agent's host):
+Release 4.0.0 (the rename to Helmsman, its settings and resources included, and tighter rules for launches and for input to the agent's host):
 
 This is a major release for two reasons: the product is renamed, so an existing installation must be removed and
-installed again under the new name, and calls that worked with 3.2.0 are now refused (input to the agent's own host
-window without the user's yes for that call, launches of more programs with arguments and of more file types, and Win+R
-and Win+X). The markers mean what they mean for 3.1.0 above: **Changed:** where a call that worked with 3.2.0 can now be
-refused or return something else. No result field that 3.2.0 always sent is left out, so no bullet says **Breaking:**;
-what breaks an existing setup is the rename in the first three bullets. The default tools/list grows by about 770 tokens
-(56,443 to 57,216), and every tool together from 66,545 to 67,317, most of it in the `allowHostTarget` descriptions.
+installed again under the new name and what names the old plugin, tools, exe, settings or resources must be changed;
+and calls that worked with 3.2.0 are now refused (input to the agent's own host window without the user's yes for that
+call, launches of more programs with arguments and of more file types, and Win+R and Win+X). The markers mean what they
+mean for 3.1.0 above: **Changed:** where a call that worked with 3.2.0 can now be refused or return something else. No
+result field that 3.2.0 always sent is left out, so no bullet says **Breaking:**; what breaks an existing setup is the
+rename in the first four bullets. They are written for a client of the tagged 3.x releases. A 3.2.0 installed from the
+repository's main branch after the release had the same plugin, skill, server name, settings and resources, but an exe
+and folders of its own, which the bullets name where it matters. The default tools/list grows by 766 tokens (56,443 to
+57,209), and every tool together from 66,545 to 67,311, most of it (about 675 tokens) in the `allowHostTarget`
+descriptions.
 
-- **The product is Helmsman: reinstall the plugin.** The Claude Code plugin is `helmsman` in the
-  marketplace `helmsman-marketplace` (they were `windows-app-manager` and `windows-app-manager-marketplace`), so
-  Claude Code takes it for a new plugin and a 3.x install does not update to it: remove the old plugin and marketplace
-  and install the new one, as [Upgrading from 3.x](../README.md#upgrading-from-3x) in the README says. Claude Code names
-  its tools `mcp__plugin_helmsman_helmsman__<tool>` (they were
-  `mcp__plugin_windows-app-manager_windows-app-manager__<tool>`), so permission rules, hook matchers and subagent
-  `tools` lists that name the old ones must be changed, and the skill is `using-helmsman`. The exe is
-  `helmsman.exe` (it was `WindowsAppManagerMcp.exe`), in the plugin's `bin` folder and in a release's
-  `helmsman-<tag>-win-x64.zip`: point a hand-written MCP config's `command` at it. **Changed:** the server
-  reports `serverInfo.name` and get_server_info's `server.name` as `helmsman` (they were `windows-app-manager`),
-  its instructions, prompts and messages call it so, the prompts' slash commands (`/mcp__<server>__automate_app` and the
-  other three) change with the server name a client shows, as the tool names do, and its stderr log categories start
-  with `Helmsman.` (`Helmsman.ToolCalls`). The environment variables are now named `HELMSMAN_*`, and a `WAM_*` one is
-  still read when its `HELMSMAN_*` name is not set; the resources are now `helmsman://`, and `wam://` URIs are no longer
-  served. Unchanged: the tool names after the prefix and their arguments.
-- **The server's folders moved.** Its default folders are `%LOCALAPPDATA%\Helmsman` and `%TEMP%\Helmsman`
-  (they were `...\WindowsAppManagerMcp`): layout presets in `layouts`, the audit log in `audit`, named debug-browser
-  profiles in `browser-profiles`, and under `%TEMP%` the temporary debug-browser profiles (`browser-debug`) and the
-  capture files written without `outputPath` (`captures`). The first time the server uses its layouts folder, it copies
-  the presets in `%LOCALAPPDATA%\WindowsAppManagerMcp\layouts`, and in the `layouts` folder of an installed older plugin
-  version, into it, never moving or overwriting one; with `WAM_LAYOUTS_PATH` set, that folder is used as before. Nothing
-  else is copied: the audit log goes on in the new folder (`WAM_AUDIT_PATH` still overrides it), and the files 3.x wrote
-  stay in `%LOCALAPPDATA%\WindowsAppManagerMcp\audit`. What 3.x left under `%TEMP%\WindowsAppManagerMcp` (temporary
-  debug-browser profiles, captures) is not cleaned up by 4.0.0 and can be deleted by hand once no 3.x server runs.
-  **Changed:** a [launch_browser_with_debug](#launch_browser_with_debug) `profile` made with 3.x is not found, so a
+- **The product is Helmsman: reinstall the plugin.** The Claude Code plugin is `helmsman` in the marketplace
+  `helmsman-marketplace`, added from the repository `mortenbrudvik/Helmsman` (they were `windows-app-manager`,
+  `windows-app-manager-marketplace` and `mortenbrudvik/WindowsAppManagerMcp`), so Claude Code takes it for a new plugin
+  and a 3.x install does not update to it: remove the old plugin and marketplace and install the new one, as
+  [Upgrading from 3.x](../README.md#upgrading-from-3x) in the README says. Claude Code names its tools
+  `mcp__plugin_helmsman_helmsman__<tool>` (they were `mcp__plugin_windows-app-manager_windows-app-manager__<tool>`), so
+  permission rules, hook matchers and subagent `tools` lists that name the old ones must be changed, and the skill is
+  `using-helmsman` (it was `using-windows-app-manager`). The exe is `helmsman.exe` (it was `WindowsAppManagerMcp.exe`,
+  and `win-desktop-mcp.exe` in the build from the main branch), in the plugin's `bin` folder and in a release's
+  `helmsman-<tag>-win-x64.zip` (it was `WindowsAppManagerMcp-<tag>-win-x64.zip`): point a hand-written MCP config's
+  `command` at it. **Changed:** the server reports `serverInfo.name` and get_server_info's `server.name` as `helmsman`
+  (they were `windows-app-manager`), its instructions, prompts and messages call it Helmsman, the prompts' slash
+  commands (`/mcp__<server>__automate_app` and the other three) change with the server name a client shows, as the tool
+  names do, and its stderr log categories start with `Helmsman.` (`Helmsman.ToolCalls`; they started with
+  `WindowsAppManagerMcp.`). Unchanged: the tool names after the prefix, and their arguments.
+- **The settings and resources are renamed.** The server's 14 environment variables are named `HELMSMAN_*`
+  (`HELMSMAN_DENY_PROCESSES`, `HELMSMAN_TOOLSETS`, ...; they were `WAM_*`). A `WAM_*` variable is still read, and parsed
+  as before, when its `HELMSMAN_*` name is not in the server's environment, so a deny list or read-only mode given under
+  the old name keeps applying; a `HELMSMAN_*` variable that is there wins, even when it is empty, and its `WAM_*` twin is
+  ignored. get_server_info's `warnings` and the log at start (stderr) name every old variable read in place of its new
+  one, and every old variable ignored because its new one is set, never their values. **Changed:** the fields that say
+  where a setting came from (get_server_info's `denyListSource`, `destructiveChordSource`, `toolsets.source` and
+  `uiAutomation.source`, and get_control_status' `hotkey.source` and `takeover.source`) and the messages that say which
+  variable to set name the `HELMSMAN_*` variable, also when the value came from the `WAM_*` one. **Changed:** the
+  resources are `helmsman://monitors`, `helmsman://windows` and `helmsman://layouts/{name}`; a `wam://` URI is no longer
+  served and is an error, as any URI that no resource matches (see [Resources and Prompts](#resources-and-prompts)).
+- **The server's folders moved.** Its default folders are `%LOCALAPPDATA%\Helmsman` and `%TEMP%\Helmsman` (they were
+  `...\WindowsAppManagerMcp`, and `...\win-desktop-mcp` for the build from the main branch): layout presets in
+  `layouts`, the audit log in `audit`, named debug-browser profiles in `browser-profiles`, and under `%TEMP%` the
+  temporary debug-browser profiles (`browser-debug`) and the capture files written without `outputPath` (`captures`).
+  The first time the server uses its layouts folder, it copies into it the presets of
+  `%LOCALAPPDATA%\WindowsAppManagerMcp\layouts`, `%LOCALAPPDATA%\win-desktop-mcp\layouts` and the `layouts` folders of
+  installed older plugin versions (when several hold a preset of the same name, the most recently written file), never
+  moving or overwriting one, and adds the sample presets, so a sample deleted under 3.x is back. When
+  `%LOCALAPPDATA%\win-desktop-mcp\layouts` holds an `.initialized` file (that build set up its folder the same way), it
+  stands for the folders before it: presets are copied from it alone and no samples are added, so a preset or sample
+  deleted there stays deleted. With `HELMSMAN_LAYOUTS_PATH` (or `WAM_LAYOUTS_PATH`) set, that folder is used as before.
+  Nothing else is copied: the audit log goes on in the new folder (`HELMSMAN_AUDIT_PATH` still overrides it), and the
+  files earlier versions wrote stay in their `audit` folder. What earlier versions left under `%TEMP%` (temporary
+  debug-browser profiles, captures) is not cleaned up by 4.0.0 and can be deleted by hand once no such server runs.
+  **Changed:** a [launch_browser_with_debug](#launch_browser_with_debug) `profile` made before 4.0.0 is not found, so a
   launch with its name starts a new, empty profile (signed out), and close_debug_browser counts only the new folders as
   the server's own.
-- **3.x and 4.0.0 servers do not share the pause.** **Changed:** the pause that every server on the desktop shares, and
-  the mark of the server that registered the pause hotkey, have new names, so a 3.x server still running beside a 4.0.0
-  one (another client still set up with the old exe) is neither paused nor resumed by the other's hotkey or confirmed
-  resume_input. The one that finds the chord taken by the other reports `hotkey.state` `Failed` in
-  [get_control_status](#get_control_status), not `OtherServer`, and registers the chord once the other stops. Upgrade or
-  remove every 3.x setup.
+- **Servers of different releases do not share the pause.** **Changed:** the pause that every server on the desktop
+  shares, and the mark of the server that registered the pause hotkey, have new names, so a 3.x server still running
+  beside a 4.0.0 one (another client still set up with `WindowsAppManagerMcp.exe` or `win-desktop-mcp.exe`) is neither
+  paused nor resumed by the other's hotkey or confirmed resume_input; the tagged 3.x releases and the build from the
+  main branch do not share it with each other either. The one that finds the chord taken by the other reports
+  `hotkey.state` `Failed` in [get_control_status](#get_control_status), not `OtherServer`, keeps trying, and registers
+  the chord once the other stops. Upgrade or remove every setup that still starts an old exe.
 - **allowHostTarget asks the user on every call.** **Changed:** `allowHostTarget: true` with `windowHandle` (or
   `window.handle`) naming the agent's own host window sent the input there at once; now the server first asks the user
   through the client (elicitation), once per call, naming the window and showing every character and key the call would
@@ -8924,7 +8945,7 @@ what breaks an existing setup is the rename in the first three bullets. The defa
   (`DestructiveChordNeedsTarget`; nothing is sent). A run_steps step with such keys refuses the whole run with
   `InvalidArguments` before any step runs, also when the chord's character is the R or X key of the window's keyboard
   layout (`win+к` on a Russian one); a step whose keys read so only after the layout changed during the run is not run.
-  `WAM_DESTRUCTIVE_CHORDS` does not change this. Start programs with launch_application.
+  `HELMSMAN_DESTRUCTIVE_CHORDS` does not change this. Start programs with launch_application.
 - **run_steps' wait steps wait their tool's default.** **Changed:** a wait_for_window or wait_for_element step without
   `timeoutMs` (or with `null`) waits its tool's default, 10,000 ms, cut to what is left of `maxDurationMs` (less 250 ms)
   only when less is left; it waited all that was left. A `timeoutMs` written as a string of digits (`"5000"`) is read as
@@ -8940,8 +8961,8 @@ what breaks an existing setup is the rename in the first three bullets. The defa
   type_text's paste, the paste check) failed until the server restarted. **Changed:** a launch of a packaged app is
   refused with `ActivationFailed` while three earlier activations still wait for Windows to answer, now also when their
   calls were cancelled; an activation whose call was cancelled before Windows answered was not counted.
-- **Documented.** What the process allow and deny lists (`WAM_ALLOW_PROCESSES`, `WAM_DENY_PROCESSES`) refuse, mask and
-  leave alone, in the README and in [What the policy covers](#what-the-policy-covers): monitor and region captures, a
+- **Documented.** What the process allow and deny lists (`HELMSMAN_ALLOW_PROCESSES`, `HELMSMAN_DENY_PROCESSES`) refuse,
+  mask and leave alone, in the README and in [What the policy covers](#what-the-policy-covers): monitor and region captures, a
   window copied from the screen, the browser reads with an explicit `cdpPort`, launches, the window titles in the window
   lists and the audit log are not filtered. The behaviour is unchanged.
 - **Internal.** The large services are split into smaller ones, and the checks' collaborators (target policy, host
