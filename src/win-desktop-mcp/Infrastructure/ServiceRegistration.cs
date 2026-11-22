@@ -67,6 +67,8 @@ public static class ServiceRegistration
         services.AddSingleton<TopmostPins>();
         // set_window_zorder (roadmap M6.7): the z-order changes, under the target policy, recorded in the pins above
         services.AddSingleton<IWindowZOrder, WindowZOrderService>();
+        // close_window's close under the target policy and the shell and host guards, and the reads of what a close leaves
+        services.AddSingleton<IWindowClosing, WindowClosingService>();
         services.AddSingleton<IWindowService, WindowService>();
         // Verified close (roadmap M2.5): waits for closed windows and reads their prompts through UI Automation
         services.AddSingleton<IWindowCloseVerifier, WindowCloseVerifier>();

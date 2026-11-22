@@ -125,6 +125,7 @@ src/win-desktop-mcp/Services/ServerInfoService.cs -> Native.NativeEnums
 src/win-desktop-mcp/Services/ServerInfoService.cs -> Native.Uia3Tree
 src/win-desktop-mcp/Services/WindowChangeFailures.cs -> Native.NativeEnums  # moved out of WindowService when it was split; the same dependency it had
 src/win-desktop-mcp/Services/WindowClassification.cs -> Native.NativeEnums
+src/win-desktop-mcp/Services/WindowClosingService.cs -> Native.NativeEnums  # moved out of WindowService when it was split; the same dependency it had
 src/win-desktop-mcp/Services/WindowEventJournal.cs -> Native.NativeEnums
 src/win-desktop-mcp/Services/WindowInfoReader.cs -> Native.NativeEnums  # moved out of WindowService when it was split; the same dependency it had
 src/win-desktop-mcp/Services/WindowOwnerChain.cs -> Native.NativeEnums

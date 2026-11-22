@@ -14,10 +14,10 @@ public sealed class WiredWindowService : WindowService
         IHostGuard hostGuard,
         ITargetPolicy targetPolicy,
         WindowZOrderService zOrder,
+        WindowClosingService closing,
         IWindowCallRunner windowCalls,
-        TimeSpan? stateChangeTimeout,
-        INativeVirtualDesktopWrapper? virtualDesktops)
-        : base(monitorService, nativeWrapper, hostGuard, targetPolicy, zOrder, windowCalls, stateChangeTimeout, virtualDesktops)
+        TimeSpan? stateChangeTimeout)
+        : base(monitorService, nativeWrapper, hostGuard, targetPolicy, zOrder, closing, windowCalls, stateChangeTimeout)
     {
     }
 
@@ -38,6 +38,7 @@ public sealed class WiredWindowService : WindowService
     {
         var calls = windowCalls ?? new WindowCallRunner(nativeWrapper);
         var zOrder = new WindowZOrderService(nativeWrapper, targetPolicy, calls, topmostPins ?? new TopmostPins());
-        return new WiredWindowService(monitorService, nativeWrapper, hostGuard, targetPolicy, zOrder, calls, stateChangeTimeout, virtualDesktops);
+        var closing = new WindowClosingService(monitorService, nativeWrapper, hostGuard, targetPolicy, virtualDesktops);
+        return new WiredWindowService(monitorService, nativeWrapper, hostGuard, targetPolicy, zOrder, closing, calls, stateChangeTimeout);
     }
 }
