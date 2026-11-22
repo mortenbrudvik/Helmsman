@@ -165,7 +165,7 @@ public class ToolsetContractTests
         // Roadmap M6.3 (owner decisions D2 and D10): two read-only tools in their own opt-in toolset, and nothing else in it
         var selection = ToolsetSelection.FromEnvironment(
             name => name == ToolsetSelection.ToolsetsVariable ? toolsets : null, Toolsets.Server);
-        await using var server = await InProcessMcpServer.StartAsync([], builder => builder.AddWindowsAppManagerTools(selection));
+        await using var server = await InProcessMcpServer.StartAsync([], builder => builder.AddWinDesktopMcpTools(selection));
 
         var tools = (await server.Client.ListToolsAsync()).Select(t => t.Name).ToList();
 
@@ -184,7 +184,7 @@ public class ToolsetContractTests
         // clicks and typing (roadmap M5.8)
         var selection = ToolsetSelection.FromEnvironment(
             name => name == ToolsetSelection.ToolsetsVariable ? toolsets : null, Toolsets.Server);
-        await using var server = await InProcessMcpServer.StartAsync([], builder => builder.AddWindowsAppManagerTools(selection));
+        await using var server = await InProcessMcpServer.StartAsync([], builder => builder.AddWinDesktopMcpTools(selection));
 
         var tools = (await server.Client.ListToolsAsync()).Select(t => t.Name).ToList();
 
@@ -198,7 +198,7 @@ public class ToolsetContractTests
     {
         var selection = ToolsetSelection.FromEnvironment(
             name => name == ToolsetSelection.ToolsetsVariable ? "all" : null, Toolsets.Server);
-        await using var server = await InProcessMcpServer.StartAsync([], builder => builder.AddWindowsAppManagerTools(selection));
+        await using var server = await InProcessMcpServer.StartAsync([], builder => builder.AddWinDesktopMcpTools(selection));
 
         var tools = (await server.Client.ListToolsAsync()).Select(t => t.Name).ToList();
 
@@ -233,7 +233,7 @@ public class ToolsetContractTests
                 ToolsetSelection.ToolsetsVariable => toolsets,
                 _ => null
             }, Toolsets.Server);
-        await using var server = await InProcessMcpServer.StartAsync([], builder => builder.AddWindowsAppManagerTools(readOnly));
+        await using var server = await InProcessMcpServer.StartAsync([], builder => builder.AddWinDesktopMcpTools(readOnly));
 
         var tools = await server.Client.ListToolsAsync();
 
@@ -287,7 +287,7 @@ public class ToolsetContractTests
                 _ => null
             },
             Toolsets.Server);
-        await using var server = await InProcessMcpServer.StartAsync([], builder => builder.AddWindowsAppManagerTools(readOnly));
+        await using var server = await InProcessMcpServer.StartAsync([], builder => builder.AddWinDesktopMcpTools(readOnly));
 
         var tools = (await server.Client.ListToolsAsync()).Select(t => t.Name).ToList();
 
@@ -303,7 +303,7 @@ public class ToolsetContractTests
         // It is how the agent finds out which tools are off and why, so WAM_EXCLUDE_TOOLS cannot drop it
         var selection = ToolsetSelection.FromEnvironment(
             name => name == ToolsetSelection.ExcludeToolsVariable ? "get_server_info,kill_process" : null, Toolsets.Server);
-        await using var server = await InProcessMcpServer.StartAsync([], builder => builder.AddWindowsAppManagerTools(selection));
+        await using var server = await InProcessMcpServer.StartAsync([], builder => builder.AddWinDesktopMcpTools(selection));
 
         var tools = (await server.Client.ListToolsAsync()).Select(t => t.Name).ToList();
 
@@ -317,7 +317,7 @@ public class ToolsetContractTests
         // Fail closed: a typo in a variable meant to restrict the server must not serve every tool
         var selection = ToolsetSelection.FromEnvironment(
             name => name == ToolsetSelection.ToolsetsVariable ? "windws,-proces" : null, Toolsets.Server);
-        await using var server = await InProcessMcpServer.StartAsync([], builder => builder.AddWindowsAppManagerTools(selection));
+        await using var server = await InProcessMcpServer.StartAsync([], builder => builder.AddWinDesktopMcpTools(selection));
 
         var tools = await server.Client.ListToolsAsync();
 
@@ -340,7 +340,7 @@ public class ToolsetContractTests
         await using var server = await InProcessMcpServer.StartAsync([], builder =>
         {
             builder.Services.Configure<McpServerOptions>(ServerIdentity.Configure);
-            builder.AddWindowsAppManagerTools(selection);
+            builder.AddWinDesktopMcpTools(selection);
         });
 
         var instructions = server.Client.ServerInstructions;
@@ -358,7 +358,7 @@ public class ToolsetContractTests
         await using var server = await InProcessMcpServer.StartAsync([], builder =>
         {
             builder.Services.Configure<McpServerOptions>(ServerIdentity.Configure);
-            builder.AddWindowsAppManagerTools(ToolsetSelection.FromEnvironment(_ => null, Toolsets.Server));
+            builder.AddWinDesktopMcpTools(ToolsetSelection.FromEnvironment(_ => null, Toolsets.Server));
         });
 
         server.Client.ServerInstructions.Should().Be(ServerIdentity.Instructions);
@@ -369,7 +369,7 @@ public class ToolsetContractTests
     {
         var selection = ToolsetSelection.FromEnvironment(
             name => name == ToolsetSelection.ExcludeToolsVariable ? "kill_process" : null, Toolsets.Server);
-        await using var server = await InProcessMcpServer.StartAsync([], builder => builder.AddWindowsAppManagerTools(selection));
+        await using var server = await InProcessMcpServer.StartAsync([], builder => builder.AddWinDesktopMcpTools(selection));
 
         var tools = await server.Client.ListToolsAsync();
 
@@ -384,9 +384,9 @@ public class ToolsetContractTests
     {
         var program = Snapshots.ReadNormalized(RepositoryFiles.PathOf("src", "win-desktop-mcp", "Program.cs"))!;
 
-        program.Should().Contain("var toolsets = ToolsetSelection.FromEnvironment();").And.Contain(".AddWindowsAppManagerTools(toolsets)");
+        program.Should().Contain("var toolsets = ToolsetSelection.FromEnvironment();").And.Contain(".AddWinDesktopMcpTools(toolsets)");
         program.IndexOf("ToolsetSelection.FromEnvironment()", StringComparison.Ordinal)
-            .Should().BeLessThan(program.IndexOf(".AddWindowsAppManagerTools(toolsets)", StringComparison.Ordinal));
+            .Should().BeLessThan(program.IndexOf(".AddWinDesktopMcpTools(toolsets)", StringComparison.Ordinal));
     }
 
     #endregion

@@ -13,7 +13,7 @@ namespace WinDesktopMcp.Tests.Integration;
 public sealed class ScrollClipboardRegistrationTests : IDisposable
 {
     private readonly ServiceProvider _provider = new ServiceCollection()
-        .AddWindowsAppManagerServices(() => LayoutStorageOptions.ForPath(
+        .AddWinDesktopMcpServices(() => LayoutStorageOptions.ForPath(
             Path.Combine(Path.GetTempPath(), $"ScrollClipboardRegistrationTests_{Guid.NewGuid()}")))
         .AddSingleton<INativeWindowWrapper>(new ReadOnlyNativeWindowWrapper())
         .BuildServiceProvider();

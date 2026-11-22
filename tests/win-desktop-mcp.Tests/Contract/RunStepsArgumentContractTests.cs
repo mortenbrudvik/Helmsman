@@ -23,7 +23,7 @@ public class RunStepsArgumentContractTests
     {
         var services = new ContractServices(ContractMode.Typical);
         await using var server = await InProcessMcpServer.StartAsync(
-            [], builder => builder.AddWindowsAppManagerTools(), configureServices: services.Register);
+            [], builder => builder.AddWinDesktopMcpTools(), configureServices: services.Register);
         var result = await server.CallToolAsync("run_steps", new Dictionary<string, object?>
         {
             ["window"] = new Dictionary<string, object?> { ["handle"] = Notepad },

@@ -267,7 +267,7 @@ public class ResourceContractTests
     private static Task<InProcessMcpServer> StartAsync(ContractServices services, ToolsetSelection? selection = null, string? revision = null) =>
         InProcessMcpServer.StartAsync(
             [],
-            builder => builder.AddWindowsAppManagerTools(selection),
+            builder => builder.AddWinDesktopMcpTools(selection),
             clientOptions: InProcessMcpServer.WithRevision(null, revision),
             configureServices: services.Register);
 

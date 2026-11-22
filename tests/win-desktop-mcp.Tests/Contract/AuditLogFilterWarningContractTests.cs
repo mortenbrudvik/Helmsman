@@ -44,7 +44,7 @@ public class AuditLogFilterWarningContractTests
             }
         }
 
-        await using var server = await InProcessMcpServer.StartAsync([], builder => builder.AddWindowsAppManagerTools(),
+        await using var server = await InProcessMcpServer.StartAsync([], builder => builder.AddWinDesktopMcpTools(),
             configureServices: s =>
             {
                 services.Register(s);
@@ -66,7 +66,7 @@ public class AuditLogFilterWarningContractTests
     public async Task AnAuditLogThatCannotBeCreated_LeavesAWarning_AndTheCallGoesOn()
     {
         using var services = new ContractServices(ContractMode.Typical);
-        await using var server = await InProcessMcpServer.StartAsync([], builder => builder.AddWindowsAppManagerTools(),
+        await using var server = await InProcessMcpServer.StartAsync([], builder => builder.AddWinDesktopMcpTools(),
             configureServices: s =>
             {
                 services.Register(s);

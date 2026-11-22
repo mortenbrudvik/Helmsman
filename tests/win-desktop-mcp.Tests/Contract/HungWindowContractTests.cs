@@ -136,7 +136,7 @@ public sealed class HungWindowContractTests : IDisposable
         return InProcessMcpServer.StartAsync(
             [],
             builder => builder
-                // The server's filters, in the server's order (ServiceRegistration.AddWindowsAppManagerTools)
+                // The server's filters, in the server's order (ServiceRegistration.AddWinDesktopMcpTools)
                 .AddToolErrorReporting()
                 .AddInputGateSerialization()
                 .WithServerTools(new WindowManagerTools(windows, Mock.Of<IForegroundService>(), Permissive.Session)));

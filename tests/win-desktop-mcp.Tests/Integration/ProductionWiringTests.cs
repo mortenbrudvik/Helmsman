@@ -50,10 +50,10 @@ public sealed class ProductionWiringTests : IDisposable
         _services = new ServiceCollection();
         // The host (Host.CreateApplicationBuilder in Program.cs) registers logging; layouts and the audit log go to a temp folder
         _services.AddLogging();
-        _services.AddWindowsAppManagerServices(
+        _services.AddWinDesktopMcpServices(
             () => LayoutStorageOptions.ForPath(_folder),
             () => AuditLogOptions.ForFolder(Path.Combine(_folder, "audit")));
-        _services.AddMcpServer().AddWindowsAppManagerTools();
+        _services.AddMcpServer().AddWinDesktopMcpTools();
         _provider = _services.BuildServiceProvider();
         _isService = _provider.GetRequiredService<IServiceProviderIsService>();
     }
@@ -72,8 +72,8 @@ public sealed class ProductionWiringTests : IDisposable
     {
         var data = new TheoryData<Type>();
         var services = new ServiceCollection();
-        services.AddWindowsAppManagerServices();
-        services.AddMcpServer().AddWindowsAppManagerTools();
+        services.AddWinDesktopMcpServices();
+        services.AddMcpServer().AddWinDesktopMcpTools();
         foreach (var type in services
                      .Where(d => !d.IsKeyedService && d.ImplementationType?.Assembly == Server)
                      .Select(d => d.ImplementationType!)

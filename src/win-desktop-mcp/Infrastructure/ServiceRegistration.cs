@@ -30,7 +30,7 @@ public static class ServiceRegistration
     /// <see cref="AuditLogOptions.FromEnvironment"/>: %LOCALAPPDATA%\win-desktop-mcp\audit or WAM_AUDIT_PATH.
     /// Nothing is written until an audited tool is called; tests that call one pass a temporary folder.
     /// </param>
-    public static IServiceCollection AddWindowsAppManagerServices(
+    public static IServiceCollection AddWinDesktopMcpServices(
         this IServiceCollection services,
         Func<LayoutStorageOptions>? layoutStorage = null,
         Func<AuditLogOptions>? auditLog = null)
@@ -280,7 +280,7 @@ public static class ServiceRegistration
             sp.GetRequiredService<IPauseHotkey>(),
             sp.GetRequiredService<ILayoutService>(),
             sp.GetRequiredService<INativeWindowWrapper>(),
-            sp.GetService<ToolsetSelection>(), // registered by AddWindowsAppManagerTools
+            sp.GetService<ToolsetSelection>(), // registered by AddWinDesktopMcpTools
             sp.GetRequiredService<IAuditLog>(),
             sp.GetService<ClipboardOptions>(),
             sp.GetRequiredService<ProtocolAllowlist>(),
@@ -367,7 +367,7 @@ public static class ServiceRegistration
     /// <see cref="ServerStartupLog"/> reports, at Information.
     /// Program.cs writes them to stderr; stdout carries the MCP protocol.
     /// </summary>
-    public static ILoggingBuilder AddWindowsAppManagerLogLevels(this ILoggingBuilder logging)
+    public static ILoggingBuilder AddWinDesktopMcpLogLevels(this ILoggingBuilder logging)
     {
         ArgumentNullException.ThrowIfNull(logging);
 
@@ -390,7 +390,7 @@ public static class ServiceRegistration
     /// (<see cref="ToolsetSelection.FromEnvironment()"/>). Null serves every tool (<see cref="ToolsetSelection.All"/>),
     /// the whole surface the tests and the tools/list snapshot check.
     /// </param>
-    public static IMcpServerBuilder AddWindowsAppManagerTools(this IMcpServerBuilder builder, ToolsetSelection? toolsets = null)
+    public static IMcpServerBuilder AddWinDesktopMcpTools(this IMcpServerBuilder builder, ToolsetSelection? toolsets = null)
     {
         ArgumentNullException.ThrowIfNull(builder);
 
@@ -443,7 +443,7 @@ public static class ServiceRegistration
             // run_steps (roadmap M6.2): its steps call the tools above through these same filters
             .WithServerTools<StepSequenceTools>()
             // The wam:// resources and the prompts (roadmap M6.9), with their own request log
-            .AddWindowsAppManagerResourcesAndPrompts()
+            .AddWinDesktopMcpResourcesAndPrompts()
             // Last: removes the tools the user's toolsets, exclusions or read-only mode leave out, and the resources and
             // prompts whose tools are then not served
             .WithToolsets(toolsets ?? ToolsetSelection.All());

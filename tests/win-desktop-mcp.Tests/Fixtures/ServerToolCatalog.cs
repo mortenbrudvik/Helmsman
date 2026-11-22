@@ -23,7 +23,7 @@ public static class ServerToolCatalog
 
     /// <summary>
     /// The names of the tools the server really serves: the tool collection that
-    /// <see cref="ServiceRegistration.AddWindowsAppManagerTools"/> (used by Program.cs) builds, which
+    /// <see cref="ServiceRegistration.AddWinDesktopMcpTools"/> (used by Program.cs) builds, which
     /// is what tools/list returns. <see cref="Tools"/> must list exactly these: a class registered with
     /// WithTools&lt;T&gt;() but missing [McpServerToolType] is served but not in <see cref="Tools"/>,
     /// and an attributed class that is never registered is in <see cref="Tools"/> but not served.
@@ -83,9 +83,9 @@ public static class ServerToolCatalog
         // The production registrations, without a transport. Building the tool collection only
         // reflects over the tool methods: no service, tool class or layout storage is created.
         var services = new ServiceCollection();
-        services.AddWindowsAppManagerServices(() =>
+        services.AddWinDesktopMcpServices(() =>
             throw new InvalidOperationException("The tool catalog must not create the layout storage."));
-        services.AddMcpServer().AddWindowsAppManagerTools();
+        services.AddMcpServer().AddWinDesktopMcpTools();
 
         using var provider = services.BuildServiceProvider();
         var tools = provider.GetRequiredService<IOptions<McpServerOptions>>().Value.ToolCollection

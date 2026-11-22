@@ -1033,7 +1033,7 @@ public class WrapperGuardTests
     {
         // Arrange - the server's own registrations, as Program.cs makes them
         var services = new ServiceCollection();
-        services.AddWindowsAppManagerServices(() => LayoutStorageOptions.ForPath(Path.GetTempPath()));
+        services.AddWinDesktopMcpServices(() => LayoutStorageOptions.ForPath(Path.GetTempPath()));
 
         // Act
         var guarded = WrapperGuard.GuardNativeWrappers(services, new ReadOnlyCallPolicy());

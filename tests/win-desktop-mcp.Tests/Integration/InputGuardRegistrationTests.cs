@@ -18,7 +18,7 @@ namespace WinDesktopMcp.Tests.Integration;
 public sealed class InputGuardRegistrationTests : IDisposable
 {
     private readonly ServiceProvider _provider = new ServiceCollection()
-        .AddWindowsAppManagerServices(() => LayoutStorageOptions.ForPath(
+        .AddWinDesktopMcpServices(() => LayoutStorageOptions.ForPath(
             Path.Combine(Path.GetTempPath(), $"InputGuardRegistrationTests_{Guid.NewGuid()}")))
         .AddSingleton<INativeWindowWrapper>(new ReadOnlyNativeWindowWrapper())
         .BuildServiceProvider();

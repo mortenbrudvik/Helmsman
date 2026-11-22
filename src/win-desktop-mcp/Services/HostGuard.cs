@@ -101,7 +101,7 @@ public sealed class HostGuard : IHostGuard
             .ToList();
 
         // Information, so the record behind a later refusal shows in the server log (it is enabled for
-        // this category, see ServiceRegistration.AddWindowsAppManagerLogLevels)
+        // this category, see ServiceRegistration.AddWinDesktopMcpLogLevels)
         _logger?.LogInformation(
             "Agent host recorded: ancestors {Ancestors}, console host window {ConsoleHost} (process {ConsoleHostProcess}), " +
             "console servers {ConsoleServers}, startup foreground window {Foreground} (process {ForegroundProcess}), shell process {ShellProcess}",

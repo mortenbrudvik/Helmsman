@@ -70,7 +70,7 @@ public sealed class HostTargetConfirmationUiaContractTests : IDisposable
 
         return InProcessMcpServer.StartAsync(
             [],
-            builder => builder.AddWindowsAppManagerTools(),
+            builder => builder.AddWinDesktopMcpTools(),
             clientOptions: options,
             configureServices: _services.Register);
     }

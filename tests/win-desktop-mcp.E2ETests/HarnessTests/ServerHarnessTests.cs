@@ -408,7 +408,7 @@ public class ServerHarnessTests : IDisposable
         // Act
         await using var server = await InProcessMcpServer.StartAsync(
             [],
-            builder => builder.AddWindowsAppManagerTools(),
+            builder => builder.AddWinDesktopMcpTools(),
             configureServices: host => ServerHarness.Forward(services, provider, host));
         var tools = await server.Client.ListToolsAsync();
 

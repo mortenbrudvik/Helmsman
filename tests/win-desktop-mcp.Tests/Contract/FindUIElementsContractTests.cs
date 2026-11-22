@@ -16,7 +16,7 @@ public class FindUIElementsContractTests
         arrange?.Invoke(services);
         await using var server = await InProcessMcpServer.StartAsync(
             [],
-            builder => builder.AddWindowsAppManagerTools(),
+            builder => builder.AddWinDesktopMcpTools(),
             configureServices: services.Register);
         return await server.CallToolAsync("find_ui_elements", arguments);
     }

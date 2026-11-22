@@ -23,7 +23,7 @@ public class ServerInfoToolContractTests
         var client = new McpClientOptions { ClientInfo = new Implementation { Name = "contract-test", Version = "3.1.4" } };
         await using var server = await InProcessMcpServer.StartAsync(
             [],
-            builder => builder.AddWindowsAppManagerTools(),
+            builder => builder.AddWinDesktopMcpTools(),
             clientOptions: InProcessMcpServer.WithRevision(client, revision),
             configureServices: services.Register);
 
@@ -43,7 +43,7 @@ public class ServerInfoToolContractTests
     {
         using var services = new ContractServices(ContractMode.Typical);
         await using var server = await InProcessMcpServer.StartAsync(
-            [], builder => builder.AddWindowsAppManagerTools(), configureServices: services.Register);
+            [], builder => builder.AddWinDesktopMcpTools(), configureServices: services.Register);
 
         var info = Json(await server.CallToolAsync("get_server_info"));
 
@@ -65,7 +65,7 @@ public class ServerInfoToolContractTests
     {
         using var services = new ContractServices(ContractMode.Failing);
         await using var server = await InProcessMcpServer.StartAsync(
-            [], builder => builder.AddWindowsAppManagerTools(), configureServices: services.Register);
+            [], builder => builder.AddWinDesktopMcpTools(), configureServices: services.Register);
 
         var result = await server.CallToolAsync("get_server_info");
 
@@ -81,7 +81,7 @@ public class ServerInfoToolContractTests
         using var services = new ContractServices(ContractMode.Typical);
         var readOnly = ToolsetSelection.FromEnvironment(name => name == ToolsetSelection.ReadOnlyVariable ? "1" : null, Toolsets.Server);
         await using var server = await InProcessMcpServer.StartAsync(
-            [], builder => builder.AddWindowsAppManagerTools(readOnly), configureServices: services.Register);
+            [], builder => builder.AddWinDesktopMcpTools(readOnly), configureServices: services.Register);
 
         // Act
         var listed = await server.Client.ListToolsAsync();
@@ -101,9 +101,9 @@ public class ServerInfoToolContractTests
         using var services = new ContractServices(ContractMode.Typical);
         var readOnly = ToolsetSelection.FromEnvironment(name => name == ToolsetSelection.ReadOnlyVariable ? "1" : null, Toolsets.Server);
         await using var all = await InProcessMcpServer.StartAsync(
-            [], builder => builder.AddWindowsAppManagerTools(), configureServices: services.Register);
+            [], builder => builder.AddWinDesktopMcpTools(), configureServices: services.Register);
         await using var reading = await InProcessMcpServer.StartAsync(
-            [], builder => builder.AddWindowsAppManagerTools(readOnly), configureServices: services.Register);
+            [], builder => builder.AddWinDesktopMcpTools(readOnly), configureServices: services.Register);
 
         var toolsets = Json(await all.CallToolAsync("get_server_info")).GetProperty("toolsets");
         var readOnlyToolsets = Json(await reading.CallToolAsync("get_server_info")).GetProperty("toolsets");
@@ -119,7 +119,7 @@ public class ServerInfoToolContractTests
         using var services = new ContractServices(ContractMode.Typical);
         var serverOnly = ToolsetSelection.FromEnvironment(name => name == ToolsetSelection.ToolsetsVariable ? "server" : null, Toolsets.Server);
         await using var server = await InProcessMcpServer.StartAsync(
-            [], builder => builder.AddWindowsAppManagerTools(serverOnly), configureServices: services.Register);
+            [], builder => builder.AddWinDesktopMcpTools(serverOnly), configureServices: services.Register);
 
         var toolsets = Json(await server.CallToolAsync("get_server_info")).GetProperty("toolsets");
 

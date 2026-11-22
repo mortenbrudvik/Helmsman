@@ -21,7 +21,7 @@ public class UndeclaredArgumentContractTests
     {
         var services = new ContractServices(ContractMode.Typical);
         await using var server = await InProcessMcpServer.StartAsync(
-            [], builder => builder.AddWindowsAppManagerTools(), configureServices: collection =>
+            [], builder => builder.AddWinDesktopMcpTools(), configureServices: collection =>
             {
                 services.Register(collection);
                 if (session != null)
@@ -174,7 +174,7 @@ public class UndeclaredArgumentContractTests
         using var services = new ContractServices(ContractMode.Typical);
         await using var connection = await RawMcpConnection.StartAsync(builder =>
         {
-            builder.AddWindowsAppManagerTools();
+            builder.AddWinDesktopMcpTools();
             services.Register(builder.Services);
         });
         await connection.SendAsync($$"""

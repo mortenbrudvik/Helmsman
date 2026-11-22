@@ -18,7 +18,7 @@ public class AdditiveConsolidationContractTests
         var services = new ContractServices(ContractMode.Typical);
         arrange?.Invoke(services);
         await using var server = await InProcessMcpServer.StartAsync(
-            [], builder => builder.AddWindowsAppManagerTools(), configureServices: services.Register);
+            [], builder => builder.AddWinDesktopMcpTools(), configureServices: services.Register);
         return (await server.CallToolAsync(tool, arguments), services);
     }
 

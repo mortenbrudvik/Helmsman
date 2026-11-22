@@ -24,7 +24,7 @@ public class ProtocolRevisionContractTests
     public async Task TheClient_NegotiatesTheRevisionItAsksFor(string? requested, string negotiated)
     {
         await using var server = await InProcessMcpServer.StartAsync(
-            [], builder => builder.AddWindowsAppManagerTools(), clientOptions: InProcessMcpServer.WithRevision(null, requested));
+            [], builder => builder.AddWinDesktopMcpTools(), clientOptions: InProcessMcpServer.WithRevision(null, requested));
 
         server.Client.NegotiatedProtocolVersion.Should().Be(negotiated);
     }
@@ -49,7 +49,7 @@ public class ProtocolRevisionContractTests
     {
         // The revision the SDK's server prefers on the initialize path. The CI guard and the tests' NewestInitializeRevision
         // follow it, so an SDK upgrade that moves it fails here instead of leaving them on a stale revision.
-        await using var connection = await RawMcpConnection.StartAsync(builder => builder.AddWindowsAppManagerTools());
+        await using var connection = await RawMcpConnection.StartAsync(builder => builder.AddWinDesktopMcpTools());
 
         await connection.SendAsync("""
             { "jsonrpc": "2.0", "id": 1, "method": "initialize",
@@ -69,7 +69,7 @@ public class ProtocolRevisionContractTests
         using var services = new ContractServices(ContractMode.Typical);
         await using var server = await InProcessMcpServer.StartAsync(
             [],
-            builder => builder.AddWindowsAppManagerTools(),
+            builder => builder.AddWinDesktopMcpTools(),
             clientOptions: InProcessMcpServer.WithRevision(null, revision),
             configureServices: services.Register);
 
@@ -92,7 +92,7 @@ public class ProtocolRevisionContractTests
         using var services = new ContractServices(ContractMode.Typical);
         await using var server = await InProcessMcpServer.StartAsync(
             [],
-            builder => builder.AddWindowsAppManagerTools(),
+            builder => builder.AddWinDesktopMcpTools(),
             clientOptions: InProcessMcpServer.WithRevision(null, revision),
             configureServices: services.Register);
 

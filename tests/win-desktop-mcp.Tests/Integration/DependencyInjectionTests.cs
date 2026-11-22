@@ -44,10 +44,10 @@ public class DependencyInjectionTests : IDisposable
         var services = new ServiceCollection();
         // The host (Host.CreateApplicationBuilder in Program.cs) registers logging, so the tools' optional loggers resolve
         services.AddLogging();
-        services.AddWindowsAppManagerServices(
+        services.AddWinDesktopMcpServices(
             () => LayoutStorageOptions.ForPath(_testLayoutPath),
             () => AuditLogOptions.ForFolder(Path.Combine(_testLayoutPath, "audit")));
-        services.AddMcpServer().AddWindowsAppManagerTools();
+        services.AddMcpServer().AddWinDesktopMcpTools();
         return services;
     }
 
@@ -435,11 +435,11 @@ public class DependencyInjectionTests : IDisposable
     #region Program.cs Wiring
 
     [Fact]
-    public void AddWindowsAppManagerServices_EveryRegistrationIsASingletonThatResolves()
+    public void AddWinDesktopMcpServices_EveryRegistrationIsASingletonThatResolves()
     {
         // Arrange - only the server's own registrations, not the MCP SDK's
         var registrations = new ServiceCollection()
-            .AddWindowsAppManagerServices(() => LayoutStorageOptions.ForPath(_testLayoutPath))
+            .AddWinDesktopMcpServices(() => LayoutStorageOptions.ForPath(_testLayoutPath))
             .ToList();
 
         // Act & Assert
@@ -462,7 +462,7 @@ public class DependencyInjectionTests : IDisposable
     [InlineData(typeof(ICdpTransport))]
     [InlineData(typeof(ITcpPortOwnerResolver))]
     [InlineData(typeof(IDebugBrowserReadiness))]
-    public void AddWindowsAppManagerServices_RegistersService(Type serviceType)
+    public void AddWinDesktopMcpServices_RegistersService(Type serviceType)
     {
         _serviceProvider.GetService(serviceType).Should().NotBeNull();
     }
@@ -572,9 +572,9 @@ public class DependencyInjectionTests : IDisposable
             _ => null
         }, Toolsets.Server);
         var services = new ServiceCollection();
-        services.AddWindowsAppManagerServices(() => LayoutStorageOptions.ForPath(_testLayoutPath),
+        services.AddWinDesktopMcpServices(() => LayoutStorageOptions.ForPath(_testLayoutPath),
             () => AuditLogOptions.ForFolder(Path.Combine(_testLayoutPath, "audit")));
-        services.AddMcpServer().AddWindowsAppManagerTools(selection);
+        services.AddMcpServer().AddWinDesktopMcpTools(selection);
         using var provider = services.BuildServiceProvider();
 
         // Act & Assert
@@ -589,7 +589,7 @@ public class DependencyInjectionTests : IDisposable
     }
 
     [Fact]
-    public void AddWindowsAppManagerServices_RegistersEveryToolClass()
+    public void AddWinDesktopMcpServices_RegistersEveryToolClass()
     {
         // Arrange
         var toolTypes = typeof(ServiceRegistration).Assembly.GetTypes()
@@ -605,7 +605,7 @@ public class DependencyInjectionTests : IDisposable
     }
 
     [Fact]
-    public void AddWindowsAppManagerTools_RegistersEveryTool()
+    public void AddWinDesktopMcpTools_RegistersEveryTool()
     {
         // Act
         var options = _serviceProvider.GetRequiredService<IOptions<McpServerOptions>>().Value;
@@ -617,7 +617,7 @@ public class DependencyInjectionTests : IDisposable
     }
 
     [Fact]
-    public void AddWindowsAppManagerTools_RegistersTheToolErrorFilter()
+    public void AddWinDesktopMcpTools_RegistersTheToolErrorFilter()
     {
         // The errorCode contract in docs/TOOLS.md (InvalidArguments, ToolError, PresetNotFound, ...)
         // depends on this filter being in the server's pipeline.
@@ -634,7 +634,7 @@ public class DependencyInjectionTests : IDisposable
     }
 
     [Fact]
-    public void AddWindowsAppManagerTools_RegistersTheRemovedToolRefusal_InsideTheErrorFilter()
+    public void AddWinDesktopMcpTools_RegistersTheRemovedToolRefusal_InsideTheErrorFilter()
     {
         // 3.0.0 (owner decision D1): inside the error filter, so a call to a removed tool gets ToolRemoved as a tool error;
         // outside the argument check and the gate, so it is refused before either looks at the call
@@ -644,7 +644,7 @@ public class DependencyInjectionTests : IDisposable
     }
 
     [Fact]
-    public void AddWindowsAppManagerTools_RegistersTheUndeclaredArgumentFilter_InsideTheErrorFilter_OutsideTheGate()
+    public void AddWinDesktopMcpTools_RegistersTheUndeclaredArgumentFilter_InsideTheErrorFilter_OutsideTheGate()
     {
         // M3 review: inside the audit log and the error filter, so the refusal is audited and reported as a tool error;
         // outside the input gate filter, so it never waits for the gate or a pause
@@ -655,7 +655,7 @@ public class DependencyInjectionTests : IDisposable
     }
 
     [Fact]
-    public void AddWindowsAppManagerTools_RegistersTheAuditLogFilter_AsTheOutermost()
+    public void AddWinDesktopMcpTools_RegistersTheAuditLogFilter_AsTheOutermost()
     {
         // Outermost (roadmap M2.17): it records the result the agent gets, after the error filter turned an exception
         // into an error result, and a call the input gate filter refused while input was paused
@@ -667,11 +667,11 @@ public class DependencyInjectionTests : IDisposable
     }
 
     [Fact]
-    public void AddWindowsAppManagerServices_ByDefault_WritesTheAuditLogWhereFromEnvironmentSays()
+    public void AddWinDesktopMcpServices_ByDefault_WritesTheAuditLogWhereFromEnvironmentSays()
     {
         // Arrange - Program.cs's default. Creating the audit log touches no file, and only its folder is read here, so
         // nothing is created under %LOCALAPPDATA%.
-        using var provider = new ServiceCollection().AddWindowsAppManagerServices().BuildServiceProvider();
+        using var provider = new ServiceCollection().AddWinDesktopMcpServices().BuildServiceProvider();
 
         // Act
         var folder = provider.GetRequiredService<IAuditLog>().Folder;
@@ -686,14 +686,14 @@ public class DependencyInjectionTests : IDisposable
     }
 
     [Fact]
-    public void AddWindowsAppManagerServices_WithAuditLog_UsesIt()
+    public void AddWinDesktopMcpServices_WithAuditLog_UsesIt()
     {
         _serviceProvider.GetRequiredService<IAuditLog>().Folder.Should().Be(Path.Combine(_testLayoutPath, "audit"));
         _serviceProvider.GetRequiredService<IServerInfoService>().Should().NotBeNull();
     }
 
     [Fact]
-    public void AddWindowsAppManagerTools_RegistersTheInputGateFilter()
+    public void AddWinDesktopMcpTools_RegistersTheInputGateFilter()
     {
         // Window-changing tools must not run between an input call's guard check and its input
         var filter = typeof(InputGateToolFilter).GetMethod(nameof(InputGateToolFilter.Filter))!;
@@ -704,11 +704,11 @@ public class DependencyInjectionTests : IDisposable
     }
 
     [Fact]
-    public void AddWindowsAppManagerServices_ByDefault_StoresLayoutsWhereFromEnvironmentSays()
+    public void AddWinDesktopMcpServices_ByDefault_StoresLayoutsWhereFromEnvironmentSays()
     {
         // Arrange - Program.cs's default storage. Constructing LayoutService does not touch the file
         // system, and only the path is read here, so nothing is created under %LOCALAPPDATA%.
-        using var provider = new ServiceCollection().AddWindowsAppManagerServices().BuildServiceProvider();
+        using var provider = new ServiceCollection().AddWinDesktopMcpServices().BuildServiceProvider();
         var expected = LayoutStorageOptions.FromEnvironment().LayoutsPath;
 
         // Act
@@ -726,7 +726,7 @@ public class DependencyInjectionTests : IDisposable
     }
 
     [Fact]
-    public void AddWindowsAppManagerServices_WithLayoutStorage_UsesIt()
+    public void AddWinDesktopMcpServices_WithLayoutStorage_UsesIt()
     {
         // Act
         var layoutsPath = _serviceProvider.GetRequiredService<ILayoutService>().LayoutsPath;

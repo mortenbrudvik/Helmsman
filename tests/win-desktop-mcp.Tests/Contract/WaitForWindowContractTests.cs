@@ -13,7 +13,7 @@ namespace WinDesktopMcp.Tests.Contract;
 public class WaitForWindowContractTests
 {
     private static Task<InProcessMcpServer> StartAsync(ContractServices services) =>
-        InProcessMcpServer.StartAsync([], builder => builder.AddWindowsAppManagerTools(), configureServices: services.Register);
+        InProcessMcpServer.StartAsync([], builder => builder.AddWinDesktopMcpTools(), configureServices: services.Register);
 
     private static JsonElement Payload(CallToolResult result) =>
         JsonDocument.Parse(result.Content.OfType<TextContentBlock>().Single().Text).RootElement;

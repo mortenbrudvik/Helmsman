@@ -2045,7 +2045,7 @@ Rules for new tests:
   wrapper calls nothing on a hotkey wrapper and hands the wrapper straight to a reflection read of a field; the shared
   pause is opened, set and reset only on a wrapper built in the same method on a name of the test's own (above).
   Server code a test hands a real wrapper to may only read it. A method that
-  builds the production container (`AddWindowsAppManagerServices`) needs an entry in `SanctionedProductionContainers`,
+  builds the production container (`AddWinDesktopMcpServices`) needs an entry in `SanctionedProductionContainers`,
   keyed by test type and method (its lambdas count as that method), and each call such a type makes that may act on
   the services needs one in `SanctionedProductionContainerCalls`: starting a hosted service or a host, invoking a tool
   through the MCP SDK, and `InProcessMcpServer`'s start and tool call count. It does not see a real wrapper registered
@@ -2197,7 +2197,7 @@ fails until a new kind is named in this list).
 tests use (`InProcessMcpServer`) lives in `win-desktop-mcp.Tests.Infrastructure`, so this tier can run the real
 MCP pipeline (argument binding, filters, result serialization) too; `HarnessTests/InProcessMcpServerTests` runs it with
 a fake tool. A scenario that hosts the server's own tools through it (roadmap M6.2) must pass them the harness's guarded
-services (`configureServices`), never the defaults of `AddWindowsAppManagerServices`, which would put unguarded native
+services (`configureServices`), never the defaults of `AddWinDesktopMcpServices`, which would put unguarded native
 wrappers behind the tools: `ServerHarness.StartMcpServerAsync` does, with the server's tools and call filters over the
 harness's own instances (one input session, element registry and audit log for the harness and the host) and none of its
 hosted services (no pause hotkey is registered). `FixtureRunStepsTests` runs run_steps through it.
@@ -3023,7 +3023,7 @@ does.
 ### Tool surface snapshot
 
 `Contract/ToolSurfaceSnapshotTests` tests the server the way an agent sees it. It lists the tools of an
-in-process server with the production registrations (`ServiceRegistration.AddWindowsAppManagerTools`, the
+in-process server with the production registrations (`ServiceRegistration.AddWinDesktopMcpTools`, the
 call Program.cs makes) and compares every tool object, as the server sends it (name, title, description,
 annotations, inputSchema, outputSchema), with the checked-in
 `tests/win-desktop-mcp.Tests/Contract/tools.snapshot.json`, sorted by tool name. A failure names the
@@ -3032,7 +3032,7 @@ client's first request on each protocol revision into `Contract/initialize.snaps
 2025-06-18 and 2025-11-25, and the `server/discover` result on 2026-07-28 (where serverInfo sits in `_meta`), with
 `serverInfo.version` masked. A client acts on more than the tool list (the negotiated revision, the capabilities object,
 the instructions), so an SDK upgrade that starts advertising a capability, or drops a revision, fails here too. The
-whole tool surface is snapshotted: `AddWindowsAppManagerTools()` without a toolset selection serves every toolset.
+whole tool surface is snapshotted: `AddWinDesktopMcpTools()` without a toolset selection serves every toolset.
 The resources and prompts (roadmap M6.9) are surface too: `Contract/resources.snapshot.json` holds the
 resources/list, resources/templates/list and prompts/list results, each sorted, and fails the same way. Since M6.9 the
 initialize snapshot advertises `resources`, `prompts` (both `listChanged: true`, as `tools` has) and `completions` on
@@ -3408,7 +3408,7 @@ Act rule names every input tool the default serves and lists exactly those.
 Two production services write to the user's machine, so a test never uses them as they are configured for the
 server:
 
-- **The audit log** (roadmap M2.17). `ServiceRegistration.AddWindowsAppManagerServices` defaults to
+- **The audit log** (roadmap M2.17). `ServiceRegistration.AddWinDesktopMcpServices` defaults to
   `AuditLogOptions.FromEnvironment`, the real `%LOCALAPPDATA%\win-desktop-mcp\audit` folder (or
   `WAM_AUDIT_PATH`). A test that builds the server with the production registrations and calls an audited tool must
   pass a temporary folder: `auditLog: () => AuditLogOptions.ForFolder(<temp folder>)`, as

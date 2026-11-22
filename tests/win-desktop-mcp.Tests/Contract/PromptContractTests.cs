@@ -250,7 +250,7 @@ public partial class PromptContractTests
     }
 
     private static Task<InProcessMcpServer> StartAsync(ToolsetSelection? selection) =>
-        InProcessMcpServer.StartAsync([], builder => builder.AddWindowsAppManagerTools(selection));
+        InProcessMcpServer.StartAsync([], builder => builder.AddWinDesktopMcpTools(selection));
 
     private static async Task<string> GetTextAsync(InProcessMcpServer server, string name) =>
         (await GetAsync(server, name, SampleArguments[name])).Messages.Single().Content.Should().BeOfType<TextContentBlock>().Subject.Text;

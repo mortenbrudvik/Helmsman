@@ -8,7 +8,7 @@ using WinDesktopMcp.Infrastructure;
 namespace WinDesktopMcp.Tests.Fixtures;
 
 /// <summary>
-/// The server's real services, registered as Program.cs registers them (<see cref="ServiceRegistration.AddWindowsAppManagerServices"/>),
+/// The server's real services, registered as Program.cs registers them (<see cref="ServiceRegistration.AddWinDesktopMcpServices"/>),
 /// with every native seam replaced by a fake: every interface of the server named INative* or *Wrapper, every server interface a
 /// type of the Native namespace implements (IUiaTree, IScreenCaptureWrapper, ITcpPortOwnerResolver, ...) and the CDP transport.
 /// NativeCallGuardTests keeps every action of the server behind those seams, so nothing here can reach the desktop, a process,
@@ -34,7 +34,7 @@ public sealed class NativeFakedServer : IDisposable
     public NativeFakedServer(TargetPolicySettings policy)
     {
         var services = new ServiceCollection();
-        services.AddWindowsAppManagerServices(
+        services.AddWinDesktopMcpServices(
             () => LayoutStorageOptions.ForPath(Path.Combine(_folder, "layouts")),
             () => AuditLogOptions.ForFolder(Path.Combine(_folder, "audit")));
         // MonitorService creates its own monitor wrapper unless the container has one
@@ -122,13 +122,13 @@ public sealed class NativeFakedServer : IDisposable
 
     /// <summary>
     /// Starts the in-process MCP host with the server's own tools and call filters
-    /// (<see cref="ServiceRegistration.AddWindowsAppManagerTools"/>) over these services: the call goes through the real pipeline
+    /// (<see cref="ServiceRegistration.AddWinDesktopMcpTools"/>) over these services: the call goes through the real pipeline
     /// and the real services, and reaches only the fakes.
     /// </summary>
     public Task<InProcessMcpServer> StartAsync() =>
         InProcessMcpServer.StartAsync(
             [],
-            builder => builder.AddWindowsAppManagerTools(),
+            builder => builder.AddWinDesktopMcpTools(),
             configureServices: host =>
             {
                 foreach (var type in _registrations

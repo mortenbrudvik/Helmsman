@@ -63,7 +63,7 @@ public static class ServerHandshake
             {
                 // Program.cs: AddMcpServer(ServerIdentity.Configure); this runs after the fixture's own options
                 builder.Services.Configure<McpServerOptions>(ServerIdentity.Configure);
-                builder.AddWindowsAppManagerTools();
+                builder.AddWinDesktopMcpTools();
             },
             clientOptions: InProcessMcpServer.WithRevision(null, revision));
 

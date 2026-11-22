@@ -65,7 +65,7 @@ public static class ResourcesAndPrompts
     /// Registers the resources, the prompts, the completion of layout names in wam://layouts/{name}, and the filter that logs
     /// each resource read and prompt request. <see cref="Toolsets.WithToolsets"/> later removes those whose tools are not served.
     /// </summary>
-    public static IMcpServerBuilder AddWindowsAppManagerResourcesAndPrompts(this IMcpServerBuilder builder)
+    public static IMcpServerBuilder AddWinDesktopMcpResourcesAndPrompts(this IMcpServerBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
         return builder

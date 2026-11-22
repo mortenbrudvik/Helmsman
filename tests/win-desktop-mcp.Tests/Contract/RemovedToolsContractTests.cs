@@ -48,7 +48,7 @@ public class RemovedToolsContractTests
 
     private static async Task<List<string>> ListAsync(ToolsetSelection selection)
     {
-        await using var server = await InProcessMcpServer.StartAsync([], builder => builder.AddWindowsAppManagerTools(selection));
+        await using var server = await InProcessMcpServer.StartAsync([], builder => builder.AddWinDesktopMcpTools(selection));
         return (await server.Client.ListToolsAsync()).Select(t => t.Name).ToList();
     }
 
@@ -103,7 +103,7 @@ public class RemovedToolsContractTests
         // Arrange - every tool served, as WAM_TOOLSETS=all
         using var services = new ContractServices(ContractMode.Typical);
         await using var server = await InProcessMcpServer.StartAsync(
-            [], builder => builder.AddWindowsAppManagerTools(), configureServices: services.Register);
+            [], builder => builder.AddWinDesktopMcpTools(), configureServices: services.Register);
 
         // Act
         var result = await server.CallToolAsync(tool, new Dictionary<string, object?> { ["x"] = 10, ["y"] = 10 });
@@ -298,7 +298,7 @@ public class RemovedToolsContractTests
     {
         var services = new ContractServices(ContractMode.Typical);
         await using var server = await InProcessMcpServer.StartAsync(
-            [], builder => builder.AddWindowsAppManagerTools(), configureServices: services.Register);
+            [], builder => builder.AddWinDesktopMcpTools(), configureServices: services.Register);
         using var document = JsonDocument.Parse(arguments);
         var parsed = document.RootElement.EnumerateObject().ToDictionary(p => p.Name, p => (object?)p.Value.Clone(), StringComparer.Ordinal);
         return (await server.CallToolAsync(tool, parsed), services);
@@ -311,7 +311,7 @@ public class RemovedToolsContractTests
     {
         using var services = new ContractServices(ContractMode.Typical);
         await using var server = await InProcessMcpServer.StartAsync(
-            [], builder => builder.AddWindowsAppManagerTools(selection), configureServices: services.Register);
+            [], builder => builder.AddWinDesktopMcpTools(selection), configureServices: services.Register);
         var result = await server.CallToolAsync("get_server_info");
         return JsonDocument.Parse(result.Content.OfType<TextContentBlock>().Single().Text).RootElement.Clone();
     }

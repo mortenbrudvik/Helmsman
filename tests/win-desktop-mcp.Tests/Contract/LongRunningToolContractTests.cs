@@ -47,7 +47,7 @@ public class LongRunningToolContractTests
                         }
                     }
                 }))
-                .AddWindowsAppManagerTools(),
+                .AddWinDesktopMcpTools(),
             clientOptions: InProcessMcpServer.WithRevision(null, revision),
             configureServices: services.Register);
 

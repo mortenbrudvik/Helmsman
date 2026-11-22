@@ -15,7 +15,7 @@ namespace WinDesktopMcp.Tests.Integration;
 public sealed class SecurityServiceRegistrationTests : IDisposable
 {
     private readonly ServiceProvider _provider = new ServiceCollection()
-        .AddWindowsAppManagerServices(() => LayoutStorageOptions.ForPath(
+        .AddWinDesktopMcpServices(() => LayoutStorageOptions.ForPath(
             Path.Combine(Path.GetTempPath(), $"SecurityRegistrationTests_{Guid.NewGuid()}")))
         .AddSingleton<INativeWindowWrapper>(new ReadOnlyNativeWindowWrapper())
         .BuildServiceProvider();
@@ -34,7 +34,7 @@ public sealed class SecurityServiceRegistrationTests : IDisposable
     [InlineData(typeof(INativeProcessWrapper), typeof(NativeProcessWrapper))]
     [InlineData(typeof(IProcessSecurityProbe), typeof(ProcessSecurityProbe))]
     [InlineData(typeof(IHostGuard), typeof(HostGuard))]
-    public void AddWindowsAppManagerServices_RegistersTheSafetyServicesAsSingletons(Type serviceType, Type implementation)
+    public void AddWinDesktopMcpServices_RegistersTheSafetyServicesAsSingletons(Type serviceType, Type implementation)
     {
         // Act
         var first = _provider.GetRequiredService(serviceType);
@@ -46,7 +46,7 @@ public sealed class SecurityServiceRegistrationTests : IDisposable
     }
 
     [Fact]
-    public void AddWindowsAppManagerServices_CreatesTheHostGuardWhenTheServerStarts()
+    public void AddWinDesktopMcpServices_CreatesTheHostGuardWhenTheServerStarts()
     {
         // Act - the host resolves its hosted services when it starts, before any tool call
         var startup = _provider.GetServices<IHostedService>().OfType<HostGuardStartup>().Should().ContainSingle().Subject;

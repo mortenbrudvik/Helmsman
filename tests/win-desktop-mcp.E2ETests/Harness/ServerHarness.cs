@@ -9,7 +9,7 @@ namespace WinDesktopMcp.E2ETests.Harness;
 
 /// <summary>
 /// The real server services, registered as Program.cs registers them
-/// (<see cref="ServiceRegistration.AddWindowsAppManagerServices"/>), with these differences:
+/// (<see cref="ServiceRegistration.AddWinDesktopMcpServices"/>), with these differences:
 /// <list type="bullet">
 /// <item>layouts live in a temporary folder;</item>
 /// <item>the native wrappers some services create themselves are registered, so the container passes
@@ -27,7 +27,7 @@ namespace WinDesktopMcp.E2ETests.Harness;
 /// <remarks>
 /// Tests call the services directly. The in-process MCP host (<see cref="InProcessMcpServer"/>, shared with the contract
 /// tests) can run the real MCP pipeline in this tier too; a scenario that hosts the server's tools through it must hand
-/// them this harness's guarded services, not the defaults of <see cref="ServiceRegistration.AddWindowsAppManagerServices"/>:
+/// them this harness's guarded services, not the defaults of <see cref="ServiceRegistration.AddWinDesktopMcpServices"/>:
 /// <see cref="StartMcpServerAsync"/> does (run_steps, roadmap M6.2, whose steps only the pipeline can run).
 /// </remarks>
 public sealed class ServerHarness : IDisposable
@@ -64,7 +64,7 @@ public sealed class ServerHarness : IDisposable
 
     /// <summary>
     /// Starts the in-process MCP host with the server's own tools and call filters
-    /// (<see cref="ServiceRegistration.AddWindowsAppManagerTools"/>, every toolset) over this harness's services
+    /// (<see cref="ServiceRegistration.AddWinDesktopMcpTools"/>, every toolset) over this harness's services
     /// (<see cref="Forward"/>), so a call goes through the real pipeline (binding, the audit log, error reporting, the
     /// undeclared-argument refusal, the input gate) and acts only through this harness's guard. A scenario that calls
     /// run_steps (roadmap M6.2) needs it: its steps are tool calls inside the server.
@@ -72,7 +72,7 @@ public sealed class ServerHarness : IDisposable
     public Task<InProcessMcpServer> StartMcpServerAsync() =>
         InProcessMcpServer.StartAsync(
             [],
-            builder => builder.AddWindowsAppManagerTools(),
+            builder => builder.AddWinDesktopMcpTools(),
             configureServices: host => Forward(_registrations, _provider, host));
 
     /// <summary>
@@ -221,7 +221,7 @@ public sealed class ServerHarness : IDisposable
         IReadOnlyCollection<string>? uiaActionProcesses = null)
     {
         var services = new ServiceCollection();
-        services.AddWindowsAppManagerServices(
+        services.AddWinDesktopMcpServices(
             () => LayoutStorageOptions.ForPath(layoutsPath),
             () => AuditLogOptions.ForFolder(AuditFolderFor(layoutsPath)));
         AddWrappersTheServerCreatesItself(services);

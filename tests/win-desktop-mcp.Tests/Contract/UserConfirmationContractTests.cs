@@ -67,7 +67,7 @@ public sealed class UserConfirmationContractTests : IDisposable
 
         return InProcessMcpServer.StartAsync(
             [],
-            builder => builder.AddWindowsAppManagerTools(),
+            builder => builder.AddWinDesktopMcpTools(),
             clientOptions: InProcessMcpServer.WithRevision(options, revision),
             configureServices: _services.Register);
     }
@@ -1161,7 +1161,7 @@ public sealed class UserConfirmationContractTests : IDisposable
             };
             await using var server = await InProcessMcpServer.StartAsync(
                 [],
-                builder => builder.AddWindowsAppManagerTools(),
+                builder => builder.AddWinDesktopMcpTools(),
                 clientOptions: options,
                 configureServices: services =>
                 {

@@ -572,8 +572,8 @@ public sealed class DeniedTargetContractTests
     private static IReadOnlyList<(string Name, JsonElement Schema)> ServedSchemas()
     {
         var services = new ServiceCollection();
-        services.AddWindowsAppManagerServices(() => throw new InvalidOperationException("The schemas need no layout storage."));
-        services.AddMcpServer().AddWindowsAppManagerTools();
+        services.AddWinDesktopMcpServices(() => throw new InvalidOperationException("The schemas need no layout storage."));
+        services.AddMcpServer().AddWinDesktopMcpTools();
         using var provider = services.BuildServiceProvider();
         return provider.GetRequiredService<IOptions<McpServerOptions>>().Value.ToolCollection!
             .Select(t => (t.ProtocolTool.Name, t.ProtocolTool.InputSchema.Clone()))

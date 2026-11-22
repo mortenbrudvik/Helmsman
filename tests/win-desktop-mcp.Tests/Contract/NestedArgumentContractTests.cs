@@ -22,7 +22,7 @@ public class NestedArgumentContractTests
     {
         var services = new ContractServices(ContractMode.Typical);
         await using var server = await InProcessMcpServer.StartAsync(
-            [], builder => builder.AddWindowsAppManagerTools(), configureServices: services.Register);
+            [], builder => builder.AddWinDesktopMcpTools(), configureServices: services.Register);
         using var document = JsonDocument.Parse(arguments);
         var parsed = document.RootElement.EnumerateObject().ToDictionary(p => p.Name, p => (object?)p.Value.Clone(), StringComparer.Ordinal);
         return (await server.CallToolAsync(tool, parsed), services);

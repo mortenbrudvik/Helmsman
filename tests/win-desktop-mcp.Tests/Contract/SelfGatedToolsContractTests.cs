@@ -343,7 +343,7 @@ public sealed class SelfGatedToolsContractTests : IDisposable
         var observer = new GateObserver(flow);
         await using var server = await InProcessMcpServer.StartAsync(
             [],
-            builder => builder.AddWindowsAppManagerTools(),
+            builder => builder.AddWinDesktopMcpTools(),
             configureServices: services =>
             {
                 _services.Register(services);
@@ -392,7 +392,7 @@ public sealed class SelfGatedToolsContractTests : IDisposable
         var mock = WatchedServices(_services).Single(s => s.Service == through.Service).Mock;
         await using var server = await InProcessMcpServer.StartAsync(
             [],
-            builder => builder.AddWindowsAppManagerTools(),
+            builder => builder.AddWinDesktopMcpTools(),
             configureServices: services =>
             {
                 _services.Register(services);
@@ -572,7 +572,7 @@ public sealed class SelfGatedToolsContractTests : IDisposable
     /// <summary>The service types the server registers with an implementation type, and that type (no service is created).</summary>
     private static Dictionary<Type, Type> ProductionRegistrations() =>
         new ServiceCollection()
-            .AddWindowsAppManagerServices(() => throw new InvalidOperationException("The registrations are only read."))
+            .AddWinDesktopMcpServices(() => throw new InvalidOperationException("The registrations are only read."))
             .Where(d => !d.IsKeyedService && d.ImplementationType != null)
             .GroupBy(d => d.ServiceType)
             .ToDictionary(g => g.Key, g => g.Last().ImplementationType!);

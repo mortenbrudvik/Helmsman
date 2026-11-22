@@ -23,7 +23,7 @@ public class ElementReadContractTests
         arrange?.Invoke(services);
         await using var server = await InProcessMcpServer.StartAsync(
             [],
-            builder => builder.AddWindowsAppManagerTools(),
+            builder => builder.AddWinDesktopMcpTools(),
             configureServices: services.Register);
         return await server.CallToolAsync(tool, arguments);
     }

@@ -20,7 +20,7 @@ public sealed class ToolArgumentContractTests : IDisposable
     private async Task<CallToolResult> CallAsync(string tool, string arguments)
     {
         await using var server = await InProcessMcpServer.StartAsync(
-            [], builder => builder.AddWindowsAppManagerTools(), configureServices: _services.Register);
+            [], builder => builder.AddWinDesktopMcpTools(), configureServices: _services.Register);
         return await server.CallToolAsync(tool, Args(arguments));
     }
 

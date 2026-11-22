@@ -40,7 +40,7 @@ public class RunStepsContractTests
 
                     return next(request, token);
                 }))
-                .AddWindowsAppManagerTools(toolsets),
+                .AddWinDesktopMcpTools(toolsets),
             clientOptions: InProcessMcpServer.WithRevision(null, revision),
             configureServices: services.Register);
 

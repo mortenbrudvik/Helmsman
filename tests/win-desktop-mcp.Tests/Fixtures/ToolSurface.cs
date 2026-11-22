@@ -9,7 +9,7 @@ namespace WinDesktopMcp.Tests.Fixtures;
 
 /// <summary>
 /// The server's tool surface as an MCP client sees it: the tools/list result of an in-process server with the
-/// production tool and filter registrations (<see cref="ServiceRegistration.AddWindowsAppManagerTools"/>, the
+/// production tool and filter registrations (<see cref="ServiceRegistration.AddWinDesktopMcpTools"/>, the
 /// same call Program.cs makes). Listing tools creates no tool class and no service, so nothing native runs.
 /// </summary>
 /// <remarks>
@@ -124,7 +124,7 @@ public static class ToolSurface
     {
         await using var server = await InProcessMcpServer.StartAsync(
             [],
-            builder => builder.AddWindowsAppManagerTools(toolsets),
+            builder => builder.AddWinDesktopMcpTools(toolsets),
             clientOptions: InProcessMcpServer.WithRevision(null, revision));
 
         var tools = new List<JsonObject>();

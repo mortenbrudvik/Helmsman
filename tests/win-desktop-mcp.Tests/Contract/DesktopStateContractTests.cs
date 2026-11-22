@@ -14,7 +14,7 @@ namespace WinDesktopMcp.Tests.Contract;
 public class DesktopStateContractTests
 {
     private static Task<InProcessMcpServer> StartAsync(ContractServices services, ToolsetSelection? toolsets = null) =>
-        InProcessMcpServer.StartAsync([], builder => builder.AddWindowsAppManagerTools(toolsets), configureServices: services.Register);
+        InProcessMcpServer.StartAsync([], builder => builder.AddWinDesktopMcpTools(toolsets), configureServices: services.Register);
 
     private static JsonElement Json(CallToolResult result) =>
         JsonDocument.Parse(result.Content.OfType<TextContentBlock>().Single().Text).RootElement.Clone();

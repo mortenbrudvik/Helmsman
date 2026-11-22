@@ -8,7 +8,7 @@ using WinDesktopMcp.Infrastructure;
 namespace WinDesktopMcp.Tests.Contract;
 
 /// <summary>
-/// Contract: the server's call-tool pipeline as <see cref="ServiceRegistration.AddWindowsAppManagerTools"/> builds it.
+/// Contract: the server's call-tool pipeline as <see cref="ServiceRegistration.AddWinDesktopMcpTools"/> builds it.
 /// The tool error filter runs outside the input gate filter (only the audit log's filter is further out), so its
 /// call log covers what the input gate filter does: a call the gate filter refuses while input is paused, and the
 /// wait for the gate. Runs a real MCP client and server
@@ -23,7 +23,7 @@ public class ServerFilterPipelineTests
     [Fact]
     public async Task TheSdk_RunsTheFirstFilterAddedAsTheOutermost()
     {
-        // The order AddWindowsAppManagerTools relies on. SDK 0.5's XML documentation of McpServerOptions.Filters said
+        // The order AddWinDesktopMcpTools relies on. SDK 0.5's XML documentation of McpServerOptions.Filters said
         // the opposite ("the last filter added will be the outermost"); 2.x documents this order. Pinned all the same.
         var order = new System.Collections.Concurrent.ConcurrentQueue<string>();
         await using var server = await InProcessMcpServer.StartAsync(
@@ -121,7 +121,7 @@ public class ServerFilterPipelineTests
     private static Task<InProcessMcpServer> StartServerAsync(IInputSession? session) =>
         InProcessMcpServer.StartAsync(
             [McpServerTool.Create(() => "done", new McpServerToolCreateOptions { Name = UnclassifiedTool })],
-            builder => builder.AddWindowsAppManagerTools(),
+            builder => builder.AddWinDesktopMcpTools(),
             configureServices: services => services.AddSingleton(session ?? Permissive.Session));
 
     private static List<string> CallLines(InProcessMcpServer server, string tool) =>

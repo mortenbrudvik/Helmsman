@@ -266,7 +266,7 @@ public static class Toolsets
     /// leaves them out and a call to one is an unknown tool, and then the resources and prompts that rest on a removed tool
     /// (<see cref="ResourcesAndPrompts.RemoveUnserved"/>). When the user turned off tools the default serves, the
     /// server instructions get one more line that says which (<see cref="ToolsetSelection.InstructionsNote"/>). Program.cs reads the selection from the environment before
-    /// the tool registrations (<see cref="ServiceRegistration.AddWindowsAppManagerTools"/>).
+    /// the tool registrations (<see cref="ServiceRegistration.AddWinDesktopMcpTools"/>).
     /// </summary>
     public static IMcpServerBuilder WithToolsets(this IMcpServerBuilder builder, ToolsetSelection selection)
     {

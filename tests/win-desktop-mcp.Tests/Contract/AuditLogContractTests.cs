@@ -41,7 +41,7 @@ public class AuditLogContractTests
         arrange?.Invoke(services);
         CallToolResult result;
         await using (var server = await InProcessMcpServer.StartAsync(
-                         [], builder => builder.AddWindowsAppManagerTools(), configureServices: services.Register))
+                         [], builder => builder.AddWinDesktopMcpTools(), configureServices: services.Register))
         {
             result = await server.CallToolAsync(tool, arguments);
         }
@@ -706,7 +706,7 @@ public class AuditLogContractTests
             audit.Setup(a => a.EndAsync(It.IsAny<AuditCall>(), It.IsAny<CallToolResult?>(), It.IsAny<string>())).Throws(new IOException("end"));
         }
 
-        await using var server = await InProcessMcpServer.StartAsync([], builder => builder.AddWindowsAppManagerTools(),
+        await using var server = await InProcessMcpServer.StartAsync([], builder => builder.AddWinDesktopMcpTools(),
             configureServices: s =>
             {
                 services.Register(s);
@@ -737,7 +737,7 @@ public class AuditLogContractTests
         audit.Setup(a => a.EndAsync(It.IsAny<AuditCall>(), It.IsAny<CallToolResult?>(), It.IsAny<string>()))
             .Returns(neverFinishes ? new TaskCompletionSource().Task : Task.FromException(new IOException("end")));
 
-        await using var server = await InProcessMcpServer.StartAsync([], builder => builder.AddWindowsAppManagerTools(),
+        await using var server = await InProcessMcpServer.StartAsync([], builder => builder.AddWinDesktopMcpTools(),
             configureServices: s =>
             {
                 services.Register(s);
@@ -760,7 +760,7 @@ public class AuditLogContractTests
         using var services = new ContractServices(ContractMode.Typical);
         services.BlockAuditFolder();
         await using var server = await InProcessMcpServer.StartAsync(
-            [], builder => builder.AddWindowsAppManagerTools(), configureServices: services.Register);
+            [], builder => builder.AddWinDesktopMcpTools(), configureServices: services.Register);
 
         // Act
         var before = Json(await server.CallToolAsync("get_server_info"));

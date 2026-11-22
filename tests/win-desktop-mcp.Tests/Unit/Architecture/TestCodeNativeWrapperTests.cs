@@ -32,7 +32,7 @@ namespace WinDesktopMcp.Tests.Unit.Architecture;
 /// shared pause is opened only on a wrapper built so in the same method, and set or reset only when it was opened so.</item>
 /// <item>Server code that a test hands a real wrapper to (a constructor called in the same method) calls only those read members
 /// on it.</item>
-/// <item>Test code builds the server's production container (ServiceRegistration.AddWindowsAppManagerServices), whose services
+/// <item>Test code builds the server's production container (ServiceRegistration.AddWinDesktopMcpServices), whose services
 /// hold the real input, clipboard, hook, window and process wrappers, only in the methods where
 /// <see cref="SanctionedProductionContainers"/> says why that use only reads; and a type with such a method calls the server's
 /// services and wrappers only through constructors, property getters, static members and the reads on
@@ -173,13 +173,13 @@ public class TestCodeNativeWrapperTests
         [("WinDesktopMcp.Tests.Integration.DependencyInjectionTests", "BuildServerServices")] =
             "the registrations of Program.cs the tests resolve to check their types, lifetimes and what they hold; they act through " +
             "none of them, and call only the reads on SanctionedProductionContainerCalls",
-        [("WinDesktopMcp.Tests.Integration.DependencyInjectionTests", "AddWindowsAppManagerServices_EveryRegistrationIsASingletonThatResolves")] =
+        [("WinDesktopMcp.Tests.Integration.DependencyInjectionTests", "AddWinDesktopMcpServices_EveryRegistrationIsASingletonThatResolves")] =
             "lists the registrations and resolves each to check its lifetime; nothing is called on them",
         [("WinDesktopMcp.Tests.Integration.DependencyInjectionTests", "TheCaptureRegistry_KeepsSignatures_OnlyWhileWaitForVisualIsServed")] =
             "resolves the capture registry for a toolset selection and reads whether it keeps signatures",
-        [("WinDesktopMcp.Tests.Integration.DependencyInjectionTests", "AddWindowsAppManagerServices_ByDefault_WritesTheAuditLogWhereFromEnvironmentSays")] =
+        [("WinDesktopMcp.Tests.Integration.DependencyInjectionTests", "AddWinDesktopMcpServices_ByDefault_WritesTheAuditLogWhereFromEnvironmentSays")] =
             "resolves the audit log and reads its folder; creating it touches no file",
-        [("WinDesktopMcp.Tests.Integration.DependencyInjectionTests", "AddWindowsAppManagerServices_ByDefault_StoresLayoutsWhereFromEnvironmentSays")] =
+        [("WinDesktopMcp.Tests.Integration.DependencyInjectionTests", "AddWinDesktopMcpServices_ByDefault_StoresLayoutsWhereFromEnvironmentSays")] =
             "resolves the layout service and reads its path; creating it touches no file",
         [("WinDesktopMcp.Tests.Integration.ProductionWiringTests", ".ctor")] =
             "the registrations of Program.cs, whose constructors it inspects and whose services, hosted services and tool, " +
@@ -236,7 +236,7 @@ public class TestCodeNativeWrapperTests
             "gives the tools' schemas",
         [("WinDesktopMcp.Tests.Contract.SelfGatedToolsContractTests", "InProcessMcpServer.StartAsync")] =
             "hosts the contract run's mocks (ContractServices) and the tools, not the production services: the type's one call of " +
-            "AddWindowsAppManagerServices (ProductionRegistrations, reviewed on its own) only reads the registrations",
+            "AddWinDesktopMcpServices (ProductionRegistrations, reviewed on its own) only reads the registrations",
         [("WinDesktopMcp.Tests.Contract.SelfGatedToolsContractTests", "InProcessMcpServer.CallToolAsync")] =
             "calls tools on that host of the contract run's mocks",
     };
@@ -841,19 +841,19 @@ public class TestCodeNativeWrapperTests
         }
     }
 
-    /// <summary>A call of ServiceRegistration.AddWindowsAppManagerServices: the outermost type, the source method it is in, and the calling code.</summary>
+    /// <summary>A call of ServiceRegistration.AddWinDesktopMcpServices: the outermost type, the source method it is in, and the calling code.</summary>
     private sealed record ContainerBuilder(Type Owner, string Method, MethodBase Caller)
     {
         public string Description => $"{Owner.FullName}.{Method}";
     }
 
     /// <summary>
-    /// The calls of ServiceRegistration.AddWindowsAppManagerServices, each by the source method it is in: a call in a lambda, a
+    /// The calls of ServiceRegistration.AddWinDesktopMcpServices, each by the source method it is in: a call in a lambda, a
     /// local function or a state machine is the method's that holds it (a configureServices handed to a server it starts).
     /// </summary>
     private static IEnumerable<ContainerBuilder> ContainerBuilders(IEnumerable<MethodBase> methods) =>
         Calls(methods)
-            .Where(c => c.Callee.DeclaringType == typeof(ServiceRegistration) && c.Callee.Name == nameof(ServiceRegistration.AddWindowsAppManagerServices))
+            .Where(c => c.Callee.DeclaringType == typeof(ServiceRegistration) && c.Callee.Name == nameof(ServiceRegistration.AddWinDesktopMcpServices))
             .Select(c => new ContainerBuilder(c.Owner, SourceMethodName(c.Caller) ?? c.Caller.Name, c.Caller));
 
     /// <summary>The test types (by full name) with a method on <see cref="SanctionedProductionContainers"/>: their calls are held to reads.</summary>
@@ -992,7 +992,7 @@ internal static class NativeWrapperScanSamples
 
     public static async Task ActsThroughTheProductionContainer()
     {
-        using var provider = new ServiceCollection().AddWindowsAppManagerServices().BuildServiceProvider();
+        using var provider = new ServiceCollection().AddWinDesktopMcpServices().BuildServiceProvider();
         provider.GetRequiredService<INativeClipboardWrapper>().WriteText("sample");
         await provider.GetRequiredService<IInputSimulationService>().TypeTextAsync(
             "sample", 0, new InputTarget(null), false, null, TextInputMethod.Unicode, CancellationToken.None);
@@ -1006,7 +1006,7 @@ internal static class NativeWrapperScanSamples
 
         provider.GetRequiredService<IHost>().Start();
         await provider.GetServices<McpServerTool>().First().InvokeAsync(null!, CancellationToken.None);
-        await using var server = await InProcessMcpServer.StartAsync([], configureServices: services => services.AddWindowsAppManagerServices());
+        await using var server = await InProcessMcpServer.StartAsync([], configureServices: services => services.AddWinDesktopMcpServices());
         await server.CallToolAsync("type_text", new Dictionary<string, object?> { ["text"] = "sample" });
     }
 

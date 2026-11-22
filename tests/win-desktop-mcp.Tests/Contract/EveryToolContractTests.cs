@@ -253,7 +253,7 @@ public class EveryToolContractTests
         // concurrent calls apart (the services are mocks here, so this covers the server, not the native reads)
         using var services = new ContractServices(ContractMode.Typical);
         await using var server = await InProcessMcpServer.StartAsync(
-            [], builder => builder.AddWindowsAppManagerTools(), configureServices: services.Register);
+            [], builder => builder.AddWinDesktopMcpTools(), configureServices: services.Register);
         string[] tools = ["find_windows", "get_monitors", "list_processes", "get_ui_elements", "get_focused_element"];
 
         var calls = Enumerable.Range(0, 50)

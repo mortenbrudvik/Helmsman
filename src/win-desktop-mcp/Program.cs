@@ -14,13 +14,13 @@ builder.Logging.AddConsole(options =>
     options.LogToStandardErrorThreshold = LogLevel.Trace;
 });
 // Warning and above, plus one Information line at the start and end of every tool call (tool, duration,
-// outcome; never arguments or results). See ServiceRegistration.AddWindowsAppManagerLogLevels.
-builder.Logging.AddWindowsAppManagerLogLevels();
+// outcome; never arguments or results). See ServiceRegistration.AddWinDesktopMcpLogLevels.
+builder.Logging.AddWinDesktopMcpLogLevels();
 
 // Register services and MCP tool classes (shared with DependencyInjectionTests, see ServiceRegistration).
 // Layout presets live in %LOCALAPPDATA%\win-desktop-mcp\layouts or WAM_LAYOUTS_PATH, outside the
 // versioned plugin folder (LayoutStorageOptions.FromEnvironment).
-builder.Services.AddWindowsAppManagerServices();
+builder.Services.AddWinDesktopMcpServices();
 
 // The toolsets, excluded tools and read-only mode the user chose (WAM_TOOLSETS, WAM_EXCLUDE_TOOLS, WAM_READ_ONLY),
 // read before the tool registrations; ServerStartupLog logs them and what they leave out
@@ -30,7 +30,7 @@ var toolsets = ToolsetSelection.FromEnvironment();
 builder.Services.AddMcpServer(ServerIdentity.Configure)
 .WithStdioServerTransport()
 // The tool error filter (ToolErrorReporting), the input gate and the tools the toolsets serve
-.AddWindowsAppManagerTools(toolsets);
+.AddWinDesktopMcpTools(toolsets);
 
 var app = builder.Build();
 

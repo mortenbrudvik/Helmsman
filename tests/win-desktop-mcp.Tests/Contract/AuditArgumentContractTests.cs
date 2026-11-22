@@ -17,7 +17,7 @@ public class AuditArgumentContractTests
         using var services = new ContractServices(ContractMode.Typical);
         services.Session.Pause(InputControlSources.Hotkey);
         await using var server = await InProcessMcpServer.StartAsync(
-            [], builder => builder.AddWindowsAppManagerTools(), configureServices: services.Register);
+            [], builder => builder.AddWinDesktopMcpTools(), configureServices: services.Register);
 
         // Act
         await server.CallToolAsync("close_window", new Dictionary<string, object?>

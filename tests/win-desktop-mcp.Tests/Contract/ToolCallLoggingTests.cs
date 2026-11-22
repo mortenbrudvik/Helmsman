@@ -197,7 +197,7 @@ public class ToolCallLoggingTests
     {
         // Arrange
         using var services = new ServiceCollection()
-            .AddLogging(b => b.AddProvider(new CapturingLoggerProvider()).AddWindowsAppManagerLogLevels())
+            .AddLogging(b => b.AddProvider(new CapturingLoggerProvider()).AddWinDesktopMcpLogLevels())
             .BuildServiceProvider();
         var factory = services.GetRequiredService<ILoggerFactory>();
 
@@ -222,7 +222,7 @@ public class ToolCallLoggingTests
     public async Task ServerLogLevels_LogEveryCallButNotTheInformationLinesOfOtherCategories()
     {
         // Arrange - the production log levels on top of the capturing provider
-        await using var server = await StartServerAsync(logging => logging.AddWindowsAppManagerLogLevels());
+        await using var server = await StartServerAsync(logging => logging.AddWinDesktopMcpLogLevels());
 
         // Act - a deliberate tool error writes an Information line in the ToolErrors category
         await server.CallToolAsync(EchoTool, new Dictionary<string, object?> { ["text"] = "hello" });

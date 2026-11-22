@@ -62,7 +62,7 @@ public static class ResourceSurface
     /// <param name="toolsets">The toolsets the server serves; null serves every tool (<see cref="ToolsetSelection.All"/>).</param>
     public static async Task<JsonObject> ListFromServerAsync(ToolsetSelection? toolsets)
     {
-        await using var server = await InProcessMcpServer.StartAsync([], builder => builder.AddWindowsAppManagerTools(toolsets));
+        await using var server = await InProcessMcpServer.StartAsync([], builder => builder.AddWinDesktopMcpTools(toolsets));
 
         var lists = new JsonObject();
         foreach (var (member, method, key) in Lists)
