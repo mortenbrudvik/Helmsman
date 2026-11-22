@@ -88,6 +88,8 @@ What changes for you:
   `mcp__plugin_windows-app-manager_windows-app-manager__...` tool. The tool names after the prefix are unchanged.
 - **Skill.** The plugin skill is now `using-win-desktop-mcp` (shown as `/win-desktop-mcp:using-win-desktop-mcp`),
   not `using-windows-app-manager`.
+- **Server name.** The server now reports its name (`serverInfo.name` in the MCP handshake, `server.name` in
+  `get_server_info`) as `win-desktop-mcp` instead of `windows-app-manager`. Update clients or scripts that match on it.
 - **Hand-written MCP config** (Option 2). Only the exe path matters: 3.x shipped `WindowsAppManagerMcp.exe`, 4.0.0
   ships `win-desktop-mcp.exe`, so point `command` at the new file. You may rename your server key to
   `"win-desktop-mcp"`; if you do, its tools change from `mcp__<old key>__<tool>` to `mcp__win-desktop-mcp__<tool>`,

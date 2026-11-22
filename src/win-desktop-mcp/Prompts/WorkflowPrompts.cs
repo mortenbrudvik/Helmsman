@@ -9,8 +9,8 @@ namespace WinDesktopMcp.Prompts;
 /// <summary>
 /// The server's prompts (roadmap M6.9, owner decision D16): four recipes that write out the plugin skill's loop (locate,
 /// activate and verify, act, verify) and its untrusted-content rule for one kind of task, for clients that do not load the
-/// skill. Claude Code shows them as /mcp__SERVER__NAME commands (SERVER is win-desktop-mcp under a hand-written config, or
-/// plugin_win-desktop-mcp_win-desktop-mcp from the plugin). Each returns one user message.
+/// skill. Claude Code lists them as /SERVER:NAME (MCP), and typing /mcp__SERVER__NAME runs one too. Each returns one user
+/// message.
 /// </summary>
 /// <remarks>
 /// A recipe names only tools the server serves: each line lists the tools it names, and a line whose tool the user's

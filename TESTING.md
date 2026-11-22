@@ -1264,7 +1264,7 @@ public class LayoutServiceIntegrationTests : IDisposable
     {
         _testLayoutPath = Path.Combine(
             Path.GetTempPath(),
-            $"LayoutServiceIntegrationTests_{Guid.NewGuid()}");
+            $"IntegrationTests_{Guid.NewGuid()}");
         Directory.CreateDirectory(_testLayoutPath);
 
         _mockWindowService = CreateMockWindowService();
