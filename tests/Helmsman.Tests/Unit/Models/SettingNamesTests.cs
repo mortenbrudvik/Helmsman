@@ -4,9 +4,9 @@ namespace Helmsman.Tests.Unit.Models;
 
 /// <summary>
 /// The settings' names (SettingNames): HELMSMAN_* since release 4.0.0, and the WAM_* name each had before, which is still
-/// read when the HELMSMAN_ variable is not present. Every setting is checked through its real options class, with a fake
-/// environment: the new name is read; the old one is read, and parsed as before, when the new one is not present; the new
-/// one wins when both are, an empty one included; neither is the default.
+/// read when the HELMSMAN_ variable is not present or empty. Every setting is checked through its real options class, with a
+/// fake environment: the new name is read; the old one is read, and parsed as before, when the new one is not present or is
+/// empty or white space; the new one wins when both hold a value; neither is the default.
 /// </summary>
 public sealed class SettingNamesTests
 {
@@ -107,14 +107,17 @@ public sealed class SettingNamesTests
 
     [Theory]
     [MemberData(nameof(SettingNameData))]
-    public void Read_FollowsThePresenceRule(string name)
+    public void Read_UsesTheNewNameWhenItHoldsAValue_OtherwiseTheOldOne(string name)
     {
         var oldName = SettingNames.OldNameOf(name);
 
         SettingNames.Read(Env((name, "new")), name).Should().Be("new");
         SettingNames.Read(Env((oldName, "old")), name).Should().Be("old");
         SettingNames.Read(Env((name, "new"), (oldName, "old")), name).Should().Be("new");
-        SettingNames.Read(Env((name, ""), (oldName, "old")), name).Should().Be("", "a new name that is present wins even when empty");
+        SettingNames.Read(Env((name, ""), (oldName, "old")), name).Should().Be("old", "an empty new name counts as not set");
+        SettingNames.Read(Env((name, " \t"), (oldName, "old")), name).Should().Be("old", "so does one of white space only");
+        SettingNames.Read(Env((name, "new"), (oldName, "")), name).Should().Be("new");
+        SettingNames.Read(Env((name, "")), name).Should().Be("");
         SettingNames.Read(Env((oldName, "")), name).Should().Be("");
         SettingNames.Read(Env(), name).Should().BeNull();
     }
@@ -156,15 +159,28 @@ public sealed class SettingNamesTests
 
     [Theory]
     [MemberData(nameof(SettingNameData))]
-    public void TheNewName_Wins_WhenItIsPresentButEmpty(string name)
+    public void TheOldName_IsRead_WhenTheNewOneIsEmpty(string name)
     {
-        // An empty variable is present: on Windows a parent can pass "NAME=" in the child's environment block, and .NET
-        // returns "" for it (null only for a variable that is not there). Each setting reads "" as it always has: the default.
+        // An empty variable is present: an MCP client's env block that expands an unset variable passes "NAME=", and .NET
+        // returns "" for it (null only for a variable that is not there). Every setting reads "" or white space as not set,
+        // so the old name's value applies, as when the new name is not there at all.
         var (value, _, effect) = Settings[name];
         var oldName = SettingNames.OldNameOf(name);
 
-        effect(Env((name, ""), (oldName, value))).Should().Be(effect(Env((name, ""))));
-        effect(Env((name, ""), (oldName, value))).Should().Be(effect(Env()));
+        effect(Env((name, ""), (oldName, value))).Should().Be(effect(Env((oldName, value))));
+        effect(Env((name, "  "), (oldName, value))).Should().Be(effect(Env((oldName, value))));
+        effect(Env((name, ""), (oldName, value))).Should().NotBe(effect(Env()));
+    }
+
+    [Theory]
+    [MemberData(nameof(SettingNameData))]
+    public void AnEmptyOrWhiteSpaceValue_IsTheDefault(string name)
+    {
+        // Why an empty new name can be read as not set: no setting gives an empty or white-space value a meaning
+        var (_, _, effect) = Settings[name];
+
+        effect(Env((name, ""))).Should().Be(effect(Env()));
+        effect(Env((name, " \t "))).Should().Be(effect(Env()));
     }
 
     [Theory]
@@ -268,6 +284,35 @@ public sealed class SettingNamesTests
     {
         PauseHotkeyOptions.FromEnvironment(Env(("WAM_PAUSE_HOTKEY", "Ctrl+Alt+F12"))).Chord!.Text.Should().Be("Ctrl+Alt+F12");
         PauseHotkeyOptions.FromEnvironment(Env(("WAM_PAUSE_HOTKEY", "none"))).Chord.Should().BeNull();
+    }
+
+    [Fact]
+    public void AnEmptyNewAllowList_KeepsTheOldAllowList()
+    {
+        var policy = new TargetPolicy(TargetPolicySettings.FromEnvironment(
+            Env(("HELMSMAN_ALLOW_PROCESSES", ""), ("WAM_ALLOW_PROCESSES", "notepad"))), Permissive.Windows);
+
+        policy.Evaluate(["notepad"]).Allowed.Should().BeTrue();
+        policy.Evaluate(["calc"]).Allowed.Should().BeFalse("an empty new name must not open every app");
+    }
+
+    [Fact]
+    public void AnEmptyNewReadOnly_KeepsTheOldReadOnly()
+    {
+        var selection = ToolsetSelection.FromEnvironment(Env(("HELMSMAN_READ_ONLY", ""), ("WAM_READ_ONLY", "1")), Toolsets.Server);
+
+        selection.ReadOnly.Should().BeTrue();
+        selection.Serves("close_window", readOnlyHint: false).Should().BeFalse();
+    }
+
+    [Fact]
+    public void AnEmptyNewDenyList_KeepsTheOldAdditions()
+    {
+        var policy = new TargetPolicy(TargetPolicySettings.FromEnvironment(
+            Env(("HELMSMAN_DENY_PROCESSES", " "), ("WAM_DENY_PROCESSES", "default,notepad.exe"))), Permissive.Windows);
+
+        policy.Evaluate(["notepad"]).Allowed.Should().BeFalse();
+        policy.Evaluate(["KeePass"]).Allowed.Should().BeFalse("the default list stays in force too");
     }
 
     [Fact]

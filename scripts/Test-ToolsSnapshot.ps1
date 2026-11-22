@@ -141,7 +141,7 @@ $startInfo.RedirectStandardOutput = $true
 $startInfo.RedirectStandardError = $true
 $startInfo.Environment['HELMSMAN_PAUSE_HOTKEY'] = 'none' # no global hotkey for a server that only lists its tools
 # The snapshot is the whole tool surface: every toolset, nothing excluded, not read-only, whatever the caller's settings.
-# A setting's name from before 4.0.0 is read when its HELMSMAN_ name is not set, so both names of the two that are removed go.
+# A setting's name from before 4.0.0 is read when its HELMSMAN_ name is not set or empty, so both names of the two that are removed go.
 $startInfo.Environment['HELMSMAN_TOOLSETS'] = 'all'
 foreach ($name in 'HELMSMAN_EXCLUDE_TOOLS', 'HELMSMAN_READ_ONLY', 'WAM_EXCLUDE_TOOLS', 'WAM_READ_ONLY') {
     [void]$startInfo.Environment.Remove($name)

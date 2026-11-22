@@ -44,7 +44,7 @@ public enum DesktopTier
 /// <para>Each opt-in had a <c>WAM_</c> name before release 4.0.0 (<see cref="OldEnvironmentVariable"/>,
 /// <see cref="OldNoInputEnvironmentVariable"/>), as the server's settings did. The old name is still read when the new
 /// one is not present in the environment; when the new one is present, whatever its value, the old one is ignored
-/// (<see cref="Read"/>), the rule the server applies to its settings.</para>
+/// (<see cref="Read"/>). The server's settings read the old name beside an empty new one too; both rules fail safe.</para>
 /// </remarks>
 public static class DesktopTestGate
 {
@@ -108,6 +108,7 @@ public static class DesktopTestGate
             _ => throw new ArgumentException($"'{name}' is not an opt-in of the desktop test gate.", nameof(name))
         };
 
+        // Unlike SettingNames.Read, a present new name wins even when empty: each fails safe, and here that keeps the gate closed.
         return readVariable(name) ?? readVariable(oldName);
     }
 

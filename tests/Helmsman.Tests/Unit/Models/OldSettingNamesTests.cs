@@ -2,8 +2,8 @@ namespace Helmsman.Tests.Unit.Models;
 
 /// <summary>
 /// The warning about settings still given under their WAM_ names from before release 4.0.0 (SettingNames.FindOld,
-/// OldSettingNames): the old names read in place of a HELMSMAN_ name that is not set, and separately the old names ignored
-/// because their HELMSMAN_ name is set too. It names variables, never their values.
+/// OldSettingNames): the old names read in place of a HELMSMAN_ name that is not set or is empty, and separately the old
+/// names ignored because both they and their HELMSMAN_ name hold a value. It names variables, never their values.
 /// </summary>
 public sealed class OldSettingNamesTests
 {
@@ -52,11 +52,11 @@ public sealed class OldSettingNamesTests
     [Fact]
     public void OldNamesIgnored_AreListedInAWarningOfTheirOwn()
     {
-        // Arrange - one old name read instead, two ignored (one beside an empty new name, which is present too)
+        // Arrange - one old name read instead, two ignored
         var environment = Env(
             ("WAM_PAUSE_HOTKEY", "none"),
             ("WAM_DENY_PROCESSES", "keepass"), ("HELMSMAN_DENY_PROCESSES", "notepad"),
-            ("WAM_LAYOUTS_PATH", SecretPath), ("HELMSMAN_LAYOUTS_PATH", ""));
+            ("WAM_LAYOUTS_PATH", SecretPath), ("HELMSMAN_LAYOUTS_PATH", @"D:\layouts"));
 
         // Act
         var old = SettingNames.FindOld(environment);
@@ -65,11 +65,32 @@ public sealed class OldSettingNamesTests
         old.ReadInstead.Should().Equal("WAM_PAUSE_HOTKEY");
         old.Ignored.Should().Equal("WAM_DENY_PROCESSES", "WAM_LAYOUTS_PATH");
         old.Warnings.Should().HaveCount(2);
-        old.Warnings[0].Should().StartWith("WAM_PAUSE_HOTKEY is the name").And.Contain("HELMSMAN_PAUSE_HOTKEY, which is not set")
+        old.Warnings[0].Should().StartWith("WAM_PAUSE_HOTKEY is the name").And.Contain("HELMSMAN_PAUSE_HOTKEY, which is not set (or empty)")
             .And.Contain("Rename it").And.NotContain("DENY");
         old.Warnings[1].Should().StartWith("WAM_DENY_PROCESSES and WAM_LAYOUTS_PATH are ignored")
             .And.Contain("HELMSMAN_DENY_PROCESSES and HELMSMAN_LAYOUTS_PATH are set too")
             .And.Contain("Remove the old names");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("  ")]
+    public void AnOldNameBesideAnEmptyNewName_IsReadInstead_NotIgnored(string empty)
+    {
+        var old = SettingNames.FindOld(Env(("WAM_LAYOUTS_PATH", SecretPath), ("HELMSMAN_LAYOUTS_PATH", empty)));
+
+        old.ReadInstead.Should().Equal("WAM_LAYOUTS_PATH");
+        old.Ignored.Should().BeEmpty();
+        old.Warnings.Should().ContainSingle().Which.Should().Contain("HELMSMAN_LAYOUTS_PATH, which is not set (or empty)");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("  ")]
+    public void AnEmptyOldNameBesideASetNewName_GivesNoWarning(string empty)
+    {
+        // It changes nothing: the new name is used either way
+        SettingNames.FindOld(Env(("WAM_READ_ONLY", empty), ("HELMSMAN_READ_ONLY", "1"))).Warnings.Should().BeEmpty();
     }
 
     [Fact]
