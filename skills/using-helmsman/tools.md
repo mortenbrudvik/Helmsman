@@ -58,7 +58,7 @@ Every tool that takes a window's `handle` (or `windowHandle`) also takes `window
 | `find_text_on_screen` | Find text with Windows OCR: click points and a captureId for mouse_click (toolset ocr) | text, match, window (or handle), x, y, width, height, monitor, language |
 | `wait_for_visual` | Wait until a window, region or monitor changes or settles on screen, no image (toolset visual) | condition, window (or handle), since, stableMs, minChangedPercent, timeoutMs |
 
-All capture tools also accept `format` (`auto`, `png`, `jpeg`), `quality` (JPEG), `outputPath` and `overwrite` (with output `file` or `both`), and the legacy `saveToFile` and `maxWidth`. read_screen_text and find_text_on_screen are the fallback where UI Automation shows no text (canvas apps, games, remote desktops, rendered PDFs): off by default (`WAM_TOOLSETS=+ocr`), and OCR can misread, so prefer element refs and check the outcome of a click.
+All capture tools also accept `format` (`auto`, `png`, `jpeg`), `quality` (JPEG), `outputPath` and `overwrite` (with output `file` or `both`), and the legacy `saveToFile` and `maxWidth`. read_screen_text and find_text_on_screen are the fallback where UI Automation shows no text (canvas apps, games, remote desktops, rendered PDFs): off by default (`HELMSMAN_TOOLSETS=+ocr`), and OCR can misread, so prefer element refs and check the outcome of a click.
 
 ### UI Automation (12 tools)
 
@@ -95,7 +95,7 @@ All capture tools also accept `format` (`auto`, `png`, `jpeg`), `quality` (JPEG)
 | `browser_navigate` | Open an http(s) URL in a tab or a new tab and wait for its load (toolset browser-actions) | url, window (or handle), targetId, newTab, waitUntil, timeoutMs, dialog |
 | `wait_for_browser` | Wait until a page's URL, title or text contains a string, or a CSS selector matches | window (or handle), targetId, urlContains, textContains, selector, timeoutMs |
 
-CDP only: a browser started with launch_browser_with_debug (or with its own debug port). activate_tab and browser_navigate are in the `browser-actions` toolset, off by default (`WAM_TOOLSETS=+browser-actions`).
+CDP only: a browser started with launch_browser_with_debug (or with its own debug port). activate_tab and browser_navigate are in the `browser-actions` toolset, off by default (`HELMSMAN_TOOLSETS=+browser-actions`).
 
 ### Browser Page (DOM Bridge) (6 tools)
 
@@ -108,7 +108,7 @@ CDP only: a browser started with launch_browser_with_debug (or with its own debu
 | `browser_screenshot` | Capture a tab's page as an image, without the browser frame (toolset browser-actions) | window (or handle), targetId, maxDimension |
 | `browser_evaluate` | Run a JavaScript expression in a page; its value or what it threw (toolset browser-script) | expression, awaitPromise, timeoutMs, window (or handle) |
 
-CDP only, on a debug browser, no real mouse or keyboard: work on a window behind others without taking the foreground (browser_screenshot may bring a tab that is not shown, and its window, to the front). A JavaScript dialog: pass `dialog` (accept or dismiss) to the action that opens it; one already open is read and answered with browser_handle_dialog, through UI Automation (DevTools cannot answer it). Off by default: `WAM_TOOLSETS=+browser-actions`, and `+browser-script` for browser_evaluate (a script runs with the page's rights, so clicks and typing do not turn it on). For anything richer, attach Playwright MCP to the same browser: `--cdp-endpoint` set to launch_browser_with_debug's `browserWsEndpoint` (or `cdpEndpoint`).
+CDP only, on a debug browser, no real mouse or keyboard: work on a window behind others without taking the foreground (browser_screenshot may bring a tab that is not shown, and its window, to the front). A JavaScript dialog: pass `dialog` (accept or dismiss) to the action that opens it; one already open is read and answered with browser_handle_dialog, through UI Automation (DevTools cannot answer it). Off by default: `HELMSMAN_TOOLSETS=+browser-actions`, and `+browser-script` for browser_evaluate (a script runs with the page's rights, so clicks and typing do not turn it on). For anything richer, attach Playwright MCP to the same browser: `--cdp-endpoint` set to launch_browser_with_debug's `browserWsEndpoint` (or `cdpEndpoint`).
 
 ### Input Simulation (7 tools)
 
@@ -138,7 +138,7 @@ All seven also take `allowHostTarget` (default false): only for input to your ow
 |------|-------------|----------------|
 | `run_steps` | Several steps on one window in one call, under one input gate hold; stops at the first failure | window, steps (tool, args, id, optional, return), maxDurationMs |
 
-A step is a tool of the list with that tool's own `args`. A step that names no window gets the run's; `"$steps.<id>.<path>"` takes an earlier step's ref, handle, captureId or clickPoint. No paste, file output, window_close, scope desktop, allowHostTarget, closing chord (ctrl+w, ctrl+q, also on the window's layout: ctrl+ц on a Russian one), win+r or win+x in a step. Off with `WAM_TOOLSETS=-steps`.
+A step is a tool of the list with that tool's own `args`. A step that names no window gets the run's; `"$steps.<id>.<path>"` takes an earlier step's ref, handle, captureId or clickPoint. No paste, file output, window_close, scope desktop, allowHostTarget, closing chord (ctrl+w, ctrl+q, also on the window's layout: ctrl+ц on a Russian one), win+r or win+x in a step. Off with `HELMSMAN_TOOLSETS=-steps`.
 
 ### App Launch (5 tools)
 
@@ -178,7 +178,7 @@ A step is a tool of the list with that tool's own `args`. A step that names no w
 
 ## Toolsets
 
-The user chooses which tools the server serves (`WAM_TOOLSETS`, `WAM_EXCLUDE_TOOLS`, `WAM_READ_ONLY`). A tool that is turned off is missing from your tool list; a call to it fails as an unknown tool. `get_server_info`, which is always served, reports the toolsets in force (`toolsets.enabled`, `disabled`, `readOnly`, `excludedTools`), and its `warnings` name each setting the server could not read and what it did instead (for example, serving only the `server` toolset, ignoring the entry, or turning read-only mode on). When the user turned tools off, the server's instructions end with a line that says which. In read-only mode only the tools that never change anything are served: you can look, but not type, click, move, close, launch, capture or save layouts. Do not try to work around a missing tool (for example by typing a key chord instead of a closing tool): tell the user what you need. See [Toolsets](https://github.com/mortenbrudvik/Helmsman/blob/main/docs/TOOLS.md#toolsets).
+The user chooses which tools the server serves (`HELMSMAN_TOOLSETS`, `HELMSMAN_EXCLUDE_TOOLS`, `HELMSMAN_READ_ONLY`). A tool that is turned off is missing from your tool list; a call to it fails as an unknown tool. `get_server_info`, which is always served, reports the toolsets in force (`toolsets.enabled`, `disabled`, `readOnly`, `excludedTools`), and its `warnings` name each setting the server could not read and what it did instead (for example, serving only the `server` toolset, ignoring the entry, or turning read-only mode on). When the user turned tools off, the server's instructions end with a line that says which. In read-only mode only the tools that never change anything are served: you can look, but not type, click, move, close, launch, capture or save layouts. Do not try to work around a missing tool (for example by typing a key chord instead of a closing tool): tell the user what you need. See [Toolsets](https://github.com/mortenbrudvik/Helmsman/blob/main/docs/TOOLS.md#toolsets).
 
 **Tools removed in 3.0.0.** `click`, `right_click` and `double_click` are gone: use `mouse_click` (`button:
 "secondary"`, `clickCount: 2`). So are `move_window` and `resize_window` (use `set_window_bounds` with `x` and `y`, or
@@ -191,7 +191,7 @@ opt-in `windows-batch` toolset: without it, place windows one at a time. When a 
 ## Resources and Prompts
 
 The server also serves three read-only resources with the same JSON as a tool:
-`wam://monitors` (get_monitors), `wam://windows` (find_windows with no filter) and `wam://layouts/{name}` (get_layout),
+`helmsman://monitors` (get_monitors), `helmsman://windows` (find_windows with no filter) and `helmsman://layouts/{name}` (get_layout),
 and four prompts that write out [the loop](SKILL.md#the-loop) for one task: `automate_app`, `arrange_workspace`, `fill_form` and
 `diagnose_click`. They are for the user: Claude Code offers the resources as `@` mentions and the prompts as
 `/mcp__<server>__<name>` commands. You work with the tools; when the user starts one of the prompts, its quoted

@@ -78,7 +78,7 @@ public static class ToolDocCatalog
         SkillNote: "All capture tools also accept `format` (`auto`, `png`, `jpeg`), `quality` (JPEG), `outputPath` and `overwrite` " +
                    "(with output `file` or `both`), and the legacy `saveToFile` and `maxWidth`. read_screen_text and " +
                    "find_text_on_screen are the fallback where UI Automation shows no text (canvas apps, games, remote desktops, " +
-                   "rendered PDFs): off by default (`WAM_TOOLSETS=+ocr`), and OCR can misread, so prefer element refs and check " +
+                   "rendered PDFs): off by default (`HELMSMAN_TOOLSETS=+ocr`), and OCR can misread, so prefer element refs and check " +
                    "the outcome of a click."),
         new("UI Automation",
         [
@@ -110,7 +110,7 @@ public static class ToolDocCatalog
             new("wait_for_browser", "Wait until a page's URL, title or text contains a string, or a CSS selector matches", "window (or handle)", "targetId", "urlContains", "textContains", "selector", "timeoutMs"),
         ],
         SkillNote: "CDP only: a browser started with launch_browser_with_debug (or with its own debug port). activate_tab and " +
-                   "browser_navigate are in the `browser-actions` toolset, off by default (`WAM_TOOLSETS=+browser-actions`)."),
+                   "browser_navigate are in the `browser-actions` toolset, off by default (`HELMSMAN_TOOLSETS=+browser-actions`)."),
         new("Browser Page (DOM Bridge)",
         [
             new("browser_element_rect", "Find a page element; its rect and click point in screen pixels (toolset browser-actions)", "selector", "text", "role", "name", "index", "window (or handle)"),
@@ -124,7 +124,7 @@ public static class ToolDocCatalog
                    "foreground (browser_screenshot may bring a tab that is not shown, and its window, to the front). A JavaScript " +
                    "dialog: pass `dialog` (accept or dismiss) to the action that opens it; one already open is read and answered " +
                    "with browser_handle_dialog, through UI Automation (DevTools cannot answer it). Off by default: " +
-                   "`WAM_TOOLSETS=+browser-actions`, and `+browser-script` for browser_evaluate (a script runs with the page's " +
+                   "`HELMSMAN_TOOLSETS=+browser-actions`, and `+browser-script` for browser_evaluate (a script runs with the page's " +
                    "rights, so clicks and typing do not turn it on). For anything richer, attach Playwright MCP to the same browser: `--cdp-endpoint` set to launch_browser_with_debug's " +
                    "`browserWsEndpoint` (or `cdpEndpoint`)."),
         new("Input Simulation",
@@ -155,7 +155,7 @@ public static class ToolDocCatalog
         SkillNote: "A step is a tool of the list with that tool's own `args`. A step that names no window gets the run's; " +
                    "`\"$steps.<id>.<path>\"` takes an earlier step's ref, handle, captureId or clickPoint. No paste, file output, " +
                    "window_close, scope desktop, allowHostTarget, closing chord (ctrl+w, ctrl+q, also on the window's layout: " +
-                   "ctrl+ц on a Russian one), win+r or win+x in a step. Off with `WAM_TOOLSETS=-steps`."),
+                   "ctrl+ц on a Russian one), win+r or win+x in a step. Off with `HELMSMAN_TOOLSETS=-steps`."),
         new("App Launch",
         [
             new("launch_application", "Launch app by path/name/appId/URI", "executable", "arguments", "workingDirectory", "waitForWindow", "placement", "reuseExisting", "runAsAdmin"),

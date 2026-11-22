@@ -7,9 +7,9 @@ A comprehensive guide for Test-Driven Development (TDD) using the Red-Green-Refa
 > **Desktop safety:** a plain `dotnet test` is safe to run on your own desktop. A test that
 > launches or kills real processes, sends real keyboard or mouse input, or moves, focuses or
 > closes real windows must use `[DesktopFact]` or `[DesktopTheory]`. Those tests are skipped
-> unless `WAM_ALLOW_DESKTOP_TESTS=1`. A test that only starts the suite's own fixture app and
+> unless `HELMSMAN_ALLOW_DESKTOP_TESTS=1`. A test that only starts the suite's own fixture app and
 > reads or captures it uses `[DesktopNoInputFact]` and is skipped unless
-> `WAM_ALLOW_DESKTOP_NOINPUT_TESTS=1` (or `WAM_ALLOW_DESKTOP_TESTS=1`). See
+> `HELMSMAN_ALLOW_DESKTOP_NOINPUT_TESTS=1` (or `HELMSMAN_ALLOW_DESKTOP_TESTS=1`). See
 > [Desktop Tests](#desktop-tests).
 
 ---
@@ -659,7 +659,7 @@ public void MatchesWindow_ReturnsExpectedResult(
 
 Prefer mocking the native layer. When a test must really launch or kill a process, send input,
 or change a real window, use `[DesktopFact]` or `[DesktopTheory]` instead of `[Fact]` or
-`[Theory]`. They are skipped unless `WAM_ALLOW_DESKTOP_TESTS=1` and report the trait
+`[Theory]`. They are skipped unless `HELMSMAN_ALLOW_DESKTOP_TESTS=1` and report the trait
 `Category=Desktop`. See [Desktop Tests](#desktop-tests).
 
 ```csharp
@@ -667,13 +667,13 @@ or change a real window, use `[DesktopFact]` or `[DesktopTheory]` instead of `[F
 public void SomeOperation_OnTheRealDesktop_Works()
 {
     // Has a real side effect (a process, input or a window change):
-    // only runs when WAM_ALLOW_DESKTOP_TESTS=1
+    // only runs when HELMSMAN_ALLOW_DESKTOP_TESTS=1
 }
 ```
 
 A test that only starts the suite's own fixture app and reads it (find its windows, read its UI
 Automation tree, capture it) uses `[DesktopNoInputFact]` or `[DesktopNoInputTheory]`. It is skipped
-unless `WAM_ALLOW_DESKTOP_NOINPUT_TESTS=1` or `WAM_ALLOW_DESKTOP_TESTS=1`, and reports both
+unless `HELMSMAN_ALLOW_DESKTOP_NOINPUT_TESTS=1` or `HELMSMAN_ALLOW_DESKTOP_TESTS=1`, and reports both
 `Category=Desktop` and `Category=DesktopNoInput`.
 
 Besides the gate's own canaries in `DesktopTestGateTests`, the tests marked this way are the
@@ -1854,12 +1854,15 @@ that the unit tests and the end-to-end tests share). There are two tiers:
 
 | Attribute | Tier | Runs when | Traits |
 |-----------|------|-----------|--------|
-| `[DesktopFact]`, `[DesktopTheory]` | Input: may start or kill processes, send real input, focus, move or close windows | `WAM_ALLOW_DESKTOP_TESTS=1` | `Category=Desktop` |
-| `[DesktopNoInputFact]`, `[DesktopNoInputTheory]` | No input: starts only the suite's own fixture app and reads or captures it | `WAM_ALLOW_DESKTOP_NOINPUT_TESTS=1` or `WAM_ALLOW_DESKTOP_TESTS=1` | `Category=Desktop`, `Category=DesktopNoInput` |
+| `[DesktopFact]`, `[DesktopTheory]` | Input: may start or kill processes, send real input, focus, move or close windows | `HELMSMAN_ALLOW_DESKTOP_TESTS=1` | `Category=Desktop` |
+| `[DesktopNoInputFact]`, `[DesktopNoInputTheory]` | No input: starts only the suite's own fixture app and reads or captures it | `HELMSMAN_ALLOW_DESKTOP_NOINPUT_TESTS=1` or `HELMSMAN_ALLOW_DESKTOP_TESTS=1` | `Category=Desktop`, `Category=DesktopNoInput` |
 
 - **The attributes skip the test unless its variable is exactly `1`**. The gate is in the
   attribute, so it holds for every runner: plain `dotnet test`, any `--filter`, IDE test
   explorers and coverage tools. The no-input opt-in never unlocks an input test.
+- **The names from before 4.0.0 still work**: when a `HELMSMAN_ALLOW_...` variable is not set, the gate reads
+  `WAM_ALLOW_DESKTOP_TESTS` or `WAM_ALLOW_DESKTOP_NOINPUT_TESTS` in its place, as the server does for its settings. A
+  `HELMSMAN_` variable that is set, even to `0`, wins, so CI sets both to `0`.
 - **They report the traits above**, so you can select or exclude them with `--filter`. A filter
   treats a trait with two values as matching either, so `Category!=Desktop` leaves both tiers out,
   `Category=Desktop` selects both and `Category=DesktopNoInput` selects the no-input tier alone.
@@ -1874,20 +1877,20 @@ them deliberately:
 
 ```powershell
 # PowerShell: the no-input tier only
-$env:WAM_ALLOW_DESKTOP_NOINPUT_TESTS = "1"
+$env:HELMSMAN_ALLOW_DESKTOP_NOINPUT_TESTS = "1"
 dotnet test --filter "Category=DesktopNoInput"
-Remove-Item Env:WAM_ALLOW_DESKTOP_NOINPUT_TESTS
+Remove-Item Env:HELMSMAN_ALLOW_DESKTOP_NOINPUT_TESTS
 
 # PowerShell: both tiers
-$env:WAM_ALLOW_DESKTOP_TESTS = "1"
+$env:HELMSMAN_ALLOW_DESKTOP_TESTS = "1"
 dotnet test --filter "Category=Desktop"
-Remove-Item Env:WAM_ALLOW_DESKTOP_TESTS
+Remove-Item Env:HELMSMAN_ALLOW_DESKTOP_TESTS
 ```
 
 ```bash
 # Git Bash
-WAM_ALLOW_DESKTOP_NOINPUT_TESTS=1 dotnet test --filter "Category=DesktopNoInput"
-WAM_ALLOW_DESKTOP_TESTS=1 dotnet test --filter "Category=Desktop"
+HELMSMAN_ALLOW_DESKTOP_NOINPUT_TESTS=1 dotnet test --filter "Category=DesktopNoInput"
+HELMSMAN_ALLOW_DESKTOP_TESTS=1 dotnet test --filter "Category=Desktop"
 ```
 
 Rules for new tests:
@@ -2207,13 +2210,13 @@ forbids acting pattern calls outside the Native wrappers and the two UI Automati
 pattern objects `IUiaTree.GetPattern` hands out are guarded in turn: their actions (`UiaAction` in
 `WrapperCatalog`) are refused in the no-input tier and allowed in the input tier only on elements of the fixture
 process, as above. A scenario can choose the engine with `E2ESession.Start(..., uiaEngine: UiaEngine.Uia2)` (or
-`ServerHarness.Create(tier, pid, engine)`); without it the server reads with the engine `WAM_UIA_ENGINE` chooses in
+`ServerHarness.Create(tier, pid, engine)`); without it the server reads with the engine `HELMSMAN_UIA_ENGINE` chooses in
 the test process (by default uia3), and `E2ESession.Start` writes the engine and where it came from to the test output
 (`UI Automation engine: Uia3 (default)`). `FixtureUiaEngineTests` and `FixtureUiElementsTests` read the fixture with
 both engines in every run (see
 [Release gate: the UI Automation engines](#release-gate-the-ui-automation-engines)). The Uia3Tree unit tests never
 create the COM client: they run over Moq mocks of its interfaces. The harness finds the fixture exe from a
-path the build records in the test assembly; set `WAM_FIXTURE_APP_PATH` to use another build of
+path the build records in the test assembly; set `HELMSMAN_FIXTURE_APP_PATH` to use another build of
 `WamFixtureApp.exe` (for example in Windows Sandbox). The harness refuses any exe with another name.
 
 **Writing a scenario.** Put it in `Scenarios/`, mark it `[DesktopNoInputFact]` when it only reads or
@@ -2304,7 +2307,7 @@ being ignored.
 | `FixtureWindowSetWaitTests` | Input | wait_for_window on a set of windows (issue #14) through the real MCP pipeline, over the fixture's main and document windows: `count` `exactly` 2 lists both with their state and monitor; `all` with `minimized` once both are minimized (no `visibleBounds`), `all` with `visible` once both are restored, and `maximized` for the maximized main window, which only polling sees |
 | `FixtureWindowRowTests` | Input | A window row's monitor, zone and restore (issue #12) through the real MCP pipeline: the fixture snapped to four positions on a monitor reads back `monitorId` and `zone` as snap_window took them; moved off every zone it has none; minimized from normal and from maximized it keeps the monitor it restores to, and get_window_info `full` gives `restore` with its state and rectangle; across two monitors beside each other it has `spansMonitors` (`TwoMonitors`) |
 | `FixturePercentPlacementTests` | Input | set_window_bounds with `unit: "percent"` (M6.7): 50/0/50/100 and the three thirds give exactly snap_window's frames on the primary, and a placement on the monitor at another scale (`MonitorAtAnotherScale`) is exact after the app's DPI change |
-| `FixtureTakeoverTests` | Input | Takeover detection (M7.4) with `WAM_TAKEOVER_DETECTION=stop`: Windows installs the real low-level keyboard and mouse hooks while type_text runs (state `Watching`) and removes them afterwards (`Ready`), and the server's own typing, which Windows marks as injected, never counts as the user's, so the text goes in whole. Run it while nobody uses the keyboard or mouse: the user's input would stop the typing (`UserInterrupted`), which is the feature |
+| `FixtureTakeoverTests` | Input | Takeover detection (M7.4) with `HELMSMAN_TAKEOVER_DETECTION=stop`: Windows installs the real low-level keyboard and mouse hooks while type_text runs (state `Watching`) and removes them afterwards (`Ready`), and the server's own typing, which Windows marks as injected, never counts as the user's, so the text goes in whole. Run it while nobody uses the keyboard or mouse: the user's input would stop the typing (`UserInterrupted`), which is the feature |
 | `FixtureWindowEventTests` | Input | The window event journal (M7.2) over the real WinEvent hooks: after the first read starts it, minimizing and restoring the fixture's window are recorded in order with the window's title, class and process, and nothing of the server's own process is |
 | `ShellWindowsTests` | Input | File Explorer's folders for workspaces (M7.5): the test opens its own temp folder in File Explorer, the real shell window list (NativeShellWindowsWrapper) reports that window with that folder and the class CabinetWClass, and the test closes only that window, by the handle the list gave for its unique folder |
 | `FixtureZOrderTests` | Input | set_window_zorder (M6.7) with the fixture's topmost overlay (`--open-overlay`): `topmost` puts the main window above the overlay and get_server_info lists it in `pinnedWindows`, `notopmost` puts it back below and drops the pin, `above` the overlay makes it topmost directly above it, `bottom` sends it behind every listed window and `top` raises it above the normal ones; the foreground never moves, and every test unpins the window before the fixture closes |
@@ -2316,7 +2319,7 @@ being ignored.
 
 **Running them.** Locally only with an opt-in, as above. On GitHub, `.github/workflows/e2e.yml`
 runs them on demand (Actions, "E2E", "Run workflow"), with a choice of tier, UI Automation engine (`engine`: uia3,
-the default, or uia2, which the test step sets as `WAM_UIA_ENGINE`) and runner. It first
+the default, or uia2, which the test step sets as `HELMSMAN_UIA_ENGINE`) and runner. It first
 checks that the runner has an interactive desktop and otherwise ends with a notice instead of
 running anything; use a self-hosted runner in a logged-on desktop session then (runner version 2.327.1 or later,
 which the workflows' Node.js 24 actions need). It fails when no
@@ -2325,9 +2328,9 @@ test ran, so an opt-in that did not reach the tests cannot pass as green.
 ### Release gate: the UI Automation engines
 
 The server reads UI Automation with the UIA3 COM client by default, and with the managed UIA2 client
-(System.Windows.Automation) when `WAM_UIA_ENGINE=uia2` (roadmap M3.2). Before a release that ships
+(System.Windows.Automation) when `HELMSMAN_UIA_ENGINE=uia2` (roadmap M3.2). Before a release that ships
 uia3 as the default, the repository owner runs the whole no-input tier twice on a real desktop: once
-with `WAM_UIA_ENGINE` unset (uia3) and once with `WAM_UIA_ENGINE=uia2`. If the engines differ, the
+with `HELMSMAN_UIA_ENGINE` unset (uia3, and `WAM_UIA_ENGINE`, its name before 4.0.0, unset too) and once with `HELMSMAN_UIA_ENGINE=uia2`. If the engines differ, the
 release ships with uia2 as the default (`UiaEngineOptions.Default`). The owner runs it, never an
 agent. The tier only starts the fixture and reads it, but the fixture's windows appear on the screen:
 leave the desktop alone during the runs, because a window opened over the fixture can fail a capture
@@ -2335,32 +2338,32 @@ scenario.
 
 `.github/workflows/e2e.yml` can run either engine: start it twice on a self-hosted runner in a logged-on desktop
 session, with tier `no-input` and engine `uia3`, then engine `uia2`. Each run uploads its trx files as
-`e2e-results-no-input-<engine>`, and its summary names the tier and the engine. The workflow sets `WAM_UIA_ENGINE` in
-both runs, so the first run's output reads `UI Automation engine: Uia3 (WAM_UIA_ENGINE)` instead of `(default)`: the
+`e2e-results-no-input-<engine>`, and its summary names the tier and the engine. The workflow sets `HELMSMAN_UIA_ENGINE` in
+both runs, so the first run's output reads `UI Automation engine: Uia3 (HELMSMAN_UIA_ENGINE)` instead of `(default)`: the
 same engine, chosen by name. Or run both from the repository root, on a real desktop. The trx logger keeps every test's
 output, so the two runs can be compared afterwards (`TestResults/` is gitignored):
 
 ```bash
 # Git Bash
 # Run 1: the default engine (uia3)
-env -u WAM_UIA_ENGINE WAM_ALLOW_DESKTOP_NOINPUT_TESTS=1 dotnet test --filter "Category=DesktopNoInput" --logger trx --results-directory TestResults/release-gate/uia3
+env -u HELMSMAN_UIA_ENGINE -u WAM_UIA_ENGINE HELMSMAN_ALLOW_DESKTOP_NOINPUT_TESTS=1 dotnet test --filter "Category=DesktopNoInput" --logger trx --results-directory TestResults/release-gate/uia3
 # Run 2: uia2
-WAM_UIA_ENGINE=uia2 WAM_ALLOW_DESKTOP_NOINPUT_TESTS=1 dotnet test --filter "Category=DesktopNoInput" --logger trx --results-directory TestResults/release-gate/uia2
+HELMSMAN_UIA_ENGINE=uia2 HELMSMAN_ALLOW_DESKTOP_NOINPUT_TESTS=1 dotnet test --filter "Category=DesktopNoInput" --logger trx --results-directory TestResults/release-gate/uia2
 ```
 
 ```powershell
 # PowerShell
-# Run 1: the default engine (uia3)
-Remove-Item Env:WAM_UIA_ENGINE -ErrorAction SilentlyContinue
-$env:WAM_ALLOW_DESKTOP_NOINPUT_TESTS = "1"
+# Run 1: the default engine (uia3); WAM_UIA_ENGINE, its name before 4.0.0, is read when the new one is not set
+Remove-Item Env:HELMSMAN_UIA_ENGINE, Env:WAM_UIA_ENGINE -ErrorAction SilentlyContinue
+$env:HELMSMAN_ALLOW_DESKTOP_NOINPUT_TESTS = "1"
 dotnet test --filter "Category=DesktopNoInput" --logger trx --results-directory TestResults/release-gate/uia3
 
 # Run 2: uia2
-$env:WAM_UIA_ENGINE = "uia2"
+$env:HELMSMAN_UIA_ENGINE = "uia2"
 dotnet test --filter "Category=DesktopNoInput" --logger trx --results-directory TestResults/release-gate/uia2
 
-Remove-Item Env:WAM_UIA_ENGINE
-Remove-Item Env:WAM_ALLOW_DESKTOP_NOINPUT_TESTS
+Remove-Item Env:HELMSMAN_UIA_ENGINE
+Remove-Item Env:HELMSMAN_ALLOW_DESKTOP_NOINPUT_TESTS
 ```
 
 What the runs cover:
@@ -2371,8 +2374,8 @@ What the runs cover:
   `FixtureDesktopStateTests` (get_desktop_state) and `FixtureVirtualizedListTests` (the virtualized list search).
   The rest of the tier (see [the scenarios](#end-to-end-tests-against-the-fixture-app)) runs too. Each test's output
   names the engine and where it came from:
-  `UI Automation engine: Uia3 (default)` in the first run (`Uia3 (WAM_UIA_ENGINE)` from the workflow),
-  `UI Automation engine: Uia2 (WAM_UIA_ENGINE)` in the second. A value of `WAM_UIA_ENGINE` other than `uia3` or `uia2` fails these tests instead of
+  `UI Automation engine: Uia3 (default)` in the first run (`Uia3 (HELMSMAN_UIA_ENGINE)` from the workflow),
+  `UI Automation engine: Uia2 (HELMSMAN_UIA_ENGINE)` in the second. A value of `HELMSMAN_UIA_ENGINE` other than `uia3` or `uia2` fails these tests instead of
   falling back to uia3, so a mistyped second run cannot pass as a uia2 run.
 - `FixtureUiaEngineTests` and `FixtureUiElementsTests` choose the engine themselves, so they give the
   same results in both runs (`UiaEngineScenarioTests` keeps it so). Each of their theories runs once
@@ -2415,9 +2418,9 @@ names and the display language. On 2026-10-14 the same commit passed and then, o
 and a failure there said nothing about the server's engine code. Record such a difference, and compare the fixture's own controls in the output of the find_ui_elements
 theory, which writes every element it finds with each engine, before you change the default.
 
-### Desktop check: provider-side contains (`WAM_UIA_PROVIDER_CONTAINS`)
+### Desktop check: provider-side contains (`HELMSMAN_UIA_PROVIDER_CONTAINS`)
 
-With `WAM_UIA_PROVIDER_CONTAINS=1`, the UIA3 engine gives the provider a substring condition for find_ui_elements'
+With `HELMSMAN_UIA_PROVIDER_CONTAINS=1`, the UIA3 engine gives the provider a substring condition for find_ui_elements'
 `nameMatch: "contains"` (PropertyConditionFlags_MatchSubstring with IgnoreCase, on the text's longest run of ASCII
 characters other than `i` and `I`), and the server still tests every name it returns (roadmap M3.F12). The unit tests
 check the server's side over the fake tree; what Windows does with the condition has not been checked, so the option is
@@ -2527,7 +2530,7 @@ never with keystrokes; windows are moved only with set_window_bounds (`x` and `y
   (Chrome: the whole caption, `Inbox - Google Chrome`; Edge, whose caption carries the profile: `Inbox - <profile
   name>`): get_browser_url and
   get_browser_content with `requireCdp: true` and no `targetId`, browser_type without `targetId` (server with
-  `WAM_TOOLSETS=+browser-actions`) and list_tabs' `shownTargetId` all name the shown `Inbox` tab. A shown tab titled
+  `HELMSMAN_TOOLSETS=+browser-actions`) and list_tabs' `shownTargetId` all name the shown `Inbox` tab. A shown tab titled
   `GitHub - Pull requests` beside a background tab titled `GitHub` still reads the shown one. With the window
   minimized, both reads return `CdpTargetAmbiguous` listing both tabs, also while a second window of A shows a tab with
   the same title in front (without `requireCdp` they fall back to UI Automation with that `cdpError`). Covered by a
@@ -2587,11 +2590,11 @@ unchanged). browser_navigate refuses `data:` and `file:` URLs, so the pages come
 runs (rule 3), each under 1 MB: `/a` (title `A`), `/b` (title `B`, whose script adds an element `#late` after one
 second), `/redirect` (302 to `/a`), `/missing` (404 with a small page), `/slow` (answers after 5 seconds), `/jsredirect`
 (an inline `<script>location.replace('/a')</script>`), `/empty500` (status 500 with no body) and `/unload` (title `U`,
-sets `onbeforeunload`). The server runs with `WAM_TOOLSETS=+browser-actions` and an audit folder of the
-check's own (`WAM_AUDIT_PATH`); launch the browser with `url` set to `/a`. Windows are only those of the check's debug
+sets `onbeforeunload`). The server runs with `HELMSMAN_TOOLSETS=+browser-actions` and an audit folder of the
+check's own (`HELMSMAN_AUDIT_PATH`); launch the browser with `url` set to `/a`. Windows are only those of the check's debug
 instance, named by the launch's `windowHandle`:
 
-- **Default surface.** Without `WAM_TOOLSETS`, tools/list has list_tabs and wait_for_browser but not activate_tab or
+- **Default surface.** Without `HELMSMAN_TOOLSETS`, tools/list has list_tabs and wait_for_browser but not activate_tab or
   browser_navigate, and get_server_info reports `browser-actions` off.
 - **List.** list_tabs on the window returns one tab with `inWindow: true`, `windowBound: true`, `shownTargetId` that
   tab's id and `cdpPort` the launch's; list_tabs with that `cdpPort` alone returns the same tab without `windowBound`.
@@ -2628,7 +2631,7 @@ instance, named by the launch's `windowHandle`:
 Roadmap M5.8 (on a real Edge, then on a real Chrome with `browser: "chrome"` as in the M5.1 block; every other rule is
 unchanged: a throwaway-profile debug instance started by launch_browser_with_debug, cleanup by process ID with
 close_debug_browser, and no window of the user's browser passed to any call). The server runs with
-`WAM_TOOLSETS=+browser-actions,+browser-script` and an audit folder of the check's own. The pages come from a 127.0.0.1
+`HELMSMAN_TOOLSETS=+browser-actions,+browser-script` and an audit folder of the check's own. The pages come from a 127.0.0.1
 HttpListener the check runs, each under 1 MB: `/form` (title `Form`: a labelled text input `#q`, a button `Save draft`
 that writes `saved` into `#out`, a disabled button `Archive`, two buttons `Delete` that write `d0` and `d1`, a button
 `Hidden` under a `div#cover` overlay, a `contenteditable` div `#note`, an input `#short` with `maxlength="3"`, and a form
@@ -2636,7 +2639,7 @@ around `#q` whose submit goes to `/done`), `/dialogs` (buttons that open `alert(
 `prompt('p', 'd')`, each writing the answer into `#out`), `/alert-on-load` (calls `alert('loaded')` on load), `/long`
 (a button `Bottom` 3000 CSS pixels down) and `/frame` (`/form` in a same-origin iframe). Launch with `url` set to `/form`:
 
-- **Default surface.** Without `WAM_TOOLSETS`, tools/list has none of the six tools; with `+browser-actions` it has
+- **Default surface.** Without `HELMSMAN_TOOLSETS`, tools/list has none of the six tools; with `+browser-actions` it has
   five and not browser_evaluate, and get_server_info reports `browser-script` off; with
   `+browser-actions,+browser-script` it has all six.
 - **Rect on the 150 % monitor.** With the debug window on the primary monitor (150 %): browser_element_rect with
@@ -2731,8 +2734,8 @@ desktop; before the release that carries it, the owner checks:
 4. **The removals in a real client** (3.0.0; no window, no input): with the built exe in Claude Code, `/mcp` lists 62
    tools without toolset variables, and none of click, right_click, double_click, move_window, resize_window,
    get_all_windows, get_primary_monitor, list_screens, get_active_browser_url or the three geometry batches; a call to
-   click returns `ToolRemoved` naming mouse_click; `WAM_TOOLSETS=+deprecated` lists the same 62 with a warning in
-   get_server_info; `WAM_EXCLUDE_TOOLS=click` still lists the 62 (it does not fail closed); and get_server_info's
+   click returns `ToolRemoved` naming mouse_click; `HELMSMAN_TOOLSETS=+deprecated` lists the same 62 with a warning in
+   get_server_info; `HELMSMAN_EXCLUDE_TOOLS=click` still lists the 62 (it does not fail closed); and get_server_info's
    `toolsets.moved` names the windows-batch toolset. The in-process contract tests (`RemovedToolsContractTests`) cover
    all of it except the client's own rendering.
 
@@ -2760,7 +2763,7 @@ October 2026); `scripts/Publish-Plugin.ps1`'s only-exe check still passes.
 The E2E scenarios ran on the owner's desktop on 2026-10-17 (see Desktop run: M6 scenarios). By hand, the owner checks:
 
 1. **Languages (read only).** `Get-WindowsCapability -Online -Name 'Language.OCR*' | ? State -eq Installed` lists the
-   installed OCR languages (it reads; install nothing). With `WAM_TOOLSETS=+ocr`: read_screen_text with no `language`
+   installed OCR languages (it reads; install nothing). With `HELMSMAN_TOOLSETS=+ocr`: read_screen_text with no `language`
    reports the profile language it used (on a Norwegian profile without a Norwegian OCR language, the first installed one
    with an `OcrLanguageFallback` warning); `language: "en-US"` works; a language that is not installed (`ja-JP` when it
    is absent) is `OcrLanguageNotInstalled` with `installedLanguages`.
@@ -2796,18 +2799,18 @@ The resources and prompts are tested in-process (`ResourceContractTests`, `Promp
 and `ServerInfoToolContractTests`). Run on the built exe so far (October 2026, no window, no input):
 `scripts/Test-ToolsSnapshot.ps1` passes on a Debug build (78 tools, 7 resources, templates and prompts) and fails on a
 snapshot with a changed title and a renamed prompt; and prompts/get over stdio rendered the four recipes with the
-default toolsets, the one with `WAM_READ_ONLY=1` (diagnose_click without capture_window and the steps that act) and
-the three with `WAM_TOOLSETS=-input`. Before the release that carries it, the owner checks, reading only:
+default toolsets, the one with `HELMSMAN_READ_ONLY=1` (diagnose_click without capture_window and the steps that act) and
+the three with `HELMSMAN_TOOLSETS=-input`. Before the release that carries it, the owner checks, reading only:
 
-1. **MCP Inspector** on the built exe with `WAM_LAYOUTS_PATH` set to a fresh temp folder (so the owner's own presets are
+1. **MCP Inspector** on the built exe with `HELMSMAN_LAYOUTS_PATH` set to a fresh temp folder (so the owner's own presets are
    neither read nor seeded): initialize advertises `resources`, `prompts` and `completions`; the three lists match
-   `Contract/resources.snapshot.json`; `wam://layouts/work-setup` (a seeded sample) reads, `wam://layouts/nope` is a
+   `Contract/resources.snapshot.json`; `helmsman://layouts/work-setup` (a seeded sample) reads, `helmsman://layouts/nope` is a
    not-found error with the PresetNotFound message, and completion offers the sample names.
-2. **wam://windows and wam://monitors against the tools**: with the WamFixtureApp window the harness started, read
-   `wam://windows` and call find_windows at once (same handle, title and bounds), and compare `wam://monitors` with
+2. **helmsman://windows and helmsman://monitors against the tools**: with the WamFixtureApp window the harness started, read
+   `helmsman://windows` and call find_windows at once (same handle, title and bounds), and compare `helmsman://monitors` with
    get_monitors; on a mixed-DPI machine the negative coordinates and scale factors match.
 3. **Claude Code** with the plugin built from the branch: `/mcp` lists the resources and prompts, a prompt runs as a
-   `/mcp__<server>__diagnose_click` command and expands with its arguments quoted, and an `@` mention of `wam://windows`
+   `/mcp__<server>__diagnose_click` command and expands with its arguments quoted, and an `@` mention of `helmsman://windows`
    attaches the JSON.
 
 No check applies a layout, sends input or closes anything but the fixture window the harness started, by its PID.
@@ -2820,7 +2823,7 @@ services (`RunStepsContractTests`: one audit line per audited step under `<run's
 read-only mode, a direct call that waits for the run, a cancelled run that frees the gate, run-level progress only). Not
 yet run on a real desktop; before the release that carries it, the owner checks:
 
-1. **The fixture scenarios.** `FixtureRunStepsTests` with `WAM_ALLOW_DESKTOP_TESTS=1` (input tier), with the terminal
+1. **The fixture scenarios.** `FixtureRunStepsTests` with `HELMSMAN_ALLOW_DESKTOP_TESTS=1` (input tier), with the terminal
    that runs the tests in front and untouched: the form fill, a failed step, a direct call during a run, a pause between
    steps, a run out of time, and a second fixture taking the foreground. The harness closes only the fixtures it started.
 2. **Notepad, by hand, in a real client** (no window the check did not open): launch a new Notepad with
@@ -2832,7 +2835,7 @@ yet run on a real desktop; before the release that carries it, the owner checks:
    [Desktop check: 3.0.0 review fixes and issues #8 to #11](#desktop-check-300-review-fixes-and-issues-8-to-11)): run
    items 2 to 4 only when the Notepad they launch shows none of the owner's tabs, and otherwise move them to a window the
    check opens itself, as the 3.0.0 checks do.
-3. **The pause hotkey, by hand:** with the server started with `WAM_PAUSE_HOTKEY` `Pause`, during a run of many
+3. **The pause hotkey, by hand:** with the server started with `HELMSMAN_PAUSE_HOTKEY` `Pause`, during a run of many
    type_text steps into that Notepad, press Pause. The run reports `PausedByUser`, nothing more is typed, and the user
    resumes; the agent never does. With the default Ctrl+Alt+Shift+Pause, the user's first modifier goes down before
    Pause, so the type_text step that is typing then fails with `ModifiersHeld`, which stops the run before the pause.
@@ -2856,7 +2859,7 @@ tool is served in `DependencyInjectionTests`, and the tool over MCP in the contr
 `--animate-for-ms`) checks them on a real window. They passed on the owner's desktop on 2026-10-17 (see Desktop run: M6 scenarios); the
 owner runs that class and checks:
 
-1. **The scenarios.** `WAM_ALLOW_DESKTOP_NOINPUT_TESTS=1 dotnet test tests/Helmsman.E2ETests --filter
+1. **The scenarios.** `HELMSMAN_ALLOW_DESKTOP_NOINPUT_TESTS=1 dotnet test tests/Helmsman.E2ETests --filter
    FullyQualifiedName~FixtureVisualWaitTests`. The harness owns and closes the fixture; nothing is clicked or typed. The
    output logs every result's regions, method and warnings. The region scenario reads the screen, so it needs the
    fixture's change panel uncovered (the fixture comes up in front); the window scenarios do not.
@@ -2872,7 +2875,7 @@ owner runs that class and checks:
    debug browser from launch_browser_with_debug on a page of the check's 127.0.0.1 HttpListener, closed with
    close_debug_browser by its processId, never
    by title), to measure PrintWindow per check.
-5. **Real clients** (no input): with the built exe and `WAM_TOOLSETS=+visual`, `/mcp` lists wait_for_visual, and a
+5. **Real clients** (no input): with the built exe and `HELMSMAN_TOOLSETS=+visual`, `/mcp` lists wait_for_visual, and a
    wait with `since` set to the `captureId` of a `capture_window` with `output: "metadata"` of a window the check opened
    compares with that capture (`checks` 1 with `timeoutMs` 0 when nothing changed: `WaitTimedOut` and 0 %); without
    `+visual` the tool is not listed.
@@ -2893,11 +2896,11 @@ images). The scenarios:
 | `calculator_add` | launch_application of Calculator, element_action invoke on 1, 2, +, 3, 0, =, read_element_text of the display (42). It refuses to start while a Calculator runs, and ends the one it started by its process ID; the E2E guard lets UI Automation act on CalculatorApp's elements only for this scenario (`uiaActionProcesses`) |
 
 `ScenarioReport` (a class fixture) prints each scenario with its change since the previous run (calls, milliseconds and
-tokens), and writes the run as `scenarios-<UTC time>.json` to `WAM_SCENARIO_RESULTS`, or `%TEMP%\WamScenarios`; the previous
+tokens), and writes the run as `scenarios-<UTC time>.json` to `HELMSMAN_SCENARIO_RESULTS`, or `%TEMP%\WamScenarios`; the previous
 run is the newest file there. Run them while nobody uses the keyboard or mouse:
 
 ```powershell
-$env:WAM_ALLOW_DESKTOP_TESTS = '1'
+$env:HELMSMAN_ALLOW_DESKTOP_TESTS = '1'
 dotnet test tests/Helmsman.E2ETests --filter "FullyQualifiedName~ScenarioEvaluationTests" --logger "console;verbosity=detailed"
 ```
 
@@ -2909,7 +2912,7 @@ and Settings and a browser are left for a later round.
 ### Desktop run: M6 scenarios (2026-10-17)
 
 Run on the owner's desktop (Windows 11 26200, a 150% primary and a second monitor at another scale) while the owner was
-away, after release 2.2.0, with both tiers on (`WAM_ALLOW_DESKTOP_TESTS=1 WAM_ALLOW_DESKTOP_NOINPUT_TESTS=1`). The whole
+away, after release 2.2.0, with both tiers on (`HELMSMAN_ALLOW_DESKTOP_TESTS=1 HELMSMAN_ALLOW_DESKTOP_NOINPUT_TESTS=1`). The whole
 E2E project passed 486 of 488; the two failures are the AltGr keyboard scenarios, which fail on this machine because
 another program registered Ctrl+Alt+2. Every M6 scenario passed:
 
@@ -2929,7 +2932,7 @@ Calculator or Terminal in a layout (its appId), and runAsAdmin where Windows sho
 
 ### Desktop run: takeover detection (2026-10-17)
 
-After M7.4 (2.3.0), the input tier ran `FixtureTakeoverTests`, `FixtureSessionTests`, `FixtureTypingTests`, `FixtureMouseClickDragTests` and `FixtureRunStepsTests` on a real desktop while it was idle: 16 of 16 passed. With `WAM_TAKEOVER_DETECTION=stop`, Windows installed the real low-level hooks while type_text ran (state `Watching`), removed them afterwards (`Ready`), and the server's own typing never counted as the user's: the text went in whole.
+After M7.4 (2.3.0), the input tier ran `FixtureTakeoverTests`, `FixtureSessionTests`, `FixtureTypingTests`, `FixtureMouseClickDragTests` and `FixtureRunStepsTests` on a real desktop while it was idle: 16 of 16 passed. With `HELMSMAN_TAKEOVER_DETECTION=stop`, Windows installed the real low-level hooks while type_text ran (state `Watching`), removed them afterwards (`Ready`), and the server's own typing never counted as the user's: the text went in whole.
 
 ### Desktop check: 3.0.0 review fixes and issues #8 to #11
 
@@ -2956,7 +2959,7 @@ does.
 3. **send_keys in batches.** send_keys of 300 small letters, without `delayMs`, into the page's text field (the debug
    browser by its handle) types all of them (`keysSent` 300; the call goes in batches of up to 64 key-downs, each
    checked again). Without `delayMs` the batches go out back to back, in well under a second, so a pause by hand is
-   checked with `delayMs`, where each key is a batch of its own. Start the server for this with `WAM_PAUSE_HOTKEY`
+   checked with `delayMs`, where each key is a batch of its own. Start the server for this with `HELMSMAN_PAUSE_HOTKEY`
    `Pause` and check that get_control_status shows `hotkey.chord` `Pause`: with the default Ctrl+Alt+Shift+Pause, the
    user's first modifier goes down before Pause, so the call stops at its next key with `ModifiersHeld` (its error
    names the pause hotkey), and the pause comes only after the call has ended. During a send_keys of 500 small letters
@@ -3061,7 +3064,7 @@ generated regions of README.md, docs/TOOLS.md and the skill (its SKILL.md and to
 tests stay skipped). Without it, CI fails on a stale snapshot or table. A run where `CI`, `GITHUB_ACTIONS` or
 `TF_BUILD` is set to anything but `false` or `0` refuses it (the tests fail with a message), because there it would turn the guards into rewrites
 that pass. Each regenerated file replaces the old one in one step, so a test that reads it in parallel never sees it
-half written. Set the variable after any `env -u` options: `env -u WAM_ALLOW_DESKTOP_TESTS UPDATE_SNAPSHOTS=1 dotnet test ...`.
+half written. Set the variable after any `env -u` options: `env -u HELMSMAN_ALLOW_DESKTOP_TESTS UPDATE_SNAPSHOTS=1 dotnet test ...`.
 
 The layering test (`Unit/Architecture/NamespaceDependencyTests`) keeps a baseline of today's layering violations in
 `Unit/Architecture/NamespaceDependencyBaseline.txt`. It fails on a dependency against the layering that is not in the
@@ -3071,7 +3074,7 @@ adds a line. Add a line by hand only when a dependency cannot be avoided yet, an
 
 **The CI guard on the built exes.** A version or commit check cannot tell whether an exe serves the tools
 its sources define. `.github/workflows/build.yml` therefore runs `scripts/Test-ToolsSnapshot.ps1`, which
-starts an exe (with `WAM_PAUSE_HOTKEY=none`, `WAM_TOOLSETS=all` and neither `WAM_EXCLUDE_TOOLS` nor `WAM_READ_ONLY`,
+starts an exe (with `HELMSMAN_PAUSE_HOTKEY=none`, `HELMSMAN_TOOLSETS=all` and neither `HELMSMAN_EXCLUDE_TOOLS` nor `HELMSMAN_READ_ONLY`,
 so it serves the whole surface), sends `initialize` and `tools/list` over stdio, closes it, and compares every tool
 object with the snapshot. It then lists the resources, resource templates and prompts and compares each item with
 `Contract/resources.snapshot.json` (`-ResourcesSnapshotPath`), so an exe that serves stale resources or prompts fails
@@ -3242,7 +3245,7 @@ typical result over 300 tokens, and tools/list itself, measured in October 2026:
 | `get_server_info` | The default deny list, five host processes, two monitors, the resources and prompts (634 before roadmap M6.9) | 707 | 850 |
 | `get_layout` | A preset of 6 placements, each with the captured window identity, its monitor's id and name and its program (529 before M6.8) | 805 | 841 |
 | tools/list | Every tool's name, title, description, schemas and annotations: 78 tools, 266,179 bytes, measured with the fixes of issues #8 to #18 merged (265,930 after issue #14, 265,209 after issues #12 and #16, 264,563 on the 3.0.0 review-fix branch after its docs pass, the follow-up to it and the fixups of their merge; `ToolList_StaysWithinItsBudget`, whose comment in ToolPayloadBudgetTests lists the steps; from M5.8 on: M5.8's six DOM bridge tools added 2,970, 936 of them their window selectors; M5.8's dialog option and the UI Automation browser_handle_dialog 199 more; M6.1a's additive consolidations 405 more: mouse_click's own click checks 249, set_window_bounds' optional pairs 87, get_browser_url's foreground sentence 41, get_monitors' virtualScreen 28; M6.1b's one-line descriptions of the nine deprecated tools and the descriptions that no longer send the agent to them 2,121 fewer; M6.6's list_processes parameters and fields 361 more and get_window_info's integrity fields 31 more; M6.2's run_steps 1,054 more; M6.4's wait_for_visual 1,072 more; M6.3's read_screen_text and find_text_on_screen in the opt-in `ocr` toolset 2,088 more; M6.7's set_window_zorder (522), the `monitor` parameters beside the deprecated monitorIndex, set_window_bounds' percent placement (233), get_monitors' identity fields and get_server_info's pinnedWindows 1,514 more; M6.5's list_installed_apps and runAsAdmin 357 more; M6.8's save_layout placements and includeMinimized and apply_layout dryRun and placements 775 more; then M7's tools and fields, 3.0.0's removal of the nine replaced tools and the monitorIndex parameters, and the 3.0.0 review's fixes, issues #8 to #10, the docs pass and its follow-up; issue #12's window row fields in find_windows' description and get_window_info's restore, and issue #16's includeMinimized, 162 more; issue #14's minimized and maximized conditions, all and count on wait_for_window, 180 more) | 66,483 | 66,497 |
-| Default tools/list | The 62 tools a server serves without WAM_TOOLSETS, WAM_EXCLUDE_TOOLS and WAM_READ_ONLY, 225,772 bytes, measured with the fixes of issues #8 to #18 merged (225,523 after issue #14, 224,802 after issues #12 and #16, 224,156 on the 3.0.0 review-fix branch after its docs pass, the follow-up to it and the fixups of their merge; `DefaultToolList_StaysWithinItsBudget`, roadmap M6.1, whose comment lists the steps; 59,627 before M6.1a, 60,032 after it with 70 tools, 9,027 fewer once M6.1b moved the nine deprecated tools and the three geometry batches to opt-in toolsets, 392 more with M6.6's list_processes and get_window_info fields, 1,055 more with M6.2's run_steps in the `steps` toolset, on by default, 1,187 more with M6.7's set_window_zorder in `windows`, the `monitor` parameters, set_window_bounds' percent placement and the get_monitors and get_server_info fields; 357 more with M6.5's list_installed_apps in the `launch` toolset and runAsAdmin; 775 more with M6.8's layout schema version 2 in the `layouts` toolset, 54,806 then; then M7's tools and fields, 3.0.0's removals and the 3.0.0 review's fixes, issues #8 to #10, the docs pass and its follow-up; issues #12 and #16, 162 more; issue #14, 180 more) | 56,381 | 56,394 |
+| Default tools/list | The 62 tools a server serves without HELMSMAN_TOOLSETS, HELMSMAN_EXCLUDE_TOOLS and HELMSMAN_READ_ONLY, 225,772 bytes, measured with the fixes of issues #8 to #18 merged (225,523 after issue #14, 224,802 after issues #12 and #16, 224,156 on the 3.0.0 review-fix branch after its docs pass, the follow-up to it and the fixups of their merge; `DefaultToolList_StaysWithinItsBudget`, roadmap M6.1, whose comment lists the steps; 59,627 before M6.1a, 60,032 after it with 70 tools, 9,027 fewer once M6.1b moved the nine deprecated tools and the three geometry batches to opt-in toolsets, 392 more with M6.6's list_processes and get_window_info fields, 1,055 more with M6.2's run_steps in the `steps` toolset, on by default, 1,187 more with M6.7's set_window_zorder in `windows`, the `monitor` parameters, set_window_bounds' percent placement and the get_monitors and get_server_info fields; 357 more with M6.5's list_installed_apps in the `launch` toolset and runAsAdmin; 775 more with M6.8's layout schema version 2 in the `layouts` toolset, 54,806 then; then M7's tools and fields, 3.0.0's removals and the 3.0.0 review's fixes, issues #8 to #10, the docs pass and its follow-up; issues #12 and #16, 162 more; issue #14, 180 more) | 56,381 | 56,394 |
 
 Every other typical result is at most 300 tokens. When a change makes a result larger on purpose, raise its
 budget in the same change (the failure message gives the new size); when a change shrinks one a lot, lower it.
@@ -3321,7 +3324,7 @@ diagnose_click 447).
 
 ### Resources and prompts
 
-`Contract/ResourceContractTests` reads the three wam:// resources over MCP with the contract services, on every revision:
+`Contract/ResourceContractTests` reads the three helmsman:// resources over MCP with the contract services, on every revision:
 each is `application/json` text equal to the result of the tool it mirrors (`get_monitors`, `find_windows` with no
 argument, `get_layout`), the windows resource asks the window service the same query as find_windows, a window of an
 app the target policy denies is listed as find_windows lists it, a non-ASCII layout name round-trips without escapes,
@@ -3381,7 +3384,7 @@ cancellation tests check the wire with `server.AssertNoResponseSentAsync(id)` (n
 ### Toolsets and server info
 
 `Contract/ToolsetContractTests` checks the toolset mechanism (roadmap M2.14) over MCP with fixture tools and a
-fixture catalog that has an opt-in toolset: `WAM_TOOLSETS`, `WAM_EXCLUDE_TOOLS` and `WAM_READ_ONLY` decide what
+fixture catalog that has an opt-in toolset: `HELMSMAN_TOOLSETS`, `HELMSMAN_EXCLUDE_TOOLS` and `HELMSMAN_READ_ONLY` decide what
 tools/list lists, and a call to a tool that is not served is an unknown tool. Against the production catalog it
 checks that every served tool is in exactly one toolset, that the default serves every toolset except the opt-in
 `browser-actions`, `browser-script`, `visual`, `windows-batch`, `ocr` and `workspaces`, that browser_evaluate is served only with `browser-script` (turning on
@@ -3390,11 +3393,11 @@ mode serves exactly the tools annotated `readOnlyHint: true` (browser_element_re
 wait_for_visual only once `visual` is on, browser_evaluate never), and that each of those is a read-only tool of the input
 gate. `Unit/Infrastructure/ToolsetSelectionTests` covers the parsing, and over a fixture catalog with moved tools the
 rules of roadmap M6.1: a moved tool is served only while the toolset it came from is on too, a toolset's name in
-`WAM_EXCLUDE_TOOLS` also excludes the tools that moved out of it, excluding a tool that is not served is no error (no
+`HELMSMAN_EXCLUDE_TOOLS` also excludes the tools that moved out of it, excluding a tool that is not served is no error (no
 fail-closed), `moved` says where a tool that is out of reach went, and the warnings name a moved tool its toolset cannot
 serve and the replaced tools that are served. `Contract/RemovedToolsContractTests` checks what 3.0.0 removed (owner
 decision D1): no selection lists the nine replaced tools, a call to one is `ToolRemoved` naming its replacement (never
-forwarded, never audited), `WAM_EXCLUDE_TOOLS` and `WAM_TOOLSETS` values that name them or `deprecated` read without
+forwarded, never audited), `HELMSMAN_EXCLUDE_TOOLS` and `HELMSMAN_TOOLSETS` values that name them or `deprecated` read without
 failing closed (`+click` warns that click is a tool 3.0.0 removed, not a toolset:
 `ARemovedToolsName_InWamToolsets_IsIgnoredWithAWarningThatSaysItIsATool`), a `monitorIndex` argument or placement
 member is refused naming `monitor`, the three geometry batches of `windows-batch` are served only with `windows`, and get_server_info's `moved`. `Contract/ServerInfoToolContractTests` calls
@@ -3410,7 +3413,7 @@ server:
 
 - **The audit log** (roadmap M2.17). `ServiceRegistration.AddHelmsmanServices` defaults to
   `AuditLogOptions.FromEnvironment`, the real `%LOCALAPPDATA%\Helmsman\audit` folder (or
-  `WAM_AUDIT_PATH`). A test that builds the server with the production registrations and calls an audited tool must
+  `HELMSMAN_AUDIT_PATH`). A test that builds the server with the production registrations and calls an audited tool must
   pass a temporary folder: `auditLog: () => AuditLogOptions.ForFolder(<temp folder>)`, as
   `Integration/DependencyInjectionTests` does; the contract services (`Fixtures/Contract/ContractServices.cs`) write
   their audit log into a temporary folder of their own, and the E2E `ServerHarness` into its temporary layouts folder.
