@@ -3,6 +3,8 @@ using System.Text.RegularExpressions;
 using WinDesktopMcp.Models;
 using WinDesktopMcp.Native;
 using WinDesktopMcp.Services.Interfaces;
+using static WinDesktopMcp.Services.WindowChangeFailures;
+using static WinDesktopMcp.Services.WindowReads;
 
 namespace WinDesktopMcp.Services;
 
@@ -35,11 +37,13 @@ public class WindowService : IWindowService
     private readonly IMonitorService _monitorService;
     private readonly INativeWindowWrapper _nativeWrapper;
     private readonly IHostGuard _hostGuard;
-    private readonly ITargetPolicy _targetPolicy;
     private readonly IWindowCallRunner _windowCalls;
     private readonly TimeSpan _stateChangeTimeout;
     private readonly INativeVirtualDesktopWrapper? _virtualDesktops;
     private readonly TopmostPins _topmostPins;
+    private readonly WindowReads _reads;
+    private readonly WindowInfoReader _windowInfos;
+    private readonly WindowTargetCheck _targetCheck;
 
     /// <param name="monitorService">Monitor lookups.</param>
     /// <param name="nativeWrapper">The window calls.</param>
@@ -78,7 +82,9 @@ public class WindowService : IWindowService
         _monitorService = monitorService;
         _nativeWrapper = nativeWrapper;
         _hostGuard = hostGuard ?? throw new ArgumentNullException(nameof(hostGuard));
-        _targetPolicy = targetPolicy ?? throw new ArgumentNullException(nameof(targetPolicy));
+        _reads = new WindowReads(nativeWrapper);
+        _windowInfos = new WindowInfoReader(nativeWrapper, monitorService, _hostGuard, _reads);
+        _targetCheck = new WindowTargetCheck(nativeWrapper, _reads, targetPolicy ?? throw new ArgumentNullException(nameof(targetPolicy)));
         _windowCalls = windowCalls ?? new WindowCallRunner(nativeWrapper);
         _stateChangeTimeout = stateChangeTimeout ?? StateChangeTimeout;
         _virtualDesktops = virtualDesktops;
@@ -296,7 +302,7 @@ public class WindowService : IWindowService
     /// </summary>
     private WindowResolution ResolveHandle(nint handle, WindowSelector selector)
     {
-        if (!IsValidWindow(handle) || ReadWindowInfo(handle) is not { } window)
+        if (!IsValidWindow(handle) || _windowInfos.ReadWindowInfo(handle) is not { } window)
         {
             return WindowResolution.Failed(nameof(WindowErrorCode.InvalidHandle),
                 $"{InvalidHandleMessage}: window.handle {handle} is no window (it closed). Nothing was done. Find the window again " +
@@ -317,7 +323,7 @@ public class WindowService : IWindowService
     private WindowResolution ResolveForeground(WindowSelector selector)
     {
         var foreground = _nativeWrapper.GetForegroundWindow();
-        if (foreground == nint.Zero || ReadWindowInfo(foreground) is not { } window)
+        if (foreground == nint.Zero || _windowInfos.ReadWindowInfo(foreground) is not { } window)
         {
             return WindowResolution.Failed(nameof(WindowErrorCode.WindowNotFound),
                 "window.foreground: no window is in the foreground right now (windows may be switching, or a UAC prompt or the lock " +
@@ -393,7 +399,7 @@ public class WindowService : IWindowService
             return null;
 
         var monitors = _monitorService.GetAllMonitors();
-        var bounds = NormalBounds(handle, placement, monitors);
+        var bounds = _reads.NormalBounds(handle, placement, monitors);
         var state = (placement.Flags & NativeEnums.WPF_RESTORETOMAXIMIZED) != 0 ? WindowState.Maximized : WindowState.Normal;
         return new WindowRestore(state, bounds, WorkspaceCoordinates.MonitorOf(bounds, monitors));
     }
@@ -404,7 +410,7 @@ public class WindowService : IWindowService
         if (hWnd == nint.Zero)
             return null;
 
-        return ReadWindowInfo(hWnd);
+        return _windowInfos.ReadWindowInfo(hWnd);
     }
 
     public WindowInfo? GetWindowInfo(nint handle)
@@ -412,7 +418,7 @@ public class WindowService : IWindowService
         if (!IsValidWindow(handle))
             return null;
 
-        return ReadWindowInfo(handle);
+        return _windowInfos.ReadWindowInfo(handle);
     }
 
     public bool IsUserFacingAppWindow(nint handle) =>
@@ -432,7 +438,7 @@ public class WindowService : IWindowService
             out _);
 
     public WindowChangeResult MoveWindow(nint handle, int x, int y, bool bringToFront = true) =>
-        ChangeRefusal(handle) ??
+        _targetCheck.ChangeRefusal(handle) ??
         Place(handle, new PlacementTarget(X: x, Y: y), BoundsFrame.Visible, PlacementFlags(bringToFront), WindowErrorCode.MoveFailed);
 
     /// <summary>
@@ -448,16 +454,16 @@ public class WindowService : IWindowService
         ResizeWindow(handle, width, height, bringToFront: false);
 
     public WindowChangeResult ResizeWindow(nint handle, int width, int height, bool bringToFront) =>
-        ChangeRefusal(handle) ??
+        _targetCheck.ChangeRefusal(handle) ??
         Place(handle, new PlacementTarget(Width: width, Height: height), BoundsFrame.Visible,
             PlacementFlags(bringToFront), WindowErrorCode.ResizeFailed);
 
     public WindowChangeResult SetWindowBounds(nint handle, int x, int y, int width, int height, bool bringToFront = true) =>
-        ChangeRefusal(handle) ??
+        _targetCheck.ChangeRefusal(handle) ??
         Place(handle, new PlacementTarget(x, y, width, height), BoundsFrame.Outer, PlacementFlags(bringToFront), WindowErrorCode.MoveFailed);
 
     public WindowChangeResult SetWindowFrame(nint handle, int x, int y, int width, int height, bool bringToFront = true) =>
-        ChangeRefusal(handle) ??
+        _targetCheck.ChangeRefusal(handle) ??
         Place(handle, new PlacementTarget(x, y, width, height), BoundsFrame.Visible, PlacementFlags(bringToFront), WindowErrorCode.MoveFailed);
 
     /// <summary>The longest settleMs the geometry tools wait for a window to stop moving: they wait inside the input gate.</summary>
@@ -629,24 +635,16 @@ public class WindowService : IWindowService
     }
 
     public WindowChangeResult SetWindowState(nint handle, WindowStateRequest state) =>
-        ChangeRefusal(handle) ?? ApplyState(handle, state);
+        _targetCheck.ChangeRefusal(handle) ?? ApplyState(handle, state);
 
     public WindowRect? GetNormalBounds(nint handle) =>
         handle != nint.Zero && _nativeWrapper.GetWindowPlacement(handle) is { } placement
-            ? NormalBounds(handle, placement, _monitorService.GetAllMonitors())
+            ? _reads.NormalBounds(handle, placement, _monitorService.GetAllMonitors())
             : null;
-
-    /// <summary>The placement's restore rectangle in screen coordinates: a tool window's is already, any other's is in workspace coordinates.</summary>
-    private WindowRect NormalBounds(nint handle, NativeWindowPlacement placement, IReadOnlyList<MonitorInfo> monitors)
-    {
-        var (left, top, right, bottom) = placement.NormalPosition;
-        var normal = WindowRect.FromLTRB(left, top, right, bottom);
-        return IsToolWindow(handle) ? normal : WorkspaceCoordinates.ToScreen(normal, monitors);
-    }
 
     public WindowChangeResult SetMinimizedBounds(nint handle, int x, int y, int width, int height)
     {
-        if (ChangeRefusal(handle) is { } refused)
+        if (_targetCheck.ChangeRefusal(handle) is { } refused)
             return refused;
 
         if (!_nativeWrapper.IsIconic(handle))
@@ -667,7 +665,7 @@ public class WindowService : IWindowService
             return _nativeWrapper.IsWindow(handle) ? NotPlaced(handle, 0, WindowErrorCode.MoveFailed) : WindowGone(handle);
 
         var target = new WindowRect(x, y, width, height);
-        var normal = IsToolWindow(handle) ? target : WorkspaceCoordinates.ToWorkspace(target, _monitorService.GetAllMonitors());
+        var normal = _reads.IsToolWindow(handle) ? target : WorkspaceCoordinates.ToWorkspace(target, _monitorService.GetAllMonitors());
         var placement = current with
         {
             ShowCmd = NativeEnums.SW_SHOWMINNOACTIVE,
@@ -696,10 +694,6 @@ public class WindowService : IWindowService
             Math.Abs(a.Left - b.Left) <= 1 && Math.Abs(a.Top - b.Top) <= 1 && Math.Abs(a.Right - b.Right) <= 1 &&
             Math.Abs(a.Bottom - b.Bottom) <= 1;
     }
-
-    /// <summary>Whether the window is a tool window (WS_EX_TOOLWINDOW), whose placement is in screen coordinates.</summary>
-    private bool IsToolWindow(nint handle) =>
-        (_nativeWrapper.GetWindowLongPtr(handle, NativeEnums.GWL_EXSTYLE) & (nint)NativeEnums.WS_EX_TOOLWINDOW) != 0;
 
     /// <summary>
     /// Changes the show state of a window that was checked already, and reports success only when the window is seen in
@@ -776,7 +770,7 @@ public class WindowService : IWindowService
 
     public WindowChangeResult SnapWindow(nint handle, SnapPosition position, int? monitorIndex = null, bool bringToFront = true)
     {
-        if (ChangeRefusal(handle) is { } refused)
+        if (_targetCheck.ChangeRefusal(handle) is { } refused)
             return refused;
 
         // Its own monitor when none is named; one that cannot be read is no reason to snap on monitor 0 (issue #12)
@@ -804,7 +798,7 @@ public class WindowService : IWindowService
     public WindowChangeResult MoveWindowToMonitor(
         nint handle, int monitorIndex, MonitorPositioning positioning = MonitorPositioning.Center, bool bringToFront = true)
     {
-        if (ChangeRefusal(handle) is { } refused)
+        if (_targetCheck.ChangeRefusal(handle) is { } refused)
             return refused;
 
         var monitors = _monitorService.GetAllMonitors();
@@ -912,17 +906,14 @@ public class WindowService : IWindowService
               "own position). Check it with find_windows.");
     }
 
-    public bool IsValidWindow(nint handle)
-    {
-        return handle != nint.Zero && _nativeWrapper.IsWindow(handle);
-    }
+    public bool IsValidWindow(nint handle) => _reads.IsValidWindow(handle);
 
     /// <summary>The flags of every z-order change: it never moves, resizes or activates the window.</summary>
     private const uint ZOrderFlags = NativeEnums.SWP_NOMOVE | NativeEnums.SWP_NOSIZE | NativeEnums.SWP_NOACTIVATE;
 
     public WindowChangeResult SetWindowZOrder(nint handle, ZOrderMode mode, nint? above = null)
     {
-        if (ChangeRefusal(handle) is { } refused)
+        if (_targetCheck.ChangeRefusal(handle) is { } refused)
             return refused;
 
         if (mode == ZOrderMode.Above && (above is not { } named || !IsValidWindow(named)))
@@ -932,7 +923,7 @@ public class WindowService : IWindowService
         }
 
         var window = TopLevel(handle);
-        var wasTopmost = IsTopmost(window);
+        var wasTopmost = _reads.IsTopmost(window);
         try
         {
             if (mode == ZOrderMode.Above)
@@ -963,7 +954,7 @@ public class WindowService : IWindowService
     /// </summary>
     private void TrackPin(nint window, bool wasTopmost)
     {
-        if (!IsTopmost(window))
+        if (!_reads.IsTopmost(window))
             _topmostPins.Unpin(window);
         else if (!wasTopmost)
             _topmostPins.Pin(window, _nativeWrapper.GetWindowThreadId(window));
@@ -972,9 +963,6 @@ public class WindowService : IWindowService
     /// <summary>The top-level window of <paramref name="handle"/>, which has the place in the z-order; itself when it has none.</summary>
     private nint TopLevel(nint handle) =>
         _nativeWrapper.GetAncestor(handle, WindowAncestor.Root) is var root && root != nint.Zero ? root : handle;
-
-    private bool IsTopmost(nint window) =>
-        ((long)_nativeWrapper.GetWindowLongPtr(window, NativeEnums.GWL_EXSTYLE) & NativeEnums.WS_EX_TOPMOST) != 0;
 
     /// <summary>ZOrderNotApplied when the window's topmost state is not what <paramref name="mode"/> asked for; otherwise null.</summary>
     private WindowChangeResult? TopmostRefusal(nint handle, nint window, ZOrderMode mode)
@@ -985,7 +973,7 @@ public class WindowService : IWindowService
             ZOrderMode.NoTopmost or ZOrderMode.Bottom => false,
             _ => (bool?)null
         };
-        if (expected is not { } topmost || IsTopmost(window) == topmost)
+        if (expected is not { } topmost || _reads.IsTopmost(window) == topmost)
             return null;
 
         return WindowChangeResult.Failed(handle, WindowErrorCode.ZOrderNotApplied, topmost
@@ -1012,8 +1000,8 @@ public class WindowService : IWindowService
                 "aboveHandle is the window itself. Nothing was changed. Pass another window to place it above.");
         }
 
-        var windowTopmost = IsTopmost(window);
-        var otherTopmost = IsTopmost(other);
+        var windowTopmost = _reads.IsTopmost(window);
+        var otherTopmost = _reads.IsTopmost(other);
         var zOrder = EnumerateTopLevelWindows(_nativeWrapper);
         var otherIndex = zOrder.IndexOf(other);
         var inFront = zOrder.Take(Math.Max(otherIndex, 0)).Where(w => w != window).LastOrDefault();
@@ -1031,7 +1019,7 @@ public class WindowService : IWindowService
             {
                 // Sent and given up on: the call can still make the window topmost once its app answers, after any undo. One
                 // that already did is undone; one refused before it was sent changed nothing, and its message says so
-                if (!IsTopmost(window))
+                if (!_reads.IsTopmost(window))
                     throw new WindowNotRespondingException(ex.Window, ex.Message + MayBecomeTopmost);
                 if (!UndoTopmost(handle, window))
                     throw new WindowNotRespondingException(ex.Window, LeftTopmost(ex.Message));
@@ -1062,7 +1050,7 @@ public class WindowService : IWindowService
 
         if (!already)
         {
-            var insertAfter = inFront == nint.Zero || IsTopmost(inFront) && !otherTopmost
+            var insertAfter = inFront == nint.Zero || _reads.IsTopmost(inFront) && !otherTopmost
                 ? otherTopmost ? NativeEnums.HWND_TOPMOST : NativeEnums.HWND_TOP
                 : inFront;
             if (SetZOrder(handle, window, insertAfter) is { Success: false } notPlaced)
@@ -1111,7 +1099,7 @@ public class WindowService : IWindowService
             // Read back below: a change Windows made before the deadline still counts
         }
 
-        return !IsTopmost(window);
+        return !_reads.IsTopmost(window);
     }
 
     /// <summary>
@@ -1150,26 +1138,8 @@ public class WindowService : IWindowService
         return placed.Succeeded ? WindowChangeResult.Done(handle) : NotPlaced(handle, placed.Win32Error, WindowErrorCode.ZOrderNotApplied);
     }
 
-    /// <summary>
-    /// Why a window change is refused before anything is sent: the handle is not a window (InvalidHandle), or the
-    /// target policy denies the window (TargetDeniedByPolicy). Null when the change can go ahead.
-    /// </summary>
-    private WindowChangeResult? ChangeRefusal(nint handle)
-    {
-        if (!IsValidWindow(handle))
-            return WindowChangeResult.Failed(handle, WindowErrorCode.InvalidHandle, InvalidHandleMessage);
-
-        return EvaluateTargetPolicy(handle) is { Allowed: false } verdict
-            ? WindowChangeResult.Failed(handle, WindowErrorCode.TargetDeniedByPolicy, WindowChangeRefusal(handle, verdict))
-            : null;
-    }
-
     /// <summary>The error of a window handle that is not a window.</summary>
-    public const string InvalidHandleMessage = "Invalid window handle";
-
-    private static WindowChangeResult WindowGone(nint handle) =>
-        WindowChangeResult.Failed(handle, WindowErrorCode.InvalidHandle,
-            "The window no longer exists: it closed during the call. Call find_windows for a current handle.");
+    public const string InvalidHandleMessage = WindowChangeFailures.InvalidHandleMessage;
 
     /// <summary>
     /// A snap without a monitor, of a window whose own monitor cannot be read (issue #12): it closed (InvalidHandle), or the
@@ -1209,22 +1179,6 @@ public class WindowService : IWindowService
         var placed = _windowCalls.Run(handle, () => _nativeWrapper.SetWindowPos(handle, rect.X, rect.Y, rect.Width, rect.Height, flags));
         return placed.Succeeded ? WindowChangeResult.Done(handle) : NotPlaced(handle, placed.Win32Error, failure);
     }
-
-    private static WindowChangeResult NotPlaced(nint handle, int win32Error, WindowErrorCode failure) => win32Error switch
-    {
-        NativeEnums.ERROR_ACCESS_DENIED => WindowChangeResult.Failed(handle, WindowErrorCode.AccessDenied,
-            $"Windows blocked the change (Win32 error {win32Error}, access denied). The window most likely belongs to an app " +
-            "running with higher privileges, for example as administrator: User Interface Privilege Isolation blocks this " +
-            "server from moving or resizing it. Nothing was changed; ask the user to do this step."),
-        NativeEnums.ERROR_INVALID_WINDOW_HANDLE => WindowGone(handle),
-        // SetWindowPos can fail without setting the last error, and error 0's text is "The operation completed successfully"
-        0 => WindowChangeResult.Failed(handle, failure,
-            $"Windows refused to {(failure == WindowErrorCode.ResizeFailed ? "resize" : "move")} the window without giving a reason " +
-            "(the application may have rejected the change). Nothing was changed."),
-        _ => WindowChangeResult.Failed(handle, failure,
-            $"Windows did not {(failure == WindowErrorCode.ResizeFailed ? "resize" : "move")} the window (Win32 error {win32Error}: " +
-            $"{new System.ComponentModel.Win32Exception(win32Error).Message}).")
-    };
 
     /// <summary>ShowWindow, with a deadline (<see cref="IWindowCallRunner"/>). Its return value is the previous visibility, so it is not returned.</summary>
     /// <exception cref="WindowNotRespondingException">The window did not answer in time.</exception>
@@ -1293,8 +1247,8 @@ public class WindowService : IWindowService
 
             var className = _nativeWrapper.GetClassName(window) ?? string.Empty;
             var title = _nativeWrapper.GetWindowText(window) ?? string.Empty;
-            var process = ResolveProcess(window, className, title, _nativeWrapper.GetWindowThreadProcessId(window), session);
-            if (BuildWindowInfo(window, title, className, _nativeWrapper.IsCloaked(window), process, session) is { } info)
+            var process = _reads.ResolveProcess(window, className, title, _nativeWrapper.GetWindowThreadProcessId(window), session);
+            if (_windowInfos.BuildWindowInfo(window, title, className, _nativeWrapper.IsCloaked(window), process, session) is { } info)
                 owned.Add(new OwnedWindowInfo(info, WindowClassification.IsDialogClass(className), window == blocking));
         }
 
@@ -1400,8 +1354,8 @@ public class WindowService : IWindowService
                 continue;
 
             var title = _nativeWrapper.GetWindowText(window) ?? string.Empty;
-            var process = ResolveProcess(window, className, title, windowProcessId, session);
-            if (BuildWindowInfo(window, title, className, isCloaked: otherDesktops, process, session) is { } info)
+            var process = _reads.ResolveProcess(window, className, title, windowProcessId, session);
+            if (_windowInfos.BuildWindowInfo(window, title, className, isCloaked: otherDesktops, process, session) is { } info)
                 windows.Add(info);
         }
 
@@ -1575,14 +1529,8 @@ public class WindowService : IWindowService
         return null;
     }
 
-    /// <summary>
-    /// The error of a window change that the target policy refuses with <paramref name="verdict"/>: the
-    /// Window Control tools report it with TargetDeniedByPolicy.
-    /// </summary>
-    public static string WindowChangeRefusal(nint handle, TargetPolicyVerdict verdict) =>
-        $"Window {handle} is refused by the server's target policy: {verdict.Reason}. Nothing was changed: the window was not " +
-        "moved, restored, raised or activated. The policy is set by the user in the server's environment and no tool argument " +
-        "changes it; ask the user to do this step.";
+    /// <inheritdoc cref="WindowTargetCheck.WindowChangeRefusal"/>
+    public static string WindowChangeRefusal(nint handle, TargetPolicyVerdict verdict) => WindowTargetCheck.WindowChangeRefusal(handle, verdict);
 
     /// <summary>
     /// Why the target policy refuses the window, or null when it allows it (or there is no policy). The
@@ -1595,19 +1543,7 @@ public class WindowService : IWindowService
               "the user in the server's environment; force does not override it. Ask the user to close this window."
             : null;
 
-    public TargetPolicyVerdict EvaluateTargetPolicy(nint handle)
-    {
-        var session = new ReadSession(_nativeWrapper, topLevelWindows: null);
-        var className = _nativeWrapper.GetClassName(handle) ?? string.Empty;
-        var title = _nativeWrapper.GetWindowText(handle) ?? string.Empty;
-        var process = ResolveProcess(handle, className, title, _nativeWrapper.GetWindowThreadProcessId(handle), session);
-
-        // A process that cannot be named cannot be checked, so it is refused while the policy denies anything, as the input
-        // guard, the captures and the UI Automation reads refuse it; a security prompt of a shared process is refused by its
-        // structure (roadmap M3.F5)
-        var name = session.ProcessName(process.ProcessId);
-        return _targetPolicy.EvaluateFailClosed(handle, process.HostProcessId is { } hostId ? [name, session.ProcessName(hostId)] : [name]);
-    }
+    public TargetPolicyVerdict EvaluateTargetPolicy(nint handle) => _targetCheck.EvaluateTargetPolicy(handle);
 
     /// <summary>
     /// A dialog box (#32770) that the user can see and dismiss: visible and top-level, not a child
@@ -1802,7 +1738,7 @@ public class WindowService : IWindowService
         if (!query.SkipsUserFacingFilter && windowProcessId == session.CurrentProcessId)
             return null; // the server's own windows are not app windows
 
-        var process = ResolveProcess(hWnd, className, title, windowProcessId, session);
+        var process = _reads.ResolveProcess(hWnd, className, title, windowProcessId, session);
         if (query.ProcessId is { } processId && !process.Has(processId))
             return null;
 
@@ -1814,7 +1750,7 @@ public class WindowService : IWindowService
                 query.ProcessNameContains))
             return null;
 
-        var info = BuildWindowInfo(hWnd, title, className, isCloaked, process, session);
+        var info = _windowInfos.BuildWindowInfo(hWnd, title, className, isCloaked, process, session);
         if (info == null || (!query.IncludeMinimized && info.State == WindowState.Minimized))
             return null;
 
@@ -1844,158 +1780,5 @@ public class WindowService : IWindowService
 
         isCloaked = _nativeWrapper.IsCloaked(hWnd);
         return includeCloaked || !isCloaked;
-    }
-
-    /// <summary>
-    /// Reads any window, with no listing filter: untitled, cloaked, tool and shell windows and the
-    /// server's own windows are described too. Null only when the window cannot be read (it is gone).
-    /// </summary>
-    private WindowInfo? ReadWindowInfo(nint hWnd)
-    {
-        var session = new ReadSession(_nativeWrapper, topLevelWindows: null);
-        var className = _nativeWrapper.GetClassName(hWnd) ?? string.Empty;
-        var title = _nativeWrapper.GetWindowText(hWnd) ?? string.Empty;
-        var process = ResolveProcess(hWnd, className, title, _nativeWrapper.GetWindowThreadProcessId(hWnd), session);
-
-        return BuildWindowInfo(hWnd, title, className, _nativeWrapper.IsCloaked(hWnd), process, session);
-    }
-
-    private WindowInfo? BuildWindowInfo(
-        nint hWnd, string title, string className, bool isCloaked, WindowProcess process, ReadSession session)
-    {
-        var rect = _nativeWrapper.GetWindowRect(hWnd);
-        if (rect == null)
-            return null;
-
-        var state = WindowState.Normal;
-        if (_nativeWrapper.IsIconic(hWnd))
-            state = WindowState.Minimized;
-        else if (_nativeWrapper.IsZoomed(hWnd))
-            state = WindowState.Maximized;
-
-        var owner = _nativeWrapper.GetWindow(hWnd, NativeEnums.GW_OWNER);
-        var frame = _nativeWrapper.GetExtendedFrameBounds(hWnd) is { } extended
-            ? WindowRect.FromLTRB(extended.Left, extended.Top, extended.Right, extended.Bottom)
-            : null;
-        var bounds = WindowRect.FromLTRB(rect.Value.Left, rect.Value.Top, rect.Value.Right, rect.Value.Bottom);
-        var isAgentHost = _hostGuard.IsHostWindow(hWnd);
-
-        // One lookup for the index, the id and the zone (issue #12); a monitor that cannot be read leaves all of them out
-        var monitor = _monitorService.GetMonitorForWindow(hWnd);
-        var visible = frame ?? bounds;
-
-        return new WindowInfo(
-            Handle: hWnd,
-            Title: title,
-            ProcessName: session.ProcessName(process.ProcessId),
-            ProcessId: (int)process.ProcessId,
-            Bounds: bounds,
-            State: state,
-            IsVisible: _nativeWrapper.IsWindowVisible(hWnd),
-            MonitorIndex: monitor?.Index)
-        {
-            MonitorId = monitor?.Id,
-            Zone = monitor == null ? null : WindowZones.Match(visible, state, monitor),
-            // Only the visible frame: the window rect's invisible borders (about 7 px) overhang the next monitor
-            SpansMonitors = monitor != null && frame != null && WindowZones.Spans(frame, state, monitor, _monitorService.GetAllMonitors),
-            VisibleBounds = frame,
-            ClassName = className,
-            IsCloaked = isCloaked,
-            OwnerHandle = owner == nint.Zero ? null : owner,
-            HostProcessName = process.HostProcessId is { } hostId ? session.ProcessName(hostId) : null,
-            HostProcessId = process.HostProcessId is { } id ? (int)id : null,
-            IsAgentHost = isAgentHost,
-            IsAgentHostOnlyWhileAncestorsUnknown = isAgentHost && _hostGuard.IsHostWindowOnlyWhileAncestorsUnknown(hWnd),
-            IsTopmost = IsTopmost(hWnd)
-        };
-    }
-
-    /// <summary>
-    /// The process a window belongs to. A UWP frame window (ApplicationFrameWindow) belongs to
-    /// ApplicationFrameHost, but the app runs in the process of the CoreWindow that the frame hosts:
-    /// report that process, with ApplicationFrameHost as the host. A window of ApplicationFrameHost of another
-    /// class, such as the frame a prompt may come up in, is attributed the same way to a CoreWindow child of
-    /// another process (roadmap M3.F7). The process name that check reads is read once per process in a call, and is
-    /// the one the window is reported with anyway.
-    /// </summary>
-    private WindowProcess ResolveProcess(nint hWnd, string className, string title, uint windowProcessId, ReadSession session)
-    {
-        if (!UwpFrames.IsFrame(className, windowProcessId, session.ProcessName))
-            return new WindowProcess(windowProcessId, HostProcessId: null);
-
-        return FindHostedAppProcessId(hWnd, className, title, windowProcessId, session) is { } appProcessId
-            ? new WindowProcess(appProcessId, HostProcessId: windowProcessId)
-            : new WindowProcess(windowProcessId, HostProcessId: null);
-    }
-
-    private uint? FindHostedAppProcessId(nint frame, string className, string title, uint hostProcessId, ReadSession session)
-    {
-        // While the app runs, its CoreWindow is a child of the frame.
-        if (UwpFrames.FindHostedAppProcessId(_nativeWrapper, frame, hostProcessId) is { } runningAppProcessId)
-            return runningAppProcessId;
-
-        // While the app is minimized or suspended, Windows moves its CoreWindow out of the frame to the
-        // top level. Match it by title, and only when exactly one other process has such a window; an
-        // ambiguous title leaves the frame attributed to its host. Only an app's frame (ApplicationFrameWindow)
-        // is minimized that way; the frame host's other windows are matched by their CoreWindow child alone.
-        if (string.IsNullOrEmpty(title) || !WindowClassification.IsApplicationFrameWindow(className))
-            return null;
-
-        var candidates = session.TopLevelCoreWindows
-            .Where(w => w.ProcessId != 0 && w.ProcessId != hostProcessId && string.Equals(w.Title, title, StringComparison.Ordinal))
-            .Select(w => w.ProcessId)
-            .Distinct()
-            .ToList();
-
-        return candidates.Count == 1 ? candidates[0] : null;
-    }
-
-    private static List<nint> EnumerateTopLevelWindows(INativeWindowWrapper nativeWrapper)
-    {
-        var handles = new List<nint>();
-        nativeWrapper.EnumWindows(hWnd =>
-        {
-            handles.Add(hWnd);
-            return true;
-        });
-        return handles;
-    }
-
-    /// <summary>The process of a window, and for a UWP frame window also the frame host process.</summary>
-    private readonly record struct WindowProcess(uint ProcessId, uint? HostProcessId)
-    {
-        public bool Has(int processId) => ProcessId == processId || HostProcessId == processId;
-    }
-
-    /// <summary>
-    /// Values shared by the reads of one call: each process name is looked up once, and the
-    /// top-level UWP CoreWindows are listed only when a frame needs them.
-    /// </summary>
-    private sealed class ReadSession(INativeWindowWrapper nativeWrapper, IReadOnlyList<nint>? topLevelWindows)
-    {
-        private readonly Dictionary<uint, string> _processNames = [];
-        private uint? _currentProcessId;
-        private List<(string Title, uint ProcessId)>? _topLevelCoreWindows;
-
-        public uint CurrentProcessId => _currentProcessId ??= nativeWrapper.GetCurrentProcessId();
-
-        /// <summary>The top-level CoreWindows: (title, process ID).</summary>
-        public IReadOnlyList<(string Title, uint ProcessId)> TopLevelCoreWindows =>
-            _topLevelCoreWindows ??= (topLevelWindows ?? EnumerateTopLevelWindows(nativeWrapper))
-                .Where(hWnd => WindowClassification.IsCoreWindow(nativeWrapper.GetClassName(hWnd)))
-                .Select(hWnd => (nativeWrapper.GetWindowText(hWnd) ?? string.Empty, nativeWrapper.GetWindowThreadProcessId(hWnd)))
-                .ToList();
-
-        /// <summary>The name of the process, or "Unknown" when it has exited or cannot be read.</summary>
-        public string ProcessName(uint processId)
-        {
-            if (!_processNames.TryGetValue(processId, out var name))
-            {
-                name = nativeWrapper.GetProcessName(processId) ?? WindowInfo.UnknownProcessName;
-                _processNames[processId] = name;
-            }
-
-            return name;
-        }
     }
 }

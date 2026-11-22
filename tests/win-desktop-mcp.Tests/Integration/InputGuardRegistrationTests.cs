@@ -55,7 +55,7 @@ public sealed class InputGuardRegistrationTests : IDisposable
         // The policy parameters are optional for tests, so check that the container fills them in
         var policy = _provider.GetRequiredService<ITargetPolicy>();
 
-        Field(_provider.GetRequiredService<IWindowService>(), "_targetPolicy").Should().BeSameAs(policy);
+        Field(Field(_provider.GetRequiredService<IWindowService>(), "_targetCheck")!, "_targetPolicy").Should().BeSameAs(policy);
         Field(_provider.GetRequiredService<IProcessTermination>(), "_targetPolicy").Should().BeSameAs(policy);
         Field(_provider.GetRequiredService<IProcessListing>(), "_targetPolicy").Should().BeSameAs(policy);
 

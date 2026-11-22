@@ -123,9 +123,12 @@ src/win-desktop-mcp/Services/SecurityPrompts.cs -> Native.NativeEnums
 src/win-desktop-mcp/Services/SendKeysParser.cs -> Native.NativeEnums
 src/win-desktop-mcp/Services/ServerInfoService.cs -> Native.NativeEnums
 src/win-desktop-mcp/Services/ServerInfoService.cs -> Native.Uia3Tree
+src/win-desktop-mcp/Services/WindowChangeFailures.cs -> Native.NativeEnums  # moved out of WindowService when it was split; the same dependency it had
 src/win-desktop-mcp/Services/WindowClassification.cs -> Native.NativeEnums
 src/win-desktop-mcp/Services/WindowEventJournal.cs -> Native.NativeEnums
+src/win-desktop-mcp/Services/WindowInfoReader.cs -> Native.NativeEnums  # moved out of WindowService when it was split; the same dependency it had
 src/win-desktop-mcp/Services/WindowOwnerChain.cs -> Native.NativeEnums
+src/win-desktop-mcp/Services/WindowReads.cs -> Native.NativeEnums  # moved out of WindowService when it was split; the same dependency it had
 src/win-desktop-mcp/Services/WindowService.cs -> Native.NativeEnums
 
 ## Services -> Infrastructure: move ToolErrorException and AppText inward (Models), give services ports for what they take from the filters (InputGateToolFilter, AuditScope, ToolsetSelection, ToolJson, CommandLineRedactor), and pass them the version instead of ServerVersion
