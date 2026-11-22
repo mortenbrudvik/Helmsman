@@ -153,7 +153,9 @@ files are elsewhere, the notes below say so.
     an old profile as one of the server's own.
   - Temporary folders: captures written to a file without `outputPath` go to `%TEMP%\Helmsman\captures`, and
     temporary debug-browser profiles to `%TEMP%\Helmsman\browser-debug`. Helmsman does not clean up the old `%TEMP%`
-    folder: delete it by hand once no old server runs.
+    folder: delete it by hand once no old server runs. Since the release after 4.0.0, Helmsman deletes its own capture
+    files in `%TEMP%\Helmsman\captures` once they are 24 hours old (see [Screenshot](docs/TOOLS.md#screenshot)); pass
+    `outputPath` to keep a capture.
 
 **5. Do not run old and new servers side by side.** The pause hotkey's registration and the pause the servers share
 have new names, so an old server still running beside Helmsman (for example a client whose MCP config still starts
