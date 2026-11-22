@@ -37,7 +37,12 @@ public sealed class HostConfirmation
 /// True when the call pastes or drops content by what it is (a right or middle click, a drag, a paste mode): what it puts
 /// in cannot be shown, so it is refused for the agent's host without a question (PasteNotAllowed).
 /// </param>
-public sealed record HostInput(string Tool, string? Action = null, Func<InputPreview?>? Content = null, bool Pastes = false);
+/// <param name="NotAllowed">
+/// What of the call is outside the allowlist for the agent's host before any content is read (a modifier key held around a
+/// click or scroll); null when nothing. Refused without a question (InvalidArguments).
+/// </param>
+public sealed record HostInput(string Tool, string? Action = null, Func<InputPreview?>? Content = null, bool Pastes = false,
+    string? NotAllowed = null);
 
 /// <summary>
 /// Asks the user, through the client, before a call's allowHostTarget sends input to the agent's own host window.
@@ -115,6 +120,12 @@ public sealed class HostTargetConfirmation : IHostTargetConfirmation
         if (input.Pastes)
         {
             throw new ToolErrorException(nameof(InputErrorCode.PasteNotAllowed), HostPasteRefusal(names));
+        }
+
+        if (input.NotAllowed is { } notAllowedAction)
+        {
+            throw new ToolErrorException(ToolErrorReporting.InvalidArgumentsErrorCode,
+                ShownInput.HostAllowlistRefusal(notAllowedAction, names) + " Nothing was sent, and the user was not asked.");
         }
 
         // The question shows every character and key that would be sent, or the call is refused: never a cut preview

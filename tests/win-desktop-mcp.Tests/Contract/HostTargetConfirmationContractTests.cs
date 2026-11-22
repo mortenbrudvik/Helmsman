@@ -750,11 +750,56 @@ public sealed class HostTargetConfirmationContractTests : IDisposable
     }
 
     [Theory]
+    [InlineData("mouse_click", "ctrl")] // Ctrl+click opens the link under the pointer in a terminal
+    [InlineData("mouse_click", "shift")]
+    [InlineData("mouse_click", "alt")]
+    [InlineData("mouse_click", "win")]
+    [InlineData("scroll", "ctrl")]
+    [InlineData("scroll", "shift")]
+    [InlineData("scroll", "alt")]
+    [InlineData("scroll", "win")]
+    public async Task MouseInputWithModifiers_ToTheHost_IsRefused_WithoutAQuestion(string tool, string modifier)
+    {
+        At(Terminal);
+        await using var server = await StartAsync(Answer.Yes);
+        var arguments = Call(tool, Terminal);
+        arguments["modifiers"] = new[] { modifier };
+
+        var result = await server.CallToolAsync(tool, arguments);
+
+        AssertRefused(result, ToolErrorReporting.InvalidArgumentsErrorCode, questions: 0);
+        Payload(result).GetProperty("error").GetString().Should().Contain(modifier);
+    }
+
+    [Theory]
+    [InlineData("send_keys", "^e")] // Quick Open in VS Code, a browser's address bar
+    [InlineData("send_keys", "^l")]
+    [InlineData("send_keys", "^k")]
+    [InlineData("send_keys", "^h")] // Replace
+    [InlineData("send_keys", "^{ESC}")] // the Start menu
+    [InlineData("send_keys", "^+{ESC}")] // Task Manager
+    [InlineData("send_keys", "+{DELETE}")] // cuts the host's text to the clipboard
+    [InlineData("send_keys", "{NUMPAD1}")]
+    [InlineData("send_keys", "{MULTIPLY}")]
+    public async Task KeysDroppedFromTheAllowlist_ToTheHost_AreRefused_WithoutAQuestion(string tool, string keys)
+    {
+        At(Terminal);
+        await using var server = await StartAsync(Answer.Yes);
+        var arguments = Call(tool, Terminal);
+        arguments["keys"] = keys;
+
+        var result = await server.CallToolAsync(tool, arguments);
+
+        AssertRefused(result, ToolErrorReporting.InvalidArgumentsErrorCode, questions: 0);
+    }
+
+    [Theory]
     [InlineData("send_keys", "^c")]
     [InlineData("send_keys", "{UP}{UP}{ENTER}")]
     [InlineData("send_keys", "^{END}{BACKSPACE 2}{ESC}")]
-    [InlineData("press_keys", "ctrl+l")]
+    [InlineData("press_keys", "ctrl+u")]
     [InlineData("press_keys", "shift+tab")]
+    [InlineData("send_keys", "{DELETE}+{ESC}{ESC}")]
     public async Task KeysOnTheAllowlist_ToTheHost_AreAsked_AndSent(string tool, string keys)
     {
         At(Terminal);

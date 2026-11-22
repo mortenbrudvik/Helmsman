@@ -155,7 +155,9 @@ public class DialogTools
         var timeout = TimeSpan.FromMilliseconds(Math.Clamp(timeoutMs, MinTimeoutMs, MaxFileDialogTimeoutMs));
         var confirmed = await ConfirmHostAsync(server, target, allowHostTarget,
             new HostInput("file_dialog", $"{ToolEnum<FileDialogAction>.Name(action)}{(overwrite ? ", replacing the file" : string.Empty)}",
-                () => InputPreview.OfText(path, $"put this {path.Length}-character path in its file name box")),
+                () => InputPreview.OfText(path, $"put this {path.Length}-character path in its file name box directly (UI Automation), " +
+                    $"then press its {(action == FileDialogAction.Save ? "Save" : "Open")} button" +
+                    (overwrite ? " and answer Yes when it asks to replace the file" : string.Empty) + ",")),
             cancellationToken).ConfigureAwait(false);
         var result = await _fileDialogs.CompleteAsync(
             new FileDialogRequest(target, path, action, overwrite, allowHostTarget, timeout) { ConfirmedHost = confirmed }, cancellationToken)

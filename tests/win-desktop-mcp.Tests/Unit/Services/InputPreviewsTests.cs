@@ -51,8 +51,8 @@ public class InputPreviewsTests
     [InlineData("echo hi{ENTER}")]
     [InlineData("{TAB}+{TAB}{BACKSPACE 3}")]
     [InlineData("{UP}{DOWN}{LEFT}{RIGHT}{HOME}{END}{PGUP}{PGDN}{DELETE}{ESC}")]
-    [InlineData("+{HOME}^{END}^+{LEFT}")] // with Shift, Ctrl or both
-    [InlineData("^c^d^z^l^a^e^u^k^h^m^j")]
+    [InlineData("+{HOME}^{END}^+{LEFT}^{DELETE}")] // with Shift, Ctrl or both
+    [InlineData("^c^d^z^a^u^m^j")]
     [InlineData("Hello, wörld!")]
     public void HostInputRules_Allow_TextEnterTabBackspace_TheNavigationKeys_AndTheControlLetters(string keys)
     {
@@ -70,6 +70,13 @@ public class InputPreviewsTests
     [InlineData("^%q", "Ctrl+Alt")]
     [InlineData("^+t", "Ctrl+Shift")]
     [InlineData("^s", "Ctrl+S")]
+    [InlineData("^e", "Ctrl+E")]
+    [InlineData("^l", "Ctrl+L")]
+    [InlineData("^k", "Ctrl+K")]
+    [InlineData("^h", "Ctrl+H")]
+    [InlineData("^{ESC}", "Ctrl+ESC")]
+    [InlineData("+{DELETE}", "Shift+DELETE")]
+    [InlineData("{MULTIPLY}", "MULTIPLY")]
     [InlineData("#d", "Win")]
     [InlineData("{NUMPAD1}", "NUMPAD1")]
     [InlineData("%{NUMPAD1}%{NUMPAD3}", "Alt")] // Alt with keypad digits types a character by its code
@@ -124,31 +131,19 @@ public class InputPreviewsTests
         Render([InputEvent.Unicode('a', 0), InputEvent.Unicode('\uD800', 0)]).Shown.Should().Be("a⟨U+D800⟩");
     }
 
-    [Fact]
-    public void TheAllowlistsCopiesOfWin32Values_AreNativeEnums()
-    {
-        // Services keeps its own copies (no Services -> Native dependency); both are internal, so they are read by reflection
-        var assembly = typeof(HostInputRules).Assembly;
-        var native = assembly.GetType("WinDesktopMcp.Native.NativeEnums")!;
-        var copies = new Dictionary<string, string>
-        {
-            ["KeyUp"] = "KEYEVENTF_KEYUP", ["VkBack"] = "VK_BACK", ["VkTab"] = "VK_TAB", ["VkReturn"] = "VK_RETURN", ["VkEscape"] = "VK_ESCAPE",
-            ["VkPrior"] = "VK_PRIOR", ["VkNext"] = "VK_NEXT", ["VkEnd"] = "VK_END", ["VkHome"] = "VK_HOME", ["VkLeft"] = "VK_LEFT",
-            ["VkUp"] = "VK_UP", ["VkRight"] = "VK_RIGHT", ["VkDown"] = "VK_DOWN", ["VkDelete"] = "VK_DELETE",
-            ["VkLeftControl"] = "VK_LCONTROL", ["VkRightAlt"] = "VK_RMENU"
-        };
-        const System.Reflection.BindingFlags Static = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public |
-                                                      System.Reflection.BindingFlags.NonPublic;
-
-        foreach (var (copy, nativeName) in copies)
-        {
-            var value = typeof(HostInputRules).GetField(copy, Static)!.GetValue(null)!;
-            Convert.ToUInt32(value).Should().Be(Convert.ToUInt32(native.GetField(nativeName, Static)!.GetValue(null)!), copy);
-        }
-    }    [Fact]
     public void ARepeatCount_IsInsideTheKeysMarker()
     {
         Render(SendKeysParser.Parse("{ENTER}{ENTER}2")).Shown.Should().Be("⟨ENTER ×2⟩2");
+    }
+
+    [Fact]
+    public void ACarriageReturn_IsShownByName_ALineFeedAsALineBreak_AndBothAsEnter()
+    {
+        ShownInput.Escape("a\r\nb\rc\nd").Should().Be("a⟨CR⟩⏎b⟨CR⟩c⏎d");
+        var rendered = Render([InputEvent.Unicode('\r', 0), InputEvent.Unicode('\r', 0x0002)]);
+        rendered.Shown.Should().Be("⟨CR⟩");
+        rendered.PressesEnter.Should().BeTrue();
+        ShownInput.Legend.Should().Contain("⟨CR⟩").And.Contain("⏎");
     }
 
     [Fact]

@@ -34,9 +34,9 @@ public class InputSimulationTools
     internal const string AllowHostTargetDescription =
         "Allow input to the agent's own host window (its terminal, editor or chat app), named by windowHandle or window.handle. The " +
         "server asks the user first, showing the whole input; nothing is sent without their yes (ConfirmationDeclined) or when the " +
-        "client cannot ask (ConfirmationRequired). Only text, Enter, Tab, Backspace, navigation keys and Ctrl+A/C/D/E/H/J/K/L/M/U/Z " +
-        "go there, up to 300 characters (else InvalidArguments, TextTooLong); pastes, drags and right or middle clicks are refused " +
-        "(PasteNotAllowed). Use only when the user asked for it. Default: false";
+        "client cannot ask (ConfirmationRequired). Only text, Enter, Tab, Backspace, navigation keys and Ctrl+A/C/D/J/M/U/Z go " +
+        "there, up to 300 characters, and mouse input without modifiers (else InvalidArguments, TextTooLong); pastes, drags and " +
+        "right or middle clicks are refused (PasteNotAllowed). Use only when the user asked for it. Default: false";
 
     internal const string ReleaseHeldModifiersDescription =
         "Release modifier keys (Shift, Ctrl, Alt, Windows) that are down before the input is sent, instead of refusing with " +
@@ -168,7 +168,7 @@ public class InputSimulationTools
             new HostInput("mouse_click",
                 $"{ClickName(button, clickCount)} at ({point.X}, {point.Y}) on the window{With(modifiers)}; a click presses whatever is at that " +
                 "point, which can be a button or menu item such as Allow or Paste",
-                Pastes: button is MouseButton.Secondary or MouseButton.Middle), cancellationToken).ConfigureAwait(false);
+                Pastes: button is MouseButton.Secondary or MouseButton.Middle, NotAllowed: HeldAround(modifiers, "the click")), cancellationToken).ConfigureAwait(false);
         var target = confirmed.Apply(point.Target);
         return await ObserveAsync(Echo(_inputService.MouseClick(point.X, point.Y, button, clickCount, modifiers ?? [], target,
             releaseHeldModifiers, cancellationToken), point.Requested), target, observe, cancellationToken).ConfigureAwait(false);
@@ -362,7 +362,8 @@ public class InputSimulationTools
             }
 
             var confirmedAtPoint = await ConfirmAsync(server, [point.Target],
-                new HostInput("scroll", $"{Notches(deltaY, deltaX)} at ({point.X}, {point.Y}){With(modifiers)}"), cancellationToken).ConfigureAwait(false);
+                new HostInput("scroll", $"{Notches(deltaY, deltaX)} at ({point.X}, {point.Y}){With(modifiers)}",
+                    NotAllowed: HeldAround(modifiers, "the wheel")), cancellationToken).ConfigureAwait(false);
             return Echo(_inputService.Scroll(point.X, point.Y, deltaY, deltaX, modifiers ?? [], confirmedAtPoint.Apply(point.Target),
                 releaseHeldModifiers, cancellationToken), point.Requested);
         }
@@ -383,7 +384,8 @@ public class InputSimulationTools
                 "x and y. {\"foreground\": true} alone names no window here. Nothing was scrolled.");
         }
 
-        var confirmed = await ConfirmAsync(server, [target], new HostInput("scroll", $"{Notches(deltaY, deltaX)} at the centre of the window{With(modifiers)}"),
+        var confirmed = await ConfirmAsync(server, [target], new HostInput("scroll", $"{Notches(deltaY, deltaX)} at the centre of the window{With(modifiers)}",
+                NotAllowed: HeldAround(modifiers, "the wheel")),
             cancellationToken).ConfigureAwait(false);
         return _inputService.Scroll(null, null, deltaY, deltaX, modifiers ?? [], confirmed.Apply(target), releaseHeldModifiers, cancellationToken);
     }
@@ -575,6 +577,15 @@ public class InputSimulationTools
     /// <summary>A click as the user's question names it: "a double primary click".</summary>
     private static string ClickName(MouseButton button, int clickCount) =>
         $"{clickCount switch { 2 => "a double", 3 => "a triple", _ => "a" }} {ToolEnum<MouseButton>.Name(button)} click";
+
+    /// <summary>
+    /// The modifier keys held around mouse input, as what of it may not go to the agent's host ("the modifier key ctrl held
+    /// around the click"); null without any. A chord with a click or the wheel does things the question cannot explain.
+    /// </summary>
+    private static string? HeldAround(MouseModifier[]? modifiers, string what) =>
+        modifiers is { Length: > 0 }
+            ? $"the modifier key {string.Join("+", modifiers.Distinct().Select(ToolEnum<MouseModifier>.Name))} held around {what}"
+            : null;
 
     /// <summary>The modifier keys held, for the question: " with ctrl+shift", or nothing.</summary>
     private static string With(MouseModifier[]? modifiers) =>

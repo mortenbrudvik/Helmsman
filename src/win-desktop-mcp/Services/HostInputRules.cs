@@ -10,29 +10,44 @@ namespace WinDesktopMcp.Services;
 /// <list type="bullet">
 /// <item>Text: a character the question shows as itself (<see cref="ShownInput.IsShownAsItself"/>), sent as itself or typed by
 /// a key of the window's keyboard layout with no modifier but Shift (or AltGr for the character the layout types with it);
-/// and a line break, tab or carriage return, shown as ⏎, ⇥ and Enter.</item>
+/// and a line break, tab or carriage return, shown as ⏎, ⇥ and ⟨CR⟩.</item>
 /// <item>Enter, Tab and Backspace, alone or with Shift.</item>
-/// <item>Navigation and editing keys: the arrows, Home, End, Page Up, Page Down, Delete and Esc, alone or with Shift, Ctrl or
-/// both.</item>
-/// <item>Ctrl with one of <see cref="CtrlLetters"/> (A C D E H J K L M U Z), the control input of terminals and editors; Ctrl+M
-/// and Ctrl+J count as Enter in the question.</item>
+/// <item>The arrows, Home, End, Page Up and Page Down, alone or with Shift, Ctrl or both; Delete alone or with Ctrl (Shift+Delete
+/// cuts the host's text to the clipboard); Esc alone or with Shift (Ctrl+Esc opens the Start menu, Ctrl+Shift+Esc Task
+/// Manager).</item>
+/// <item>Ctrl with one of <see cref="CtrlLetters"/> (A C D J M U Z), the control input of terminals; Ctrl+M and Ctrl+J count as
+/// Enter in the question. Not E, H, K or L: in common hosts they open Quick Open, Replace, a browser's address bar or a chord
+/// whose next key arrives as text, which the question could only name.</item>
 /// </list>
 /// Everything else is refused: a modifier pressed alone (Alt opens the menu bar), Alt or Win with anything, Ctrl with Alt
 /// (on a layout with AltGr an explicit Ctrl+Alt chord types a character), any other Ctrl chord, the Apps key, the function
-/// keys, the numeric keypad, and every key without a name or that types nothing the question can show. Mouse events are left
-/// to the click rules (a right or middle click and a drag are refused as pastes).
+/// keys, the numeric keypad (whose keys depend on Num Lock), and every key without a name or that types nothing the question
+/// can show. Mouse events are left to the mouse rules: a right or middle click and a drag are refused as pastes, and a modifier
+/// held around mouse input as a chord (InputSimulationService).
 /// </summary>
 public static class HostInputRules
 {
-    // Win32 values, as NativeEnums has them (Services computes with no Native type; NativeEnumsMirrorTests pins them)
-    internal const uint KeyUp = 0x0002;
-    internal const ushort VkBack = 0x08, VkTab = 0x09, VkReturn = 0x0D, VkEscape = 0x1B, VkPrior = 0x21, VkNext = 0x22, VkEnd = 0x23,
-        VkHome = 0x24, VkLeft = 0x25, VkUp = 0x26, VkRight = 0x27, VkDown = 0x28, VkDelete = 0x2E, VkLeftControl = 0xA2, VkRightAlt = 0xA5;
+    /// <summary>
+    /// Copies of the Win32 values the rules use, under NativeEnums' own names: Services may not depend on Native (the layering
+    /// test, NamespaceDependencyTests), so NativeEnumsMirrorTests pins each one to the NativeEnums constant of the same name.
+    /// </summary>
+    internal static class Win32
+    {
+        internal const uint KEYEVENTF_KEYUP = 0x0002;
+        internal const ushort VK_BACK = 0x08, VK_TAB = 0x09, VK_RETURN = 0x0D, VK_ESCAPE = 0x1B, VK_PRIOR = 0x21, VK_NEXT = 0x22,
+            VK_END = 0x23, VK_HOME = 0x24, VK_LEFT = 0x25, VK_UP = 0x26, VK_RIGHT = 0x27, VK_DOWN = 0x28, VK_DELETE = 0x2E,
+            VK_NUMPAD0 = 0x60, VK_DIVIDE = 0x6F, VK_LCONTROL = 0xA2, VK_RMENU = 0xA5;
+    }
 
-    /// <summary>The letters Ctrl may be pressed with: a terminal's or an editor's control input (interrupt, end of input, line editing).</summary>
-    public static IReadOnlySet<char> CtrlLetters { get; } = new HashSet<char> { 'A', 'C', 'D', 'E', 'H', 'J', 'K', 'L', 'M', 'U', 'Z' };
+    internal const uint KeyUp = Win32.KEYEVENTF_KEYUP;
+    internal const ushort VkBack = Win32.VK_BACK, VkTab = Win32.VK_TAB, VkReturn = Win32.VK_RETURN, VkEscape = Win32.VK_ESCAPE,
+        VkDelete = Win32.VK_DELETE, VkLeftControl = Win32.VK_LCONTROL, VkRightAlt = Win32.VK_RMENU;
 
-    private static readonly HashSet<ushort> Navigation = [VkPrior, VkNext, VkEnd, VkHome, VkLeft, VkUp, VkRight, VkDown, VkDelete, VkEscape];
+    /// <summary>The letters Ctrl may be pressed with: a terminal's control input (interrupt, end of input, line editing, Enter).</summary>
+    public static IReadOnlySet<char> CtrlLetters { get; } = new HashSet<char> { 'A', 'C', 'D', 'J', 'M', 'U', 'Z' };
+
+    private static readonly HashSet<ushort> Navigation =
+        [Win32.VK_PRIOR, Win32.VK_NEXT, Win32.VK_END, Win32.VK_HOME, Win32.VK_LEFT, Win32.VK_UP, Win32.VK_RIGHT, Win32.VK_DOWN];
 
     /// <summary>
     /// The first press in <paramref name="events"/> that may not go to the agent's host, described for the refusal ("the key
@@ -154,6 +169,22 @@ public static class HostInputRules
         if (Navigation.Contains(code))
         {
             return (held & ~(KeyModifiers.Shift | KeyModifiers.Control)) == KeyModifiers.None;
+        }
+
+        if (code == VkDelete)
+        {
+            return held is KeyModifiers.None or KeyModifiers.Control;
+        }
+
+        if (code == VkEscape)
+        {
+            return shiftAtMost;
+        }
+
+        // The numeric keypad types a digit or moves the caret by Num Lock, which the question cannot know
+        if (code is >= Win32.VK_NUMPAD0 and <= Win32.VK_DIVIDE)
+        {
+            return false;
         }
 
         if (held == KeyModifiers.Control)

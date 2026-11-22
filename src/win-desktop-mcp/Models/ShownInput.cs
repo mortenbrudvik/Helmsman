@@ -36,7 +36,8 @@ public static class ShownInput
 
     /// <summary>What the markers mean, for the question.</summary>
     public const string Legend =
-        "⏎ is a line break, ⇥ a tab, ⟨NAME⟩ a key or chord, ⟨NAME ×n⟩ the same key pressed n times, and ⟨U+XXXX⟩ a character " +
+        "⏎ is a line break (LF), ⟨CR⟩ a carriage return, ⇥ a tab, ⟨NAME⟩ a key or chord, ⟨NAME ×n⟩ the same key pressed n " +
+        "times, and ⟨U+XXXX⟩ a character " +
         "shown by its code: one that is not a visible letter, digit, punctuation mark, symbol or plain space, a right-to-left " +
         "letter, or a fullwidth or other compatibility form of a plain ASCII character. Letters of other scripts that resemble " +
         "Latin ones are shown as they are.";
@@ -84,6 +85,13 @@ public static class ShownInput
         if (rune.Value == '\t')
         {
             shown.Append(Tab);
+            return;
+        }
+
+        // A carriage return is shown by name: CRLF as ⟨CR⟩⏎, so each character a terminal may take as Enter shows
+        if (rune.Value == '\r')
+        {
+            shown.Append(KeyOpen).Append("CR").Append(KeyClose);
             return;
         }
 
@@ -141,9 +149,9 @@ public static class ShownInput
     /// </summary>
     public static string HostAllowlistRefusal(string what, string window) =>
         $"The input contains {what}, which never goes to {window}, the agent's own host: the question to the user can only " +
-        "promise what text, Enter, Tab, Backspace, the navigation keys (arrows, Home, End, Page Up, Page Down, Delete, Esc, also " +
-        "with Shift or Ctrl) and Ctrl with A, C, D, E, H, J, K, L, M, U or Z do there. A key it can only name (a menu key, a " +
-        "function key, an Alt, Win or other chord) could do anything, such as paste through a menu.";
+        "promise what text, Enter, Tab, Backspace, the arrows, Home, End, Page Up and Page Down (also with Shift or Ctrl), " +
+        "Delete, Esc and Ctrl with A, C, D, J, M, U or Z do there. A key it can only name (a menu key, a function key, an Alt, " +
+        "Win or other chord, a modifier held around mouse input) could do anything, such as paste through a menu or open a link.";
 
     /// <summary>⟨U+XXXX⟩.</summary>
     public static string CodePoint(int codePoint)

@@ -57,6 +57,40 @@ public class HostPasteRefusalTests
         _input.Batches.Should().BeEmpty();
     }
 
+    [Theory]
+    [InlineData(MouseModifier.Ctrl)]
+    [InlineData(MouseModifier.Shift)]
+    [InlineData(MouseModifier.Alt)]
+    [InlineData(MouseModifier.Win)]
+    public void MouseInputWithModifiers_ToAConfirmedHost_IsRefusedAtSendTime(MouseModifier modifier)
+    {
+        var sut = CreateSut();
+
+        sut.MouseClick(400, 300, MouseButton.Primary, 1, [modifier], Confirmed).ErrorCode.Should().Be(InputErrorCode.InvalidArguments);
+        sut.Scroll(400, 300, 1, 0, [modifier], Confirmed).ErrorCode.Should().Be(InputErrorCode.InvalidArguments);
+        _input.Batches.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void AModifierTheServerStillHolds_IsReleasedBeforeAClickToAConfirmedHost_SoTheClickIsNoChord()
+    {
+        // A modifier the server pressed and holds is let go of before the next call's input: the click then goes out alone
+        var session = new InputSession(_input);
+        session.Send([InputEvent.Key(0xA2, 0)]);
+        var before = _input.Batches.Count;
+        var sut = new InputSimulationService(TestDataFactory.CreateMockMonitorService().Object, _input, _guard.Object, session,
+            Permissive.PasteGuard, Permissive.Takeover, keyboardLayout: new FakeKeyboardLayoutWrapper());
+
+        sut.MouseClick(400, 300, MouseButton.Primary, 1, [], Confirmed);
+
+        var after = _input.Batches.Skip(before).SelectMany(b => b).ToList();
+        var press = after.FindIndex(e => e.Kind == InputEventKind.Mouse && (e.Flags & 0x0002) != 0);
+        var ctrlUp = after.FindIndex(e => e.Kind == InputEventKind.VirtualKey && e.Code == 0xA2 && (e.Flags & 0x0002) != 0);
+        if (press >= 0)
+        {
+            ctrlUp.Should().BeInRange(0, press - 1, "Ctrl is up before the button goes down");
+        }
+    }
     [Fact]
     public async Task TypeText_TheSynCharacter_ToAConfirmedHost_IsRefusedAtSendTime()
     {

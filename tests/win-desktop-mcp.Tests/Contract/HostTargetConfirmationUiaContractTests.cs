@@ -237,6 +237,58 @@ public sealed class HostTargetConfirmationUiaContractTests : IDisposable
     }
 
     [Fact]
+    public async Task ElementAction_ValueMode_TheQuestionSaysTheTextIsSetDirectly_AndNothingIsPressed()
+    {
+        await using var server = await StartAsync(confirm: false, action: "decline");
+
+        await server.CallToolAsync("element_action", new Dictionary<string, object?>
+        {
+            ["action"] = "set_value", ["ref"] = AllowButton, ["value"] = "y", ["allowHostTarget"] = true
+        });
+
+        Questions().Should().ContainSingle().Which.Should().Contain("directly").And.Contain("no key is pressed").And.Contain("⟦y⟧");
+    }
+
+    [Theory]
+    [InlineData(false, "press its Save button")]
+    [InlineData(true, "answer Yes")]
+    public async Task FileDialog_TheQuestionSaysThePathIsSetDirectly_AndWhichButtonIsPressed(bool overwrite, string pressed)
+    {
+        await using var server = await StartAsync(confirm: false, action: "decline");
+        var arguments = Call("file_dialog");
+        arguments["overwrite"] = overwrite;
+
+        await server.CallToolAsync("file_dialog", arguments);
+
+        Questions().Should().ContainSingle().Which.Should().Contain("directly").And.Contain(pressed);
+    }
+
+    [Theory]
+    [InlineData("element_action", "y\u200Bes")] // a zero-width space in a value set without typing
+    [InlineData("file_dialog", "\u05D0report.txt")] // a right-to-left letter in a path
+    public async Task TextSetWithoutTyping_ThatTheQuestionCouldOnlyShowByCodePoints_IsRefused_WithoutAQuestion(string tool, string text)
+    {
+        await using var server = await StartAsync(confirm: true);
+        var arguments = Call(tool);
+        if (tool == "element_action")
+        {
+            arguments["action"] = "set_value";
+            arguments["value"] = text;
+        }
+        else
+        {
+            arguments["path"] = Path.Combine(Path.GetTempPath(), text);
+        }
+
+        var result = await server.CallToolAsync(tool, arguments);
+
+        Payload(result).GetProperty("errorCode").GetString().Should().Be(ToolErrorReporting.InvalidArgumentsErrorCode);
+        Questions().Should().BeEmpty();
+        Passed(tool, out var called);
+        called.Should().BeFalse();
+    }
+
+    [Fact]
     public async Task ElementAction_ModePaste_OnTheHost_IsPasteNotAllowed_WithoutAQuestion()
     {
         await using var server = await StartAsync(confirm: true);
