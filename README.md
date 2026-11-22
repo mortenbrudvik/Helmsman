@@ -227,14 +227,25 @@ Get-Content .\SHA256SUMS.txt | ForEach-Object {
 For one file, compare `(Get-FileHash .\helmsman.exe -Algorithm SHA256).Hash` with its line (letter case does not
 matter). With `sha256sum` (Git Bash, WSL, Linux): `sha256sum -c --ignore-missing SHA256SUMS.txt`.
 
-What this shows, and what it does not:
+The zip and `helmsman.exe` also have a build provenance attestation, which the
+[GitHub CLI](https://cli.github.com/) checks:
+
+```powershell
+gh attestation verify .\helmsman-vX.Y.Z-win-x64.zip --repo mortenbrudvik/Helmsman
+gh attestation verify .\helmsman.exe --repo mortenbrudvik/Helmsman
+```
+
+What these show, and what they do not:
 
 - **Checksums** show that a file is the one the release lists, not corrupted or swapped on the way. They are only as
   trustworthy as the place you read them from: the checksums and the zip come from the same release, so whoever could
   replace one could replace the other. A checksum is not a signature.
+- **The attestation** is signed through Sigstore with a certificate GitHub issues to the release workflow run
+  (`.github/workflows/build.yml`), so it shows which repository, workflow and commit built the file. Replacing a
+  release asset does not produce one. It says nothing about what that commit's code does.
 - **The exe is not code-signed.** Windows SmartScreen may warn when you first run it, and its file properties name no
   verified publisher.
-- **The plugin's `bin/helmsman.exe`** has no checksum file: it is built on the maintainer's computer and committed (see
+- **The plugin's `bin/helmsman.exe`** has neither: it is built on the maintainer's computer and committed (see
   [Versioning and the plugin binary](#versioning-and-the-plugin-binary)). CI checks the version and commit SHA the
   exe reports, and that no build input changed since that commit, and compares the tools it serves with the sources'.
   That catches a stale or mislabeled exe, not one built from other code under the same label: it is not a
@@ -441,7 +452,8 @@ dotnet publish src/Helmsman -c Release -o ./publish
   pushes and pull requests it is only a warning. The tag's GitHub release gets
   `helmsman-vX.Y.Z-win-x64.zip`, which CI rebuilds from the tagged sources (a separate
   build from the committed exe, see [Option 4](#option-4-download-release)) and publishes with the
-  GitHub CLI, together with `SHA256SUMS.txt` (see [Verify a download](#verify-a-download)).
+  GitHub CLI, together with `SHA256SUMS.txt` and a build provenance attestation (see
+  [Verify a download](#verify-a-download)).
 - `bin/` is gitignored, but `bin/helmsman.exe` is tracked, so staging it needs
   `git add -f -- bin/helmsman.exe`. The `/commit` command
   (`.claude/commands/commit.md`) does this.

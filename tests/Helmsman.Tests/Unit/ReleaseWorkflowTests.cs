@@ -6,7 +6,7 @@ namespace Helmsman.Tests.Unit;
 /// A v* tag makes build.yml publish a GitHub release, and the plugin's users get that release. The
 /// test suite (test.yml) does not run for a tag on its own, so build.yml calls it for the tag and its
 /// release job needs that job: a tag whose tests fail must not be released. The release carries
-/// SHA256SUMS.txt, so a user can check a download.
+/// SHA256SUMS.txt and a build provenance attestation of the zip, so a user can check a download.
 /// These tests only read files in the repository. The workflows are read as text, by the two-space
 /// indentation GitHub's YAML files use, since the test project has no YAML parser.
 /// </summary>
@@ -91,6 +91,20 @@ public class ReleaseWorkflowTests
     }
 
     [Fact]
+    public void ReleaseJob_AttestsTheZipAndTheExe_BeforeCreatingTheRelease()
+    {
+        // Arrange
+        var release = Job(ReadWorkflow("build.yml"), "release");
+        var attest = Step(release, "Attest build provenance").Select(line => line.Trim()).ToList();
+
+        // Assert
+        attest.Should().Contain("uses: actions/attest@v4", "GitHub's own attestation action, on its major version tag");
+        attest.Should().Contain("helmsman-${{ github.ref_name }}-win-x64.zip").And.Contain("release/helmsman.exe");
+        StepIndex(release, "Attest build provenance").Should().BeLessThan(StepIndex(release, "Create Release"),
+            "a failed attestation must leave no release behind");
+    }
+
+    [Fact]
     public void ReleaseJob_AloneGetsTheWritePermissions_AndOnlyThoseItsStepsNeed()
     {
         // Arrange
@@ -100,7 +114,10 @@ public class ReleaseWorkflowTests
         // Assert
         Block(workflow, "permissions", indent: 0).Select(line => line.Trim()).Should().Equal("contents: read");
         Block(release, "permissions", indent: 4).Select(line => line.Trim()).Should().BeEquivalentTo(
-            new[] { "contents: write" }, "creating the release and uploading its assets needs contents");
+            new[] { "contents: write", "id-token: write", "attestations: write" },
+            "creating the release needs contents, and the attestation needs an OIDC token and to store the attestation");
+        workflow.Count(line => line.Trim().StartsWith("id-token:", StringComparison.Ordinal)).Should().Be(1,
+            "only the release job may mint an OIDC token");
         workflow.Count(line => line.Trim().StartsWith("permissions:", StringComparison.Ordinal)).Should().Be(2,
             "the workflow's read-only default and the release job's block; no other job asks for more");
     }

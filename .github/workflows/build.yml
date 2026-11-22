@@ -109,8 +109,12 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     # Creating a release needs write access. The repository's default GITHUB_TOKEN is read-only,
     # which is why the release job failed ("Too many retries.") for every tag up to v1.11.0.
+    # id-token and attestations are for the attestation step only: it signs the build provenance with a
+    # short-lived Sigstore certificate (the OIDC token) and stores the attestation in this repository.
     permissions:
       contents: write
+      id-token: write
+      attestations: write
 
     steps:
       - name: Download artifact
@@ -150,10 +154,21 @@ jobs:
           $verify = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/blob/$tag/README.md#verify-a-download"
           $notes = @('<!-- checksums:begin -->', '### SHA-256 checksums', '', '```text') + $lines + @(
             '```', '',
-            ('The same lines are in `SHA256SUMS.txt`: see [Verify a download](' + $verify + '). ' +
-              'The exe is not code-signed.'),
+            ('The same lines are in `SHA256SUMS.txt`, and the zip and `helmsman.exe` have a build provenance ' +
+              'attestation: see [Verify a download](' + $verify + '). The exe is not code-signed.'),
             '<!-- checksums:end -->', '', '')
           [IO.File]::WriteAllText((Join-Path $PWD.Path 'checksums-notes.md'), $notes -join "`n", $utf8)
+
+      # Build provenance for the zip and the exe in it: a statement signed through Sigstore that this workflow
+      # built them from this commit, which gh attestation verify checks (see README, "Verify a download").
+      # GitHub's own action, on a tag like the other actions/* steps. It runs before the release is created,
+      # so a failed attestation leaves no release behind.
+      - name: Attest build provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            helmsman-${{ github.ref_name }}-win-x64.zip
+            release/helmsman.exe
 
       # The GitHub CLI preinstalled on the runner creates the release, so no third-party action runs
       # with this job's write token. --verify-tag refuses to create a missing tag. The zip and

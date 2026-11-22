@@ -147,8 +147,9 @@ Display:
   `helmsman-v<version>-win-x64.zip`, a CI rebuild of the tagged sources rather than
   the committed plugin exe, see "How releases work"):
   `https://github.com/mortenbrudvik/Helmsman/releases/tag/v<version>`
-- Next to the zip, the asset `SHA256SUMS.txt` with the SHA-256 of the zip, `helmsman.exe` and `helmsman.pdb`
-  (the same lines are at the top of the release notes)
+- Next to the zip, the asset `SHA256SUMS.txt` with the SHA-256 of the zip, `helmsman.exe` and `helmsman.pdb`,
+  the same lines at the top of the release notes, and the run's build provenance attestation of the zip and the exe
+  (`gh attestation verify helmsman-v<version>-win-x64.zip --repo mortenbrudvik/Helmsman`)
 
 ## Example
 
