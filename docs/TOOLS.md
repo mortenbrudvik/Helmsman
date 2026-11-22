@@ -394,7 +394,7 @@ The default surface (the toolsets that are on) is about 57,200 tokens, and every
 
 Of the tools later milestones add, the niche or heavy ones come in toolsets that are off by default (`ocr` above, and `visual` since roadmap M6.4), and small everyday steps (installed apps, z-order, and step sequences: run_steps in its own `steps` toolset, roadmap M6.2) join toolsets that are on, so the default stays a core of finding, acting, waiting, windows, captures, guarded input, launching, reading browsers and the server's state. `HELMSMAN_TOOLSETS=all` serves every tool, so `all` keeps meaning everything.
 
-**Read-only mode** serves the tools that only read, of the toolsets in force: windows, monitors, UI elements, browser pages, processes, layouts, the server's own state and get_clipboard (which then returns only what the user allows, since nothing the agent did can have filled the clipboard). The capture tools can write image files (`outputPath`), so they are not read-only (the OCR tools, which write none, are), and neither is anything that sends input, changes or closes windows, starts or ends processes, or writes or deletes layouts. Which tool counts as read-only is the tool's own annotation (`readOnlyHint`), and contract tests check that every tool annotated read-only is one the input gate also treats as read-only and is none of the tools that write files (save_layout, delete_layout, the captures). The list below is generated from the annotations:
+**Read-only mode** serves the tools that only read, of the toolsets in force: windows, monitors, UI elements, browser pages, processes, layouts, the server's own state and get_clipboard (which then returns only what the user allows, since nothing the agent did can have filled the clipboard). The capture tools can write image files (`outputPath`), so they are not read-only (the OCR tools, which write none, are), and neither is anything that sends input, changes or closes windows, starts or ends processes, or writes or deletes layouts. Whatever tools it serves, the server still keeps its own files: in the background it deletes its capture files in `%TEMP%\Helmsman\captures` once they are a day old, and the [audit log](#audit-log) deletes its day files older than 7 days when it writes a day's first line. Which tool counts as read-only is the tool's own annotation (`readOnlyHint`), and contract tests check that every tool annotated read-only is one the input gate also treats as read-only and is none of the tools that write files (save_layout, delete_layout, the captures). The list below is generated from the annotations:
 
 <!-- tools:begin read-only (generated from the readOnlyHint annotations: run the tests with UPDATE_SNAPSHOTS=1, see TESTING.md) -->
 Read-only mode serves these 27 tools: [find_windows](#find_windows), [get_foreground_window](#get_foreground_window), [get_owned_windows](#get_owned_windows), [get_window_info](#get_window_info), [wait_for_window](#wait_for_window), [get_window_events](#get_window_events), [get_monitors](#get_monitors), [get_desktop_state](#get_desktop_state), [get_ui_elements](#get_ui_elements), [find_ui_elements](#find_ui_elements), [get_focused_element](#get_focused_element), [get_element_at_point](#get_element_at_point), [get_active_popups](#get_active_popups), [read_element_text](#read_element_text), [read_table](#read_table), [wait_for_element](#wait_for_element), [get_browser_url](#get_browser_url), [get_browser_content](#get_browser_content), [list_tabs](#list_tabs), [wait_for_browser](#wait_for_browser), [get_control_status](#get_control_status), [list_installed_apps](#list_installed_apps), [list_processes](#list_processes), [get_clipboard](#get_clipboard), [list_layouts](#list_layouts), [get_layout](#get_layout), [get_server_info](#get_server_info). With their opt-in toolset turned on it also serves [read_screen_text](#read_screen_text) (`ocr`), [find_text_on_screen](#find_text_on_screen) (`ocr`), [wait_for_visual](#wait_for_visual) (`visual`), [browser_element_rect](#browser_element_rect) (`browser-actions`).
@@ -9024,15 +9024,17 @@ tools' `outputPath`, at the same size), so the tools/list sizes are those of 4.0
 - **Capture files are deleted after a day.** **Changed:** a capture written to a file without `outputPath` (`output:
   "file"` or `"both"`, or `saveToFile: true`) goes to `%TEMP%\Helmsman\captures` as before, and is now deleted once it
   was last written more than 24 hours ago: each running server sweeps that folder a minute after it starts and then
-  every hour, outside any tool call, so a `filePath` such a capture returned can be read for at least 24 hours. 4.0.0
-  never deleted these files, so the folder grew with every such capture until the user or Windows' disk cleanup removed
-  them. Files 4.0.0 wrote there are deleted too, by the first sweep. Only files directly in that folder with the names
-  the server gives them (`screenshot_<date>_<time>_<32 hex digits>.png` or `.jpg`) are deleted: no other file, no
-  sub-folder, no file marked read-only, hidden or system (one in use is tried again at the next sweep), nothing at an
-  `outputPath` outside that folder, nothing in the `%TEMP%` folders of the server's earlier names (delete those by
-  hand), and nothing at all while the folder or `%TEMP%\Helmsman` is a junction or symbolic link. To keep a capture,
-  pass `outputPath` or copy the file. The capture tools' `outputPath` description says `kept for 24 hours` in place of
-  `it is not created`; a folder named by `outputPath` must still exist, as before.
+  every hour, outside any tool call, so a `filePath` such a capture returned can be read for at least 24 hours by the
+  system clock (a clock set forward shortens that). 4.0.0 never deleted these files, so the folder grew with every such
+  capture until the user or Windows' disk cleanup removed them. Files 4.0.0 wrote there are deleted the same way: those
+  already more than a day old by the first sweep, the others once they are. Only files directly in that folder with
+  the names the server gives them (`screenshot_<date>_<time>_<32 hex digits>.png` or `.jpg`) are deleted: no other
+  file, no sub-folder, no file marked read-only, hidden or system (one in use is tried again at the next sweep),
+  nothing at an `outputPath` outside that folder, nothing in the `%TEMP%` folders of the server's earlier names (delete
+  those by hand), and nothing at all while the folder or `%TEMP%\Helmsman` is a junction or symbolic link. To keep a
+  capture, pass `outputPath` or copy the file. The capture tools' `outputPath` description says `kept for 24 hours` in
+  place of `it is not created`; a folder named by `outputPath` must still exist, as before. A server in read-only mode
+  sweeps too.
 
 ## Error Codes
 
