@@ -45,9 +45,22 @@ public sealed record LayoutStorageOptions(
     /// </summary>
     public const string PreviousAppDataFolderName = "WindowsAppManagerMcp";
 
+    /// <summary>
+    /// Folder name of this plugin in the Claude Code plugin cache (<c>...\cache\&lt;marketplace&gt;\win-desktop-mcp\&lt;version&gt;</c>):
+    /// the plugin's name. VersionConsistencyTests keeps it equal to the name in .claude-plugin/plugin.json.
+    /// </summary>
+    public const string PluginFolderName = "win-desktop-mcp";
+
+    /// <summary>
+    /// Folder name of the plugin in the cache before release 4.0.0 renamed it to <see cref="PluginFolderName"/>
+    /// (<c>...\cache\windows-app-manager-marketplace\windows-app-manager\&lt;version&gt;</c>). Old versions that kept
+    /// presets next to their exe live there, so both names are recognised and scanned.
+    /// </summary>
+    public const string PreviousPluginFolderName = "windows-app-manager";
+
     private const string LayoutsFolderName = "layouts";
-    private const string PluginFolderName = "windows-app-manager";
     private const string PluginCacheFolderName = "cache";
+    private static readonly string[] PluginFolderNames = [PluginFolderName, PreviousPluginFolderName];
     private const string SampleResourcePrefix = "WinDesktopMcp.SampleLayouts.";
 
     /// <summary>
@@ -96,9 +109,12 @@ public sealed record LayoutStorageOptions(
 
     /// <summary>
     /// Folders older versions stored presets in: <c>&lt;baseDirectory&gt;\layouts</c> and, when running from the
-    /// Claude Code plugin cache (<c>...\cache\&lt;marketplace&gt;\windows-app-manager\&lt;version&gt;\...</c>), the
-    /// matching folders of the other installed versions. Sibling folders are only scanned inside that
-    /// plugin cache structure, never next to an arbitrary install location.
+    /// Claude Code plugin cache (<c>...\cache\&lt;marketplace&gt;\&lt;plugin&gt;\&lt;version&gt;\...</c>, where the
+    /// plugin folder is <see cref="PluginFolderName"/> or <see cref="PreviousPluginFolderName"/>), the matching
+    /// folders of every other installed version under either plugin name, in any marketplace of that cache: the
+    /// rename moved the plugin to a new marketplace and plugin folder, so a 4.x install is not a sibling of the 3.x
+    /// ones. Other folders are only scanned inside that plugin cache structure, never next to an arbitrary install
+    /// location.
     /// </summary>
     public static IReadOnlyList<string> FindLegacyLayoutFolders(string baseDirectory)
     {
@@ -119,7 +135,8 @@ public sealed record LayoutStorageOptions(
         folders.Add(Path.Combine(baseDir, LayoutsFolderName));
 
         var versionDir = FindPluginVersionFolder(baseDir);
-        if (versionDir?.Parent == null)
+        var cacheDir = versionDir?.Parent?.Parent?.Parent;
+        if (versionDir == null || cacheDir == null)
             return folders;
 
         // The exe may sit in <version>\bin or <version>\.claude-plugin\bin depending on how the
@@ -133,26 +150,57 @@ public sealed record LayoutStorageOptions(
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        try
+        foreach (var otherVersion in FindInstalledPluginVersions(cacheDir))
         {
-            foreach (var sibling in versionDir.Parent.EnumerateDirectories().OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase))
-            {
-                if (string.Equals(sibling.FullName, versionDir.FullName, StringComparison.OrdinalIgnoreCase))
-                    continue;
+            if (string.Equals(otherVersion.FullName, versionDir.FullName, StringComparison.OrdinalIgnoreCase))
+                continue;
 
-                foreach (var relative in relativeExeFolders)
-                {
-                    folders.Add(Path.Combine(sibling.FullName, relative, LayoutsFolderName));
-                }
+            foreach (var relative in relativeExeFolders)
+            {
+                folders.Add(Path.Combine(otherVersion.FullName, relative, LayoutsFolderName));
             }
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
-        {
-            // Best effort: migration from other versions is optional.
         }
 
         return folders;
     }
+
+    /// <summary>
+    /// The version folders of this plugin, under its current or previous name, in every marketplace of the plugin
+    /// cache: <c>&lt;cacheDir&gt;\&lt;marketplace&gt;\&lt;plugin&gt;\&lt;version&gt;</c>, ordered by path. A folder
+    /// that cannot be listed is skipped.
+    /// </summary>
+    private static List<DirectoryInfo> FindInstalledPluginVersions(DirectoryInfo cacheDir)
+    {
+        var versions = new List<DirectoryInfo>();
+        foreach (var marketplace in EnumerateDirectoriesOrEmpty(cacheDir))
+        {
+            foreach (var plugin in EnumerateDirectoriesOrEmpty(marketplace))
+            {
+                if (!IsPluginFolderName(plugin.Name))
+                    continue;
+
+                versions.AddRange(EnumerateDirectoriesOrEmpty(plugin));
+            }
+        }
+
+        return versions;
+    }
+
+    private static List<DirectoryInfo> EnumerateDirectoriesOrEmpty(DirectoryInfo folder)
+    {
+        try
+        {
+            return folder.EnumerateDirectories().OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase).ToList();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+        {
+            // Best effort: migration from other versions is optional.
+            return [];
+        }
+    }
+
+    private static bool IsPluginFolderName(string name) =>
+        PluginFolderNames.Any(n => n.Equals(name, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// Sample presets compiled into the assembly from config/layouts/*.json.
@@ -179,7 +227,8 @@ public sealed record LayoutStorageOptions(
 
     /// <summary>
     /// Walks up from the exe folder to the <c>&lt;version&gt;</c> folder of a plugin cache install
-    /// (<c>...\cache\&lt;marketplace&gt;\windows-app-manager\&lt;version&gt;</c>), or returns null.
+    /// (<c>...\cache\&lt;marketplace&gt;\&lt;plugin&gt;\&lt;version&gt;</c>, the plugin folder under its current or
+    /// previous name), or returns null.
     /// </summary>
     private static DirectoryInfo? FindPluginVersionFolder(string baseDir)
     {
@@ -190,7 +239,7 @@ public sealed record LayoutStorageOptions(
             var pluginDir = candidate.Parent;
             var cacheDir = pluginDir?.Parent?.Parent;
             if (pluginDir != null && cacheDir != null &&
-                pluginDir.Name.Equals(PluginFolderName, StringComparison.OrdinalIgnoreCase) &&
+                IsPluginFolderName(pluginDir.Name) &&
                 cacheDir.Name.Equals(PluginCacheFolderName, StringComparison.OrdinalIgnoreCase))
             {
                 return candidate;

@@ -366,6 +366,29 @@ public class LayoutServiceStorageTests : IDisposable
     }
 
     [Fact]
+    public void FirstUse_FromTheRenamedPlugin_CopiesPresetsOfVersionsInstalledUnderEitherPluginName()
+    {
+        // Arrange - 4.x runs from cache\win-desktop-mcp-marketplace\win-desktop-mcp\<version>\bin; presets kept next to
+        // the exe of a 3.x install (old plugin and marketplace name) and of an earlier 4.x install are both picked up.
+        var cache = Path.Combine(_root, "plugins", "cache");
+        var currentBin = Path.Combine(cache, "win-desktop-mcp-marketplace", "win-desktop-mcp", "4.1.0", "bin");
+        Directory.CreateDirectory(currentBin);
+        WritePreset(Path.Combine(cache, "windows-app-manager-marketplace", "windows-app-manager", "3.2.0", "bin", "layouts"),
+            "morning.json", TestDataFactory.CreateLayoutPreset("morning"));
+        WritePreset(Path.Combine(cache, "win-desktop-mcp-marketplace", "win-desktop-mcp", "4.0.0", "bin", "layouts"),
+            "evening.json", TestDataFactory.CreateLayoutPreset("evening"));
+        var options = LayoutStorageOptions.Create(null, Path.Combine(_root, "LocalAppData"), currentBin, []);
+
+        // Act
+        var sut = CreateSut(options);
+
+        // Assert
+        options.LayoutsPath.Should().Be(_layoutsPath);
+        sut.GetPreset("morning").Should().NotBeNull();
+        sut.GetPreset("evening").Should().NotBeNull();
+    }
+
+    [Fact]
     public void MissingLegacyFolder_IsIgnored()
     {
         var sut = CreateSut(OptionsWith(migrationSources: [Path.Combine(_root, "does-not-exist")]));
