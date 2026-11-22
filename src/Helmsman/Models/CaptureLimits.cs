@@ -78,20 +78,17 @@ public static class CaptureLimits
     /// The largest maxDimension, 1 to <see cref="MaxInlineEdge"/>, whose image fits the inline pixel bound, by the caller's
     /// own sizing (<paramref name="outputSizeFor"/>: the image's size at a maxDimension, with every other limit and its
     /// rounding as the capture applies them), so the value suggested, fed back in, passes. A binary search: a larger
-    /// maxDimension never makes an image smaller. Null when not even 1 fits.
+    /// maxDimension never makes an image smaller. The sizing must keep the image's long edge within the maxDimension, as the
+    /// capture tools' OutputSize and browser_screenshot's ScaledSize do, so every maxDimension up to 5792 fits (5792 x 5792
+    /// is 33,547,264 pixels) and there is always an answer: the search starts from 1, which fits.
     /// </summary>
-    public static int? LargestFittingMaxDimension(Func<int, (int Width, int Height)> outputSizeFor)
+    public static int LargestFittingMaxDimension(Func<int, (int Width, int Height)> outputSizeFor)
     {
         ArgumentNullException.ThrowIfNull(outputSizeFor);
         bool Fits(int maxDimension)
         {
             var (width, height) = outputSizeFor(maxDimension);
             return FitsInline(width, height);
-        }
-
-        if (!Fits(1))
-        {
-            return null;
         }
 
         int low = 1, high = MaxInlineEdge;

@@ -65,7 +65,7 @@ public class CaptureLimitsTests
     {
         // Arrange
         var request = CaptureRequest.Resolve(new CaptureOptions { MaxDimension = maxDimension });
-        var suggested = request.SuggestedMaxDimension(width, height)!.Value;
+        var suggested = request.SuggestedMaxDimension(width, height);
 
         // Act
         var refusal = request.Invoking(r => r.ThrowIfOutputTooLarge(width, height)).Should().Throw<CaptureException>().Which;
@@ -103,7 +103,7 @@ public class CaptureLimitsTests
 
             var suggested = request.SuggestedMaxDimension(width, height);
             var because = $"{width}x{height} at zoom {zoom}, maxWidth {maxWidth}";
-            suggested.Should().NotBeNull(because);
+            suggested.Should().BeGreaterThanOrEqualTo(5792, because + ": every maxDimension up to 5792 fits");
             CaptureRequest.Resolve(options with { MaxDimension = suggested })
                 .Invoking(r => r.ThrowIfOutputTooLarge(width, height)).Should().NotThrow(because);
             if (suggested < CaptureLimits.MaxInlineEdge)
@@ -130,7 +130,7 @@ public class CaptureLimitsTests
                 continue;
             }
 
-            var suggested = CaptureLimits.LargestFittingMaxDimension(m => BrowserPageService.ScaledSize(width, height, m))!.Value;
+            var suggested = CaptureLimits.LargestFittingMaxDimension(m => BrowserPageService.ScaledSize(width, height, m));
             var (scaledWidth, scaledHeight) = BrowserPageService.ScaledSize(width, height, suggested);
             CaptureLimits.FitsInline(scaledWidth, scaledHeight).Should().BeTrue($"{width}x{height} at {suggested}");
             suggested.Should().BeInRange(64, CaptureLimits.MaxInlineEdge, "browser_screenshot takes 64-8000");

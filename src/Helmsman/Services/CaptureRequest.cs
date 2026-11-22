@@ -211,13 +211,10 @@ public sealed record CaptureRequest(
 
         if (ReturnsImage && !CaptureLimits.FitsInline(outputWidth, outputHeight))
         {
-            var fitting = SuggestedMaxDimension(width, height);
-            var advice = fitting is { } largest
-                ? $"For this capture pass a maxDimension of at most {largest}"
-                : "Pass a smaller maxDimension";
             throw new CaptureException(ScreenshotErrorCode.InvalidImageSize,
                 $"The {width}x{height} capture would be a {outputWidth}x{outputHeight} image, more than an image returned in the " +
-                $"result may be ({CaptureLimits.InlineBoundText}). No image was made. {advice} (the default, " +
+                $"result may be ({CaptureLimits.InlineBoundText}). No image was made. For this capture pass a maxDimension of at " +
+                $"most {SuggestedMaxDimension(width, height)} (the default, " +
                 $"{CaptureOptions.DefaultMaxDimension}, is the size vision models work at), capture a smaller area, or, called " +
                 $"directly rather than as a run_steps step, use output 'file' for the full size (a file may hold " +
                 $"{CaptureLimits.CaptureBudgetText}).");
@@ -227,9 +224,10 @@ public sealed record CaptureRequest(
     /// <summary>
     /// The largest maxDimension with which a <paramref name="width"/> x <paramref name="height"/> capture's image fits the
     /// inline pixel bound, everything else asked kept (maxWidth, zoom): found with <see cref="OutputSize"/> itself, so the
-    /// value, passed back, passes <see cref="ThrowIfOutputTooLarge"/>. Null when none does.
+    /// value, passed back, passes <see cref="ThrowIfOutputTooLarge"/>. There always is one: see
+    /// <see cref="CaptureLimits.LargestFittingMaxDimension"/>.
     /// </summary>
-    public int? SuggestedMaxDimension(int width, int height) =>
+    public int SuggestedMaxDimension(int width, int height) =>
         CaptureLimits.LargestFittingMaxDimension(maxDimension => (this with { MaxDimension = maxDimension }).OutputSize(width, height));
 
     /// <summary>
