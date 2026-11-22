@@ -18,63 +18,10 @@ public sealed class NativeShellWindowsWrapper : INativeShellWindowsWrapper
 
     private static readonly Guid ShellWindowsClsid = new("9BA05972-F6A8-11CF-A442-00A0C90A8F39");
 
-    private int _abandoned;
+    private readonly DeadlineWorker _reads = new("Shell windows read", ApartmentState.STA, Deadline);
 
-    public ExplorerFolderListing? GetExplorerFolders()
-    {
-        if (Volatile.Read(ref _abandoned) > 0)
-        {
-            return null;
-        }
-
-        ExplorerFolderListing? folders = null;
-        const int Running = 0, Finished = 1, Abandoned = 2;
-        var state = Running;
-        var finished = new ManualResetEventSlim();
-        var worker = new Thread(() =>
-        {
-            try
-            {
-                folders = Read();
-            }
-            catch (Exception)
-            {
-                // No shell (a server core), or it failed: no folders
-            }
-            finally
-            {
-                if (Interlocked.Exchange(ref state, Finished) == Abandoned)
-                {
-                    Interlocked.Decrement(ref _abandoned);
-                }
-
-                finished.Set();
-            }
-        })
-        {
-            IsBackground = true,
-            Name = "Shell windows read"
-        };
-
-        try
-        {
-            worker.SetApartmentState(ApartmentState.STA);
-            worker.UnsafeStart();
-        }
-        catch (Exception)
-        {
-            return null;
-        }
-
-        // The event is not disposed: an abandoned worker still sets it when the shell answers
-        if (!finished.Wait(Deadline) && Interlocked.CompareExchange(ref state, Abandoned, Running) == Running)
-        {
-            Interlocked.Increment(ref _abandoned);
-            return null;
-        }
-
-        return Volatile.Read(ref folders);
-    }
+    // No shell (a server core), or it failed: no folders
+    public ExplorerFolderListing? GetExplorerFolders() => _reads.Run<ExplorerFolderListing?>(Read, fallback: null);
 
     private static ExplorerFolderListing Read()
     {
