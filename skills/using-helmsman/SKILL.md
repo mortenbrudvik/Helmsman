@@ -153,7 +153,7 @@ One line each; the full entry is in [errors.md](errors.md), under the group's he
 - `NothingCopied`: your copy keys copied nothing; check the selection and copy again.
 - `ClipboardNotFromAgent`: the user's content; copy it yourself, or ask the user. `ClipboardPrivate`: a password manager's copy, never returned.
 
-[Other failure modes](errors.md#other-failure-modes): a missing tool (`ToolRemoved`: [tools.md](tools.md#toolsets)), coordinates that are off, an empty capture (`WindowMinimized`: capture with `restoreIfMinimized: true`), an unlisted window. Browser codes: [browser.md](browser.md); capture and OCR codes: [screens-and-ocr.md](screens-and-ocr.md#screenshots).
+[Other failure modes](errors.md#other-failure-modes): a missing tool (`ToolRemoved`: [tools.md](tools.md#toolsets)), coordinates that are off, an empty capture (`WindowMinimized`: capture with `restoreIfMinimized: true`), a capture unchanged after input, an unlisted window. Browser codes: [browser.md](browser.md); capture and OCR codes: [screens-and-ocr.md](screens-and-ocr.md#screenshots).
 
 ## Where the Details Are
 
