@@ -14,9 +14,13 @@ public class HostMouseAllowlistTests
     private readonly FakeInputWrapper _input = new();
     private readonly Mock<IInputTargetGuard> _guard = TestDataFactory.CreateAllowingInputGuard();
 
-    private InputSimulationService CreateSut() =>
-        new(TestDataFactory.CreateMockMonitorService().Object, _input, _guard.Object, new InputSession(_input), Permissive.PasteGuard,
-            Permissive.Takeover, keyboardLayout: new FakeKeyboardLayoutWrapper());
+    private InputSimulationService CreateSut(bool buttonsSwapped = false)
+    {
+        var systemInfo = new Mock<INativeSystemInfoWrapper>();
+        systemInfo.Setup(s => s.AreMouseButtonsSwapped()).Returns(buttonsSwapped);
+        return new(TestDataFactory.CreateMockMonitorService().Object, _input, _guard.Object, new InputSession(_input), Permissive.PasteGuard,
+            Permissive.Takeover, systemInfo: systemInfo.Object, keyboardLayout: new FakeKeyboardLayoutWrapper());
+    }
 
     private static InputTarget Confirmed => InputTarget.Window(Host, allowHostTarget: true) with
     {
@@ -56,6 +60,27 @@ public class HostMouseAllowlistTests
         var result = CreateSut().MouseClick(400, 300, MouseButton.Primary, clicks, [], Confirmed);
 
         result.Success.Should().BeTrue(result.Error);
+    }
+
+    [Fact]
+    public void MouseClick_Secondary_WithSwappedButtons_OnAConfirmedHost_IsRefusedAsAPaste()
+    {
+        // With swapped buttons the secondary click goes out as the left button's events: the rules read the buttons as the
+        // user knows them, and the user's secondary button pastes in a terminal
+        var result = CreateSut(buttonsSwapped: true).MouseClick(400, 300, MouseButton.Secondary, 1, [], Confirmed);
+
+        result.ErrorCode.Should().Be(InputErrorCode.PasteNotAllowed, result.Error);
+        _input.Batches.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void MouseClick_Primary_WithSwappedButtons_OnAConfirmedHost_IsSent()
+    {
+        // ... and the primary click, which goes out as the right button's events, is a primary click
+        var result = CreateSut(buttonsSwapped: true).MouseClick(400, 300, MouseButton.Primary, 1, [], Confirmed);
+
+        result.Success.Should().BeTrue(result.Error);
+        _input.Batches.SelectMany(b => b).Should().Contain(e => e.Kind == InputEventKind.Mouse && e.Flags == RightDown);
     }
 
     // ---- The rule itself (HostInputRules.MouseRefusal), as the send-time check reads a batch ----

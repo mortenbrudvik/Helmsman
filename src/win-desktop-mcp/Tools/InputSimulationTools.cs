@@ -35,8 +35,8 @@ public class InputSimulationTools
         "Allow input to the agent's own host window (its terminal, editor or chat app), named by windowHandle or window.handle. The " +
         "server asks the user first, showing the whole input; nothing is sent without their yes (ConfirmationDeclined) or when the " +
         "client cannot ask (ConfirmationRequired). Only text, Enter, Tab, Backspace, navigation keys and Ctrl+A/C/D/J/M/U/Z go " +
-        "there, up to 300 characters, and mouse input without modifiers (else InvalidArguments, TextTooLong); pastes, drags and " +
-        "right or middle clicks are refused (PasteNotAllowed). Use only when the user asked for it. Default: false";
+        "there, up to 300 characters, and primary clicks, moves and scrolls without modifiers (else InvalidArguments, " +
+        "TextTooLong); pastes, drags, right/middle clicks: PasteNotAllowed. Use only when the user asked for it. Default: false";
 
     internal const string ReleaseHeldModifiersDescription =
         "Release modifier keys (Shift, Ctrl, Alt, Windows) that are down before the input is sent, instead of refusing with " +
