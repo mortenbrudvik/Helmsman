@@ -2340,7 +2340,7 @@
             "default": null
           },
           "allowHostTarget": {
-            "description": "Allow input to the agent's own host window (its terminal, editor or chat app), named by windowHandle or window.handle. The server asks the user first, showing the whole input; nothing is sent without their yes (ConfirmationDeclined), when the client cannot ask (ConfirmationRequired) or for input over 300 characters (TextTooLong); a paste, drag or right or middle click there is refused (PasteNotAllowed). Use only when the user asked for it. Default: false",
+            "description": "Allow input to the agent's own host window (its terminal, editor or chat app), named by windowHandle or window.handle. The server asks the user first, showing the whole input; nothing is sent without their yes (ConfirmationDeclined) or when the client cannot ask (ConfirmationRequired). Only text, Enter, Tab, Backspace, navigation keys and Ctrl+A/C/D/E/H/J/K/L/M/U/Z go there, up to 300 characters (else InvalidArguments, TextTooLong); pastes, drags and right or middle clicks are refused (PasteNotAllowed). Use only when the user asked for it. Default: false",
             "type": "boolean",
             "default": false
           },
@@ -5489,7 +5489,7 @@
             "default": null
           },
           "allowHostTarget": {
-            "description": "Allow input to the agent's own host window (its terminal, editor or chat app), named by windowHandle or window.handle. The server asks the user first, showing the whole input; nothing is sent without their yes (ConfirmationDeclined), when the client cannot ask (ConfirmationRequired) or for input over 300 characters (TextTooLong); a paste, drag or right or middle click there is refused (PasteNotAllowed). Use only when the user asked for it. Default: false",
+            "description": "Allow input to the agent's own host window (its terminal, editor or chat app), named by windowHandle or window.handle. The server asks the user first, showing the whole input; nothing is sent without their yes (ConfirmationDeclined) or when the client cannot ask (ConfirmationRequired). Only text, Enter, Tab, Backspace, navigation keys and Ctrl+A/C/D/E/H/J/K/L/M/U/Z go there, up to 300 characters (else InvalidArguments, TextTooLong); pastes, drags and right or middle clicks are refused (PasteNotAllowed). Use only when the user asked for it. Default: false",
             "type": "boolean",
             "default": false
           },
@@ -5640,7 +5640,7 @@
             "default": null
           },
           "allowHostTarget": {
-            "description": "Allow input to the agent's own host window (its terminal, editor or chat app), named by windowHandle or window.handle. The server asks the user first, showing the whole input; nothing is sent without their yes (ConfirmationDeclined), when the client cannot ask (ConfirmationRequired) or for input over 300 characters (TextTooLong); a paste, drag or right or middle click there is refused (PasteNotAllowed). Use only when the user asked for it. Default: false",
+            "description": "Allow input to the agent's own host window (its terminal, editor or chat app), named by windowHandle or window.handle. The server asks the user first, showing the whole input; nothing is sent without their yes (ConfirmationDeclined) or when the client cannot ask (ConfirmationRequired). Only text, Enter, Tab, Backspace, navigation keys and Ctrl+A/C/D/E/H/J/K/L/M/U/Z go there, up to 300 characters (else InvalidArguments, TextTooLong); pastes, drags and right or middle clicks are refused (PasteNotAllowed). Use only when the user asked for it. Default: false",
             "type": "boolean",
             "default": false
           },
@@ -5928,7 +5928,7 @@
             "default": null
           },
           "allowHostTarget": {
-            "description": "Allow input to the agent's own host window (its terminal, editor or chat app), named by windowHandle or window.handle. The server asks the user first, showing the whole input; nothing is sent without their yes (ConfirmationDeclined), when the client cannot ask (ConfirmationRequired) or for input over 300 characters (TextTooLong); a paste, drag or right or middle click there is refused (PasteNotAllowed). Use only when the user asked for it. Default: false",
+            "description": "Allow input to the agent's own host window (its terminal, editor or chat app), named by windowHandle or window.handle. The server asks the user first, showing the whole input; nothing is sent without their yes (ConfirmationDeclined) or when the client cannot ask (ConfirmationRequired). Only text, Enter, Tab, Backspace, navigation keys and Ctrl+A/C/D/E/H/J/K/L/M/U/Z go there, up to 300 characters (else InvalidArguments, TextTooLong); pastes, drags and right or middle clicks are refused (PasteNotAllowed). Use only when the user asked for it. Default: false",
             "type": "boolean",
             "default": false
           },
@@ -7124,7 +7124,7 @@
             "default": null
           },
           "allowHostTarget": {
-            "description": "Allow input to the agent's own host window (its terminal, editor or chat app), named by windowHandle or window.handle. The server asks the user first, showing the whole input; nothing is sent without their yes (ConfirmationDeclined), when the client cannot ask (ConfirmationRequired) or for input over 300 characters (TextTooLong); a paste, drag or right or middle click there is refused (PasteNotAllowed). Use only when the user asked for it. Default: false",
+            "description": "Allow input to the agent's own host window (its terminal, editor or chat app), named by windowHandle or window.handle. The server asks the user first, showing the whole input; nothing is sent without their yes (ConfirmationDeclined) or when the client cannot ask (ConfirmationRequired). Only text, Enter, Tab, Backspace, navigation keys and Ctrl+A/C/D/E/H/J/K/L/M/U/Z go there, up to 300 characters (else InvalidArguments, TextTooLong); pastes, drags and right or middle clicks are refused (PasteNotAllowed). Use only when the user asked for it. Default: false",
             "type": "boolean",
             "default": false
           },
@@ -7257,7 +7257,7 @@
             "default": null
           },
           "allowHostTarget": {
-            "description": "Allow input to the agent's own host window (its terminal, editor or chat app), named by windowHandle or window.handle. The server asks the user first, showing the whole input; nothing is sent without their yes (ConfirmationDeclined), when the client cannot ask (ConfirmationRequired) or for input over 300 characters (TextTooLong); a paste, drag or right or middle click there is refused (PasteNotAllowed). Use only when the user asked for it. Default: false",
+            "description": "Allow input to the agent's own host window (its terminal, editor or chat app), named by windowHandle or window.handle. The server asks the user first, showing the whole input; nothing is sent without their yes (ConfirmationDeclined) or when the client cannot ask (ConfirmationRequired). Only text, Enter, Tab, Backspace, navigation keys and Ctrl+A/C/D/E/H/J/K/L/M/U/Z go there, up to 300 characters (else InvalidArguments, TextTooLong); pastes, drags and right or middle clicks are refused (PasteNotAllowed). Use only when the user asked for it. Default: false",
             "type": "boolean",
             "default": false
           },
@@ -8493,7 +8493,7 @@
             "default": null
           },
           "allowHostTarget": {
-            "description": "Allow input to the agent's own host window (its terminal, editor or chat app), named by windowHandle or window.handle. The server asks the user first, showing the whole input; nothing is sent without their yes (ConfirmationDeclined), when the client cannot ask (ConfirmationRequired) or for input over 300 characters (TextTooLong); a paste, drag or right or middle click there is refused (PasteNotAllowed). Use only when the user asked for it. Default: false",
+            "description": "Allow input to the agent's own host window (its terminal, editor or chat app), named by windowHandle or window.handle. The server asks the user first, showing the whole input; nothing is sent without their yes (ConfirmationDeclined) or when the client cannot ask (ConfirmationRequired). Only text, Enter, Tab, Backspace, navigation keys and Ctrl+A/C/D/E/H/J/K/L/M/U/Z go there, up to 300 characters (else InvalidArguments, TextTooLong); pastes, drags and right or middle clicks are refused (PasteNotAllowed). Use only when the user asked for it. Default: false",
             "type": "boolean",
             "default": false
           },

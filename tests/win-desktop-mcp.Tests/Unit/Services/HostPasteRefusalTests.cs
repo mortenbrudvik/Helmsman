@@ -81,6 +81,48 @@ public class HostPasteRefusalTests
     }
 
     [Fact]
+    public async Task ServerChosenKeys_ToAConfirmedHostWithNoLayoutRecorded_AreSent_OnAnyLayout()
+    {
+        // element_action's mode type sends ^a or ^{END}, then the text as characters: its approval records no layout, and the
+        // host's own layout (Russian here) must not make the keys a mismatch
+        var layouts = new FakeKeyboardLayoutWrapper { Layout = FakeKeyboardLayoutWrapper.Russian };
+        var sut = new InputSimulationService(TestDataFactory.CreateMockMonitorService().Object, _input, _guard.Object, new InputSession(_input),
+            Permissive.PasteGuard, Permissive.Takeover, keyboardLayout: layouts);
+        var noLayout = Confirmed with { ConfirmedHost = new HostTargetApproval(Host, 5150) };
+
+        (await sut.SendKeysAsync("^a", noLayout)).Success.Should().BeTrue();
+        (await sut.SendKeysAsync("^{END}", noLayout)).Success.Should().BeTrue();
+        (await sut.TypeTextAsync("да", 0, noLayout, false, TextControlChars.Unicode, TextInputMethod.Unicode)).Success.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task SendKeys_TheLayoutSwitchingBetweenBatches_StopsTheCallBeforeTheNextBatch()
+    {
+        // Another call, or the user, switches the input language after the first batch (each key is a batch with delayMs)
+        var layouts = new FakeKeyboardLayoutWrapper { Layout = FakeKeyboardLayoutWrapper.Us };
+        _input.BeforeSend = _ => layouts.Layout = FakeKeyboardLayoutWrapper.Russian;
+        var sut = new InputSimulationService(TestDataFactory.CreateMockMonitorService().Object, _input, _guard.Object, new InputSession(_input),
+            Permissive.PasteGuard, Permissive.Takeover, keyboardLayout: layouts);
+
+        var result = await sut.SendKeysAsync("abc", Confirmed, delayMs: 1);
+
+        result.ErrorCode.Should().Be(InputErrorCode.HandleMismatch);
+        result.KeysSent.Should().Be(1);
+    }
+
+    [Theory]
+    [InlineData("{APPS}")]
+    [InlineData("+{F10}")]
+    [InlineData("%e")]
+    public async Task SendKeys_OutsideTheAllowlist_ToAConfirmedHost_AreRefusedAtSendTime(string keys)
+    {
+        var result = await CreateSut().SendKeysAsync(keys, Confirmed);
+
+        result.ErrorCode.Should().Be(InputErrorCode.InvalidArguments);
+        _input.Batches.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task SendKeys_ToAConfirmedHostWhoseLayoutIsNotTheOneShown_IsRefused()
     {
         var approvedOnFrench = Confirmed with { ConfirmedHost = new HostTargetApproval(Host, 5150, FakeKeyboardLayoutWrapper.French) };

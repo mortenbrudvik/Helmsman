@@ -357,8 +357,17 @@ public partial class ElementActionTools
         // it as input), and the other actions' value says what they do (a toggle state, a number, a menu path)
         var how = action switch
         {
-            ElementActionKind.SetValue => mode switch { ElementValueMode.Type => "type", ElementValueMode.Paste => "paste", _ => "set the value to" },
-            ElementActionKind.AppendText => mode switch { ElementValueMode.Type => "type at the end", ElementValueMode.Paste => "paste at the end", _ => "append" },
+            // Mode type sends keys the server chooses before the text: Ctrl+A (and Delete for an empty value), or Ctrl+End
+            ElementActionKind.SetValue => mode switch
+            {
+                ElementValueMode.Type => value is { Length: 0 } ? "select all (Ctrl+A) and delete it (Delete), typing" : "select all (Ctrl+A), then type",
+                ElementValueMode.Paste => "paste",
+                _ => "set the value to"
+            },
+            ElementActionKind.AppendText => mode switch
+            {
+                ElementValueMode.Type => "go to the end (Ctrl+End), then type", ElementValueMode.Paste => "paste at the end", _ => "append"
+            },
             _ => "use the value"
         };
         var input = new HostInput("element_action",

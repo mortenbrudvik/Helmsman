@@ -90,9 +90,10 @@ public class DialogTools
                 "an AutomationId, or its visible text; leave it out to only read the dialog. Nothing was done.");
         }
 
-        // A read sends nothing to the host: allowHostTarget lets it read as it did before the question; a press asks the user
+        // A read sends nothing to the host: the dialog service lets allowHostTarget read it as before the question (InputTarget
+        // .ReadOnly), and nothing is asked; a press asks the user
         var confirmed = button == null
-            ? allowHostTarget && target != nint.Zero ? _hostConfirmation.ForReadOnly([InputTarget.Window(target, allowHostTarget: true)]).For(target) : null
+            ? null
             : await ConfirmHostAsync(server, target, allowHostTarget,
                 new HostInput("respond_to_dialog", $"press the button {UserConfirmation.Quote(button)}"), cancellationToken).ConfigureAwait(false);
         var result = await _dialogs.RespondAsync(new DialogResponseRequest(target, button, allowHostTarget, timeout) { ConfirmedHost = confirmed },

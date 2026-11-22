@@ -373,7 +373,12 @@ public sealed class DialogService : IDialogService
 
         // Checked as an action's target before anything is read: the dialog of an app the user's policy denies (a password
         // manager, a credential prompt) or of the agent's own host is neither read nor answered
-        var allowed = _guard.CheckTarget(InputTarget.Window(dialog, request.AllowHostTarget) with { ConfirmedHost = request.ConfirmedHost });
+        var allowed = _guard.CheckTarget(InputTarget.Window(dialog, request.AllowHostTarget) with
+        {
+            ConfirmedHost = request.ConfirmedHost,
+            // A read sends the dialog nothing: allowHostTarget alone lets it read the agent's host, as before the question
+            ReadOnly = request.Button == null
+        });
         if (!allowed.Allowed)
         {
             return Fail(allowed.ErrorCode.ToString(), $"{allowed.Error} Nothing was read or pressed.", dialog);

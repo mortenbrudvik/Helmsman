@@ -14,9 +14,8 @@ namespace WinDesktopMcp.Services;
 /// </summary>
 public static class InputPreviews
 {
-    // Win32 values, as NativeEnums has them (Services computes with no Native type)
-    private const uint KeyUp = 0x0002;
-    private const ushort VkReturn = 0x0D, VkLeftControl = 0xA2, VkRightAlt = 0xA5, VkNumpad0 = 0x60, VkNumpad9 = 0x69;
+    private const uint KeyUp = HostInputRules.KeyUp;
+    private const ushort VkReturn = HostInputRules.VkReturn, VkLeftControl = HostInputRules.VkLeftControl, VkRightAlt = HostInputRules.VkRightAlt;
 
     /// <summary>
     /// The events' key presses and characters, read on <paramref name="layout"/> (How is left empty): whether one presses
@@ -34,7 +33,7 @@ public static class InputPreviews
         var repeat = 0;
         ushort tapCandidate = 0;
         char? highSurrogate = null;
-        bool enter = false, lineBreak = false, byCode = false;
+        bool enter = false, lineBreak = false;
 
         void Flush()
         {
@@ -113,12 +112,23 @@ public static class InputPreviews
                 var c = (char)e.Code;
                 if (char.IsHighSurrogate(c))
                 {
+                    FlushSurrogate();
                     highSurrogate = c;
                     continue;
                 }
 
-                var character = char.IsLowSurrogate(c) && highSurrogate is { } high ? new string([high, c]) : c.ToString();
-                highSurrogate = null;
+                string character;
+                if (char.IsLowSurrogate(c) && highSurrogate is { } high)
+                {
+                    character = new string([high, c]);
+                    highSurrogate = null;
+                }
+                else
+                {
+                    FlushSurrogate();
+                    character = c.ToString();
+                }
+
                 lineBreak |= c is '\n' or '\r';
                 enter |= c is '\n' or '\r' || (ctrl && c is 'm' or 'M' or 'j' or 'J');
                 if ((held & ~KeyModifiers.Shift) != KeyModifiers.None)
@@ -133,9 +143,9 @@ public static class InputPreviews
                 continue;
             }
 
+            FlushSurrogate();
             var code = e.Code;
             enter |= code == VkReturn || (ctrl && code is 'M' or 'J');
-            byCode |= (held & KeyModifiers.Alt) != 0 && code is >= VkNumpad0 and <= VkNumpad9;
             if ((held & ~KeyModifiers.Shift) == KeyModifiers.None &&
                 layout.TextOf(code, (held & KeyModifiers.Shift) != 0, altGr) is { Length: > 0 } typed && !typed.Any(char.IsControl))
             {
@@ -147,13 +157,25 @@ public static class InputPreviews
             }
         }
 
+        FlushSurrogate();
         Flush();
         return new InputPreview(shown.ToString(), string.Empty, enter, lineBreak)
         {
             Pastes = ClipboardOrigin.PasteTrigger(events) != null,
-            TypesByCode = byCode,
-            Layout = layout.Handle
+            NotAllowed = HostInputRules.Refusal(events, layout),
+            Layout = layout.Handle,
+            CapsLock = layout.CapsLock
         };
+
+        // A high surrogate no low one followed is no character: it is sent as its code unit, and shown so
+        void FlushSurrogate()
+        {
+            if (highSurrogate is { } unpaired)
+            {
+                Text(unpaired.ToString());
+                highSurrogate = null;
+            }
+        }
     }
 
     /// <summary>

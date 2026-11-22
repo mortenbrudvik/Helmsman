@@ -720,6 +720,13 @@ public partial class InputSimulationService : IInputSimulationService
 
                 var inputs = batch.SelectMany(character => character).ToList();
 
+                // To the agent's host: the allowlist, and the layout the user was shown, read again right before the batch
+                if (HostBatchRefusal(inputs, approved.Target) is { } hostRefused)
+                {
+                    return Finish(new TypeTextResult(false, length, charactersTyped,
+                        $"{TypedSoFar(length, charactersTyped, approved)} {hostRefused.Error}", hostRefused.Code), approved);
+                }
+
                 // The SYN character pastes in an edit control, as Ctrl+V does
                 if (PasteRefusal(inputs, approved) is { } pasteRefused)
                 {
@@ -854,7 +861,9 @@ public partial class InputSimulationService : IInputSimulationService
         var events = CharacterInputs(typed, mode, layout, viaLayout).SelectMany(c => c).ToList();
         return InputPreviews.Render(events, layout) with
         {
-            How = $"type these {length} characters" + (viaLayout ? " with the keys of the window's keyboard layout" : string.Empty)
+            How = $"type these {length} characters" + (viaLayout ? " with the keys of the window's keyboard layout" : string.Empty),
+            // Characters sent as themselves read no layout: none is recorded, and none is checked when they are sent
+            Layout = ReferenceEquals(layout, KeyboardLayout.Invariant) ? null : layout.Handle
         };
     }
 
@@ -893,11 +902,41 @@ public partial class InputSimulationService : IInputSimulationService
     /// question read them on another layout (the window's changed while the user answered), so they would type other
     /// characters than the user was shown (HandleMismatch).
     /// </summary>
-    private static string? LayoutChangedSinceConfirmed(InputTarget target, KeyboardLayout layout) =>
-        target.ConfirmedHost is { } approved && approved.KeyboardLayout != layout.Handle
-            ? "The keyboard layout of the agent's host window changed after the user confirmed this input, so the keys would type " +
-              "other characters than the user was shown. Nothing was sent. Call again: the user is asked again."
+    private static string? LayoutChangedSinceConfirmed(InputTarget target, KeyboardLayout layout, string nothingSent = "Nothing was sent.") =>
+        target.ConfirmedHost is { KeyboardLayout: { } shown } approved && (shown != layout.Handle || approved.CapsLock != layout.CapsLock)
+            ? "The keyboard layout or Caps Lock of the agent's host window changed after the user confirmed this input, so the keys " +
+              $"would type other characters than the user was shown. {nothingSent} Call again: the user is asked again."
             : null;
+
+    /// <summary>
+    /// Why <paramref name="batch"/> must not go to a host window the user confirmed for this call, read inside the input gate
+    /// right before it: it can paste (PasteNotAllowed); the window's keyboard layout or Caps Lock is no longer the one the
+    /// question read the keys on (HandleMismatch: another call may have switched the input language meanwhile, which Windows
+    /// shares between apps by default); or a press is outside the allowlist for the host (<see cref="HostInputRules"/>,
+    /// InvalidArguments). Null for any other call.
+    /// </summary>
+    private (InputErrorCode Code, string Error)? HostBatchRefusal(IReadOnlyList<InputEvent> batch, InputTarget target)
+    {
+        if (target.ConfirmedHost == null)
+        {
+            return null;
+        }
+
+        if (HostPasteRefusal(batch, target) is { } paste)
+        {
+            return (InputErrorCode.PasteNotAllowed, paste);
+        }
+
+        var layout = LayoutFor(target);
+        if (LayoutChangedSinceConfirmed(target, layout, "Nothing more was sent.") is { } changed)
+        {
+            return (InputErrorCode.HandleMismatch, changed);
+        }
+
+        return HostInputRules.Refusal(batch, layout) is { } refused
+            ? (InputErrorCode.InvalidArguments, HostInputRules.Message(refused, "this window") + " Nothing (more) was sent.")
+            : null;
+    }
 
     /// <summary>
     /// Why <paramref name="batch"/> must not be sent to a host window the user confirmed for this call, or null: it can paste
@@ -1135,6 +1174,15 @@ public partial class InputSimulationService : IInputSimulationService
                         // check reads the whole call, so a copy in one batch and its paste in a later one are refused together;
                         // a later one reads its batch with the modifiers held for it, so a paste whose Ctrl went down earlier
                         // is checked against the clipboard as it is now
+                        if (HostBatchRefusal(b == 0 ? inputs : pressedAs, approved.Target) is { } hostRefused)
+                        {
+                            return held.Apply(Finish(report.ApplyTo(new SendKeysResult(false, keys,
+                                b == 0 ? hostRefused.Error : $"{KeysSentSoFar(keysSent, total, approved)} {hostRefused.Error}", hostRefused.Code)
+                            {
+                                KeysSent = keysSent
+                            }, eventsSent), approved));
+                        }
+
                         if (PasteRefusal(b == 0 ? inputs : pressedAs, approved) is { } pasteRefused)
                         {
                             return held.Apply(Finish(report.ApplyTo(new SendKeysResult(false, keys,

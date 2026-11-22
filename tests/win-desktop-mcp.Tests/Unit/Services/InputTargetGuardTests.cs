@@ -2292,6 +2292,37 @@ public class InputTargetGuardTests
     }
 
     [Fact]
+    public void AReadOnlyTarget_LetsAllowHostTargetReadTheHost_ButNeverLiftsTheRuleForInput()
+    {
+        // respond_to_dialog without a button reads: allowHostTarget alone lifts it, as before the question existed
+        var read = To(Terminal, allowHostTarget: true) with { ReadOnly = true };
+        At(Terminal);
+        var sut = CreateSut();
+
+        sut.CheckTarget(read).Allowed.Should().BeTrue();
+        sut.CheckKeyboard(read, KeyboardInputKind.Text, null).ErrorCode.Should().Be(InputErrorCode.TargetIsAgentHost);
+        sut.CheckMouse(500, 300, read).ErrorCode.Should().Be(InputErrorCode.TargetIsAgentHost);
+        sut.CheckElementWindow(read, Terminal).ErrorCode.Should().Be(InputErrorCode.TargetIsAgentHost);
+    }
+
+    [Fact]
+    public void Keys_ToAConfirmedHostInMenuMode_AreRefused_AsTextIs_BeforeTheFirstBatchAndBeforeEveryOther()
+    {
+        // Keys to an ordinary window in menu mode go through as before; to the host, a key could pick a menu's Paste
+        var sut = CreateSut();
+        var approved = sut.CheckKeyboard(ConfirmedTerminal, KeyboardInputKind.Keys, SendKeysParser.Parse("y"));
+        approved.Allowed.Should().BeTrue(approved.Error);
+        InMenuMode(Terminal);
+
+        sut.RecheckKeyboard(approved).ErrorCode.Should().Be(InputErrorCode.TargetInMenuMode);
+        sut.CheckKeyboard(ConfirmedTerminal, KeyboardInputKind.Keys, SendKeysParser.Parse("y")).ErrorCode.Should().Be(InputErrorCode.TargetInMenuMode);
+
+        _inFront = Notepad;
+        InMenuMode(Notepad);
+        sut.CheckKeyboard(To(Notepad), KeyboardInputKind.Keys, SendKeysParser.Parse("{ESC}")).Allowed.Should().BeTrue();
+    }
+
+    [Fact]
     public void HostWindowToConfirm_NothingToAsk_IsNull()
     {
         var sut = CreateSut();

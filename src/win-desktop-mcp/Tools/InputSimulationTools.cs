@@ -33,9 +33,10 @@ public class InputSimulationTools
 
     internal const string AllowHostTargetDescription =
         "Allow input to the agent's own host window (its terminal, editor or chat app), named by windowHandle or window.handle. The " +
-        "server asks the user first, showing the whole input; nothing is sent without their yes (ConfirmationDeclined), when the " +
-        "client cannot ask (ConfirmationRequired) or for input over 300 characters (TextTooLong); a paste, drag or right or middle " +
-        "click there is refused (PasteNotAllowed). Use only when the user asked for it. Default: false";
+        "server asks the user first, showing the whole input; nothing is sent without their yes (ConfirmationDeclined) or when the " +
+        "client cannot ask (ConfirmationRequired). Only text, Enter, Tab, Backspace, navigation keys and Ctrl+A/C/D/E/H/J/K/L/M/U/Z " +
+        "go there, up to 300 characters (else InvalidArguments, TextTooLong); pastes, drags and right or middle clicks are refused " +
+        "(PasteNotAllowed). Use only when the user asked for it. Default: false";
 
     internal const string ReleaseHeldModifiersDescription =
         "Release modifier keys (Shift, Ctrl, Alt, Windows) that are down before the input is sent, instead of refusing with " +
@@ -164,7 +165,9 @@ public class InputSimulationTools
         }
 
         var confirmed = await ConfirmAsync(server, [point.Target],
-            new HostInput("mouse_click", $"{ClickName(button, clickCount)} at ({point.X}, {point.Y}) on the window{With(modifiers)}",
+            new HostInput("mouse_click",
+                $"{ClickName(button, clickCount)} at ({point.X}, {point.Y}) on the window{With(modifiers)}; a click presses whatever is at that " +
+                "point, which can be a button or menu item such as Allow or Paste",
                 Pastes: button is MouseButton.Secondary or MouseButton.Middle), cancellationToken).ConfigureAwait(false);
         var target = confirmed.Apply(point.Target);
         return await ObserveAsync(Echo(_inputService.MouseClick(point.X, point.Y, button, clickCount, modifiers ?? [], target,

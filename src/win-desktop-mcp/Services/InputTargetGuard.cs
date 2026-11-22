@@ -58,6 +58,9 @@ public sealed class InputTargetGuard : IInputTargetGuard
 
     public InputGuardResult CheckKeyboard(InputTarget target, KeyboardInputKind kind, IReadOnlyList<InputEvent>? keys)
     {
+        // A read-only target lifts nothing for input
+        target = target with { ReadOnly = false };
+
         // 0. Win+R and Win+X, with or without a target: they open a place where typed text runs as a command. The other ways to
         // a command line (Start search, Task Manager's Run new task, File Explorer's address bar, a terminal already open) are
         // not refused here; only the window rules below apply to them (InputGuardOptions.RefusedChords)
@@ -149,8 +152,8 @@ public sealed class InputTargetGuard : IInputTargetGuard
                 }
             }
 
-            // 5. Letters typed into an active menu select its items
-            if (kind == KeyboardInputKind.Text && (outcome.InMenuMode || IsInMenuMode(foreground)))
+            // 5. Letters typed into an active menu select its items; to the agent's host, any key could (a menu's Paste)
+            if ((kind == KeyboardInputKind.Text || target.ConfirmedHost != null) && (outcome.InMenuMode || IsInMenuMode(foreground)))
             {
                 return MenuRefusal(target, receiving);
             }
@@ -199,6 +202,14 @@ public sealed class InputTargetGuard : IInputTargetGuard
         }
 
         var foreground = _windows.GetForegroundWindow();
+
+        // Keys to the agent's host never go into a menu, which one key can drive to Paste; checked before every batch, since a
+        // menu can open between them
+        if (approved.Target.ConfirmedHost != null && IsInMenuMode(foreground))
+        {
+            return MenuRefusal(approved.Target, Read(foreground));
+        }
+
         if (foreground != nint.Zero && foreground == approved.Receiving)
         {
             return approved;
@@ -232,6 +243,7 @@ public sealed class InputTargetGuard : IInputTargetGuard
 
     public InputGuardResult CheckMouse(int x, int y, InputTarget target)
     {
+        target = target with { ReadOnly = false };
         if (DesktopRefusal(target) is { } desktop)
         {
             return desktop;
@@ -428,6 +440,7 @@ public sealed class InputTargetGuard : IInputTargetGuard
             return InvalidHandle(target, elementWindow);
         }
 
+        target = target with { ReadOnly = false };
         var targetRoot = target.WindowHandle is { } handle && handle != nint.Zero ? RootOf(handle) : nint.Zero;
         var window = Read(elementWindow);
         return WindowRefusal(elementWindow, window, target, "done", targetRoot)
@@ -676,7 +689,7 @@ public sealed class InputTargetGuard : IInputTargetGuard
         // shown and the windows it owns
         var named = target.HasWindow && target.AllowHostTarget && targetRoot != nint.Zero &&
                     (hWnd == targetRoot || WindowOwnerChain.IsOwnedBy(_windows, hWnd, targetRoot));
-        if (_hostGuard.IsHostWindow(hWnd) && !(named && IsConfirmed(target, targetRoot)))
+        if (_hostGuard.IsHostWindow(hWnd) && !(named && (IsConfirmed(target, targetRoot) || target.ReadOnly)))
         {
             var hint = named
                 ? ConfirmationHint(target, targetRoot)

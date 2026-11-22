@@ -8,12 +8,18 @@ namespace WinDesktopMcp.Models;
 /// Input as the user's confirmation question shows it before allowHostTarget sends it to the agent's own host window (see
 /// Infrastructure.HostTargetConfirmation): every character, nothing hidden by rendering. A line break is ⏎ and a tab ⇥; a key
 /// or chord is ⟨NAME⟩ (⟨ENTER⟩, ⟨Ctrl+C⟩), and a run of the same one ⟨NAME ×n⟩, the count inside the marker. A character is
-/// shown as itself only when it is visibly printable: a letter, a digit or other number, punctuation or a symbol, or the plain
-/// space. Every other code point is shown as ⟨U+XXXX⟩: control and format characters (bidirectional overrides and isolates,
-/// zero-width characters), combining and enclosing marks and variation selectors (which change or hide the character before
-/// them), line and paragraph separators, spaces other than the plain space, private-use, unassigned and surrogate code
-/// points; the letters and symbols that draw nothing (the Hangul fillers U+115F, U+1160, U+3164, U+FFA0 and the blank
-/// braille pattern U+2800); and the marker characters themselves (⏎ ⇥ ⟨ ⟩ ⟦ ⟧ ×), so a marker in the question is always one.
+/// shown as itself only when it is visibly printable (<see cref="IsShownAsItself"/>): a letter, a digit or other number,
+/// punctuation or a symbol, or the plain space, that is not one of the exceptions below. Every other code point is shown as
+/// ⟨U+XXXX⟩: control and format characters (bidirectional overrides and isolates, zero-width characters), combining and
+/// enclosing marks and variation selectors (which change or hide the character before them), line and paragraph separators,
+/// spaces other than the plain space, private-use, unassigned and unpaired surrogate code points; the letters and symbols
+/// that draw nothing (the Hangul fillers U+115F, U+1160, U+3164, U+FFA0 and the blank braille pattern U+2800); every
+/// character of a right-to-left script (Hebrew, Arabic, Syriac, Thaana, N'Ko and the others of U+0590-U+08FF, their
+/// presentation forms U+FB1D-U+FDFF and U+FE70-U+FEFF, and U+10800-U+10FFF, U+1E800-U+1EFFF), which a client drawing the
+/// line right to left would show with its neighbours reordered; a compatibility form of ASCII text (its NFKC form is ASCII:
+/// fullwidth and mathematical letters, ligatures such as ﬁ); and the marker characters themselves (⏎ ⇥ ⟨ ⟩ ⟦ ⟧ ×), so a
+/// marker in the question is always one. Letters of other scripts that merely resemble Latin ones (Cyrillic а) are shown as
+/// they are.
 /// </summary>
 public static class ShownInput
 {
@@ -30,8 +36,10 @@ public static class ShownInput
 
     /// <summary>What the markers mean, for the question.</summary>
     public const string Legend =
-        "⏎ is a line break, ⇥ a tab, ⟨NAME⟩ a key or chord, ⟨NAME ×n⟩ the same key pressed n times, and ⟨U+XXXX⟩ any character " +
-        "that is not a visible letter, digit, punctuation mark, symbol or plain space (an invisible, combining or look-alike one).";
+        "⏎ is a line break, ⇥ a tab, ⟨NAME⟩ a key or chord, ⟨NAME ×n⟩ the same key pressed n times, and ⟨U+XXXX⟩ a character " +
+        "shown by its code: one that is not a visible letter, digit, punctuation mark, symbol or plain space, a right-to-left " +
+        "letter, or a fullwidth or other compatibility form of a plain ASCII character. Letters of other scripts that resemble " +
+        "Latin ones are shown as they are.";
 
     /// <summary>The sign of a repeat count, inside a key marker: ⟨DOWN ×3⟩.</summary>
     public const char Times = '×';
@@ -50,7 +58,7 @@ public static class ShownInput
         {
             if (Rune.DecodeFromUtf16(source, out var rune, out var consumed) != OperationStatus.Done)
             {
-                // A lone surrogate, which is no character: its code unit
+                // An unpaired surrogate, which is no character: its code unit
                 AppendCodePoint(shown, source[0]);
                 source = source[1..];
                 continue;
@@ -79,7 +87,7 @@ public static class ShownInput
             return;
         }
 
-        if (rune.Value != ' ' && (Markers.Contains(rune.Value) || Blanks.Contains(rune.Value) || !IsVisible(Rune.GetUnicodeCategory(rune))))
+        if (!IsShownAsItself(rune))
         {
             AppendCodePoint(shown, rune.Value);
             return;
@@ -88,11 +96,86 @@ public static class ShownInput
         shown.Append(rune.ToString());
     }
 
+    /// <summary>True when the question shows <paramref name="rune"/> as itself, not as its code (see the class remarks).</summary>
+    public static bool IsShownAsItself(Rune rune)
+    {
+        var value = rune.Value;
+        if (value == ' ')
+        {
+            return true;
+        }
+
+        return !Markers.Contains(value) && !Blanks.Contains(value) && !IsRightToLeft(value) && IsVisible(Rune.GetUnicodeCategory(rune)) &&
+               !IsCompatibilityAscii(rune);
+    }
+
+    /// <summary>
+    /// The first character of <paramref name="text"/> the agent's host may not get as text: one the question does not show as
+    /// itself, other than a line break or a tab (shown as ⏎ and ⇥), as ⟨U+XXXX⟩; null when there is none.
+    /// </summary>
+    public static string? FirstUnshown(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        var source = text.AsSpan();
+        while (!source.IsEmpty)
+        {
+            if (Rune.DecodeFromUtf16(source, out var rune, out var consumed) != OperationStatus.Done)
+            {
+                return CodePoint(source[0]);
+            }
+
+            if (rune.Value is not ('\n' or '\r' or '\t') && !IsShownAsItself(rune))
+            {
+                return CodePoint(rune.Value);
+            }
+
+            source = source[consumed..];
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// The refusal of input outside the allowlist for the agent's host (Services.HostInputRules), for the error
+    /// (InvalidArguments): <paramref name="what"/> is the press or character, <paramref name="window"/> the host window.
+    /// </summary>
+    public static string HostAllowlistRefusal(string what, string window) =>
+        $"The input contains {what}, which never goes to {window}, the agent's own host: the question to the user can only " +
+        "promise what text, Enter, Tab, Backspace, the navigation keys (arrows, Home, End, Page Up, Page Down, Delete, Esc, also " +
+        "with Shift or Ctrl) and Ctrl with A, C, D, E, H, J, K, L, M, U or Z do there. A key it can only name (a menu key, a " +
+        "function key, an Alt, Win or other chord) could do anything, such as paste through a menu.";
+
+    /// <summary>⟨U+XXXX⟩.</summary>
+    public static string CodePoint(int codePoint)
+    {
+        var shown = new StringBuilder();
+        AppendCodePoint(shown, codePoint);
+        return shown.ToString();
+    }
+
     /// <summary>Appends ⟨U+XXXX⟩.</summary>
     public static void AppendCodePoint(StringBuilder shown, int codePoint)
     {
         ArgumentNullException.ThrowIfNull(shown);
         shown.Append(KeyOpen).Append("U+").Append(codePoint.ToString("X4", CultureInfo.InvariantCulture)).Append(KeyClose);
+    }
+
+    /// <summary>The blocks of the right-to-left scripts and their presentation forms (bidi classes R and AL, and their digits).</summary>
+    private static bool IsRightToLeft(int value) => value is
+        (>= 0x0590 and <= 0x08FF) or (>= 0xFB1D and <= 0xFDFF) or (>= 0xFE70 and <= 0xFEFF) or
+        (>= 0x10800 and <= 0x10FFF) or (>= 0x1E800 and <= 0x1EFFF);
+
+    /// <summary>A character outside ASCII whose compatibility form (NFKC) is ASCII text: it looks like that text.</summary>
+    private static bool IsCompatibilityAscii(Rune rune)
+    {
+        if (rune.IsAscii)
+        {
+            return false;
+        }
+
+        var text = rune.ToString();
+        var normalized = text.Normalize(NormalizationForm.FormKC);
+        return normalized != text && normalized.All(char.IsAscii);
     }
 
     /// <summary>The categories of visibly printable characters: letters, numbers, punctuation and symbols. Everything else is escaped.</summary>
@@ -111,7 +194,9 @@ public static class ShownInput
 /// </summary>
 /// <param name="Shown">Every character and key the call sends, in order.</param>
 /// <param name="How">How it is sent, for the question: "type these 12 characters", "press these keys".</param>
-/// <param name="PressesEnter">True when a key press of the input is Enter (with any modifiers), which runs a command in a terminal.</param>
+/// <param name="PressesEnter">
+/// True when the input presses Enter, or a key or character a terminal takes as Enter (Ctrl+M, Ctrl+J, a typed CR or LF).
+/// </param>
 /// <param name="TypesLineBreak">True when the input types or pastes a line break character, which a terminal may run too.</param>
 public sealed record InputPreview(string Shown, string How, bool PressesEnter = false, bool TypesLineBreak = false)
 {
@@ -122,21 +207,31 @@ public sealed record InputPreview(string Shown, string How, bool PressesEnter = 
     public bool Pastes { get; init; }
 
     /// <summary>
-    /// True when the input presses a numeric keypad digit with Alt held, which types a character by its code: the agent's host
-    /// never gets it, since the character it makes is not what the question would show.
+    /// Why the agent's host may not get this input, by the allowlist for a confirmed host window (Services.HostInputRules): the
+    /// first key, chord or character outside it; null when all of it is allowed.
     /// </summary>
-    public bool TypesByCode { get; init; }
+    public string? NotAllowed { get; init; }
 
-    /// <summary>The keyboard layout (HKL) the keys were read on; 0 for the invariant layout (characters sent as themselves).</summary>
-    public nint Layout { get; init; }
+    /// <summary>
+    /// The keyboard layout (HKL) the keys were read on; null when the input reads no layout (characters sent as themselves),
+    /// so no layout is recorded in the approval and none is checked when it is sent.
+    /// </summary>
+    public nint? Layout { get; init; }
+
+    /// <summary>Whether Caps Lock was on when the keys were read on <see cref="Layout"/>; it changes what a letter key types.</summary>
+    public bool CapsLock { get; init; }
 
     /// <summary>A text set or typed as characters (element_action's value, file_dialog's path): every line break typed.</summary>
     public static InputPreview OfText(string text, string how)
     {
+        ArgumentNullException.ThrowIfNull(text);
         var lineBreak = text.Contains('\n', StringComparison.Ordinal) || text.Contains('\r', StringComparison.Ordinal);
         return new(ShownInput.Escape(text), how, PressesEnter: lineBreak, TypesLineBreak: lineBreak)
         {
-            Pastes = text.Contains('\u0016', StringComparison.Ordinal)
+            Pastes = text.Contains('\u0016', StringComparison.Ordinal),
+            NotAllowed = ShownInput.FirstUnshown(text) is { } character
+                ? $"the character {character}, which the question cannot show as itself"
+                : null
         };
     }
 }

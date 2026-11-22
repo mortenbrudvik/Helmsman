@@ -57,12 +57,6 @@ public interface IHostTargetConfirmation
     /// </exception>
     Task<HostConfirmation> ConfirmAsync(McpServer? server, IReadOnlyList<InputTarget> targets, HostInput input, CancellationToken cancellationToken);
 
-    /// <summary>
-    /// The approvals of the host windows among <paramref name="targets"/> named with allowHostTarget, without a question: only
-    /// for a call that reads and sends nothing (respond_to_dialog without a button), which allowHostTarget alone let read the
-    /// host before the question existed. A call that acts must use <see cref="ConfirmAsync"/>.
-    /// </summary>
-    HostConfirmation ForReadOnly(IReadOnlyList<InputTarget> targets);
 }
 
 /// <summary>The server's <see cref="IHostTargetConfirmation"/>.</summary>
@@ -138,12 +132,11 @@ public sealed class HostTargetConfirmation : IHostTargetConfirmation
                 throw new ToolErrorException(nameof(InputErrorCode.PasteNotAllowed), HostPasteRefusal(names));
             }
 
-            if (content.TypesByCode)
+            // Only input whose effect the question can state: text, Enter, Tab, Backspace, navigation keys, a few Ctrl letters
+            if (content.NotAllowed is { } notAllowed)
             {
                 throw new ToolErrorException(ToolErrorReporting.InvalidArgumentsErrorCode,
-                    $"The keys press a numeric keypad digit with Alt held, which types a character by its code, into {names}, the " +
-                    "agent's own host. That is never allowed there: the question could not show the character it types. Nothing " +
-                    "was sent, and the user was not asked. Type the character itself with type_text.");
+                    ShownInput.HostAllowlistRefusal(notAllowed, names) + " Nothing was sent, and the user was not asked.");
             }
 
             if (content.Shown.Length > MaxShownLength)
@@ -172,11 +165,9 @@ public sealed class HostTargetConfirmation : IHostTargetConfirmation
                 "sent. Ask the user how to continue.");
         }
 
-        return new HostConfirmation(hosts.ToDictionary(p => p.Key, p => p.Value.Approval with { KeyboardLayout = content?.Layout ?? 0 }));
+        return new HostConfirmation(hosts.ToDictionary(p => p.Key, p => p.Value.Approval with { KeyboardLayout = content?.Layout, CapsLock = content?.CapsLock ?? false }));
     }
 
-    public HostConfirmation ForReadOnly(IReadOnlyList<InputTarget> targets) =>
-        new(HostWindows(targets).ToDictionary(p => p.Key, p => p.Value.Approval));
 
     /// <summary>The host windows among <paramref name="targets"/> named with allowHostTarget, by the handle each target names.</summary>
     private Dictionary<nint, HostWindowToConfirm> HostWindows(IReadOnlyList<InputTarget> targets)

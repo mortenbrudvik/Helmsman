@@ -69,8 +69,6 @@ public static class Permissive
     {
         public Task<HostConfirmation> ConfirmAsync(McpServer? server, IReadOnlyList<InputTarget> targets, HostInput input,
             CancellationToken cancellationToken) => Task.FromResult(WinDesktopMcp.Infrastructure.HostConfirmation.None);
-
-        public HostConfirmation ForReadOnly(IReadOnlyList<InputTarget> targets) => WinDesktopMcp.Infrastructure.HostConfirmation.None;
     }
 
     private sealed class NoHost : IHostGuard
