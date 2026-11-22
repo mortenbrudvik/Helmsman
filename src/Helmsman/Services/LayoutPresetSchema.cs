@@ -555,7 +555,8 @@ public static partial class LayoutPresetSchema
 
         if (processName != null && ProcessNames.Normalize(processName).Length == 0)
         {
-            return $"processName '{processName}' is blank once '.exe' is taken off, so it would match every window. Give the " +
+            return $"processName '{processName}' is blank once spaces, quotes and '.exe' are taken off, so it would match every " +
+                   "window. Give the " +
                    "process's name, or leave it out.";
         }
 

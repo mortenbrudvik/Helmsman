@@ -338,7 +338,7 @@ public class AppLauncherTools
         }
 
         // A name filter is read as a process name is (ProcessNames): a path is refused, pathContains takes a folder, and a
-        // filter blank once read ('.exe', spaces) would keep every process
+        // filter blank once read ('.exe', spaces) names no process
         if (ProcessNames.PathRefusal(nameof(nameFilter), nameFilter) is { } path)
         {
             throw new ToolErrorException(ToolErrorReporting.InvalidArgumentsErrorCode,
@@ -348,7 +348,7 @@ public class AppLauncherTools
         if (!string.IsNullOrEmpty(nameFilter) && ProcessNames.Normalize(nameFilter).Length == 0)
         {
             throw new ToolErrorException(ToolErrorReporting.InvalidArgumentsErrorCode,
-                $"nameFilter '{nameFilter}' is blank once spaces, quotes and '.exe' are taken off, so it would keep every process; " +
+                $"nameFilter '{nameFilter}' is blank once spaces, quotes and '.exe' are taken off, so it names no process; " +
                 "leave it out or give part of a name. Nothing was listed.");
         }
 

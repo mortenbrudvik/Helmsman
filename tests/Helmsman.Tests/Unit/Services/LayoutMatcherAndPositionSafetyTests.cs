@@ -54,6 +54,19 @@ public class LayoutMatcherAndPositionSafetyTests
         error.Should().StartWith("placements[1].processName").And.Contain("not a path").And.Contain("'notepad'");
     }
 
+    [Theory]
+    [InlineData("\"\"")]
+    [InlineData("\" .exe \"")]
+    [InlineData(".exe")]
+    public void ABlankProcessName_IsRefused_WithAMessageTrueForQuotesAndExe(string processName)
+    {
+        LayoutPresetSchema.TryBuildPlacement(new LayoutPlacementSpec(processName, Snap: "left_half"), 0, OneMonitor, out _, out var error)
+            .Should().BeFalse();
+
+        error.Should().Be($"placements[0].processName '{processName}' is blank once spaces, quotes and '.exe' are taken off, so it " +
+                          "would match every window. Give the process's name, or leave it out.");
+    }
+
     [Fact]
     public void AProcessNameWithExe_IsStillTaken()
     {
