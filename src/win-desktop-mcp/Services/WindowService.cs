@@ -18,11 +18,8 @@ namespace WinDesktopMcp.Services;
 /// </remarks>
 public class WindowService : IWindowService
 {
-    /// <summary>
-    /// The longest delay the batches sleep between two windows, whatever delayBetweenMs asks for: they sleep inside
-    /// the input gate, so an agent's value must not hold it for long.
-    /// </summary>
-    public const int MaxDelayBetweenMs = 5000;
+    /// <inheritdoc cref="WindowBatchService.MaxDelayBetweenMs"/>
+    public const int MaxDelayBetweenMs = WindowBatchService.MaxDelayBetweenMs;
 
     /// <summary>
     /// How long a state change (minimize, maximize, restore) waits for the window to be seen in the new state before it
@@ -35,6 +32,7 @@ public class WindowService : IWindowService
     private readonly IWindowGeometry _geometry;
     private readonly IWindowZOrder _zOrder;
     private readonly IWindowClosing _closing;
+    private readonly IWindowBatch _batch;
     private readonly WindowReads _reads;
     private readonly WindowInfoReader _windowInfos;
     private readonly WindowTargetCheck _targetCheck;
@@ -48,6 +46,7 @@ public class WindowService : IWindowService
     /// <param name="geometry">The window placements and state changes.</param>
     /// <param name="zOrder">set_window_zorder.</param>
     /// <param name="closing">close_window's close and the reads of what a close leaves behind.</param>
+    /// <param name="batch">The batches of placements, state changes and closes.</param>
     public WindowService(
         IMonitorService monitorService,
         INativeWindowWrapper nativeWrapper,
@@ -55,7 +54,8 @@ public class WindowService : IWindowService
         ITargetPolicy targetPolicy,
         IWindowGeometry geometry,
         IWindowZOrder zOrder,
-        IWindowClosing closing)
+        IWindowClosing closing,
+        IWindowBatch batch)
     {
         _monitorService = monitorService;
         _nativeWrapper = nativeWrapper;
@@ -65,11 +65,11 @@ public class WindowService : IWindowService
         _geometry = geometry ?? throw new ArgumentNullException(nameof(geometry));
         _zOrder = zOrder ?? throw new ArgumentNullException(nameof(zOrder));
         _closing = closing ?? throw new ArgumentNullException(nameof(closing));
+        _batch = batch ?? throw new ArgumentNullException(nameof(batch));
     }
 
-    /// <summary>The delay a batch sleeps between two windows for <paramref name="delayBetweenMs"/>: 0 to <see cref="MaxDelayBetweenMs"/>.</summary>
-    public static TimeSpan BatchDelay(int delayBetweenMs) =>
-        TimeSpan.FromMilliseconds(Math.Clamp(delayBetweenMs, 0, MaxDelayBetweenMs));
+    /// <inheritdoc cref="WindowBatchService.BatchDelay"/>
+    public static TimeSpan BatchDelay(int delayBetweenMs) => WindowBatchService.BatchDelay(delayBetweenMs);
 
     public IReadOnlyList<WindowInfo> GetAllWindows(bool includeMinimized = true) =>
         FindWindows(new WindowQuery { IncludeMinimized = includeMinimized });
@@ -498,126 +498,26 @@ public class WindowService : IWindowService
         IReadOnlyList<(nint Handle, int X, int Y, int Width, int Height, bool BringToFront)> placements,
         int delayBetweenMs = 50,
         CancellationToken cancellationToken = default) =>
-        RunBatchAsync(
-            placements.Count,
-            i => placements[i].Handle,
-            i => SetWindowFrame(placements[i].Handle, placements[i].X, placements[i].Y, placements[i].Width, placements[i].Height,
-                placements[i].BringToFront),
-            WindowErrorCode.MoveFailed,
-            delayBetweenMs,
-            cancellationToken);
+        _batch.SetWindowBoundsBatchAsync(placements, delayBetweenMs, cancellationToken);
 
     public Task<IReadOnlyList<WindowChangeResult>> SnapWindowsBatchAsync(
         IReadOnlyList<(nint Handle, SnapPosition Position, int? MonitorIndex, bool BringToFront)> placements,
         int delayBetweenMs = 50,
         CancellationToken cancellationToken = default) =>
-        RunBatchAsync(
-            placements.Count,
-            i => placements[i].Handle,
-            i => SnapWindow(placements[i].Handle, placements[i].Position, placements[i].MonitorIndex, placements[i].BringToFront),
-            WindowErrorCode.MoveFailed,
-            delayBetweenMs,
-            cancellationToken);
+        _batch.SnapWindowsBatchAsync(placements, delayBetweenMs, cancellationToken);
 
     public Task<IReadOnlyList<WindowChangeResult>> SetWindowStateBatchAsync(
         IReadOnlyList<(nint Handle, WindowStateRequest State)> changes,
         int delayBetweenMs = 30,
         CancellationToken cancellationToken = default) =>
-        RunBatchAsync(
-            changes.Count,
-            i => changes[i].Handle,
-            i => SetWindowState(changes[i].Handle, changes[i].State),
-            WindowErrorCode.StateChangeFailed,
-            delayBetweenMs,
-            cancellationToken);
+        _batch.SetWindowStateBatchAsync(changes, delayBetweenMs, cancellationToken);
 
-    /// <summary>
-    /// Changes <paramref name="count"/> windows one after another. A window that fails does not stop the batch: its result
-    /// says why, with NotResponding for a window that did not answer in time and <paramref name="failure"/> for an
-    /// unexpected error. The batch pauses <paramref name="delayBetweenMs"/> after each window that was changed.
-    /// </summary>
-    private static async Task<IReadOnlyList<WindowChangeResult>> RunBatchAsync(
-        int count,
-        Func<int, nint> handleOf,
-        Func<int, WindowChangeResult> change,
-        WindowErrorCode failure,
-        int delayBetweenMs,
-        CancellationToken cancellationToken)
-    {
-        var results = new List<WindowChangeResult>(count);
-
-        for (var i = 0; i < count; i++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            WindowChangeResult result;
-            try
-            {
-                result = change(i);
-            }
-            catch (WindowNotRespondingException ex)
-            {
-                result = WindowChangeResult.Failed(handleOf(i), WindowErrorCode.NotResponding, ex.Message);
-            }
-            catch (Exception ex)
-            {
-                result = WindowChangeResult.Failed(handleOf(i), failure, ex.Message);
-            }
-
-            results.Add(result);
-
-            if (result.Success)
-            {
-                await PauseBetweenWindowsAsync(delayBetweenMs, i, count, cancellationToken).ConfigureAwait(false);
-            }
-        }
-
-        return results;
-    }
-
-    public async Task<IReadOnlyList<WindowCloseResult>> CloseWindowsBatchAsync(
+    public Task<IReadOnlyList<WindowCloseResult>> CloseWindowsBatchAsync(
         IReadOnlyList<nint> handles,
         bool force,
         int delayBetweenMs = 50,
-        CancellationToken cancellationToken = default)
-    {
-        var results = new List<WindowCloseResult>();
-
-        for (var i = 0; i < handles.Count; i++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var handle = handles[i];
-            WindowCloseResult result;
-            try
-            {
-                result = CloseWindow(handle, force);
-            }
-            catch (Exception ex)
-            {
-                result = WindowCloseResult.Failed(handle, WindowErrorCode.CloseFailed, ex.Message);
-            }
-
-            results.Add(result);
-
-            // Pause only after a close message was actually sent
-            if (result.Success)
-            {
-                await PauseBetweenWindowsAsync(delayBetweenMs, i, handles.Count, cancellationToken).ConfigureAwait(false);
-            }
-        }
-
-        return results;
-    }
-
-    /// <summary>
-    /// The batches' pause after window <paramref name="index"/> of <paramref name="count"/>: none after the last one,
-    /// <see cref="BatchDelay"/> otherwise. A cancelled call ends the pause at once.
-    /// </summary>
-    private static Task PauseBetweenWindowsAsync(int delayBetweenMs, int index, int count, CancellationToken cancellationToken) =>
-        delayBetweenMs > 0 && index < count - 1
-            ? Task.Delay(BatchDelay(delayBetweenMs), cancellationToken)
-            : Task.CompletedTask;
+        CancellationToken cancellationToken = default) =>
+        _batch.CloseWindowsBatchAsync(handles, force, delayBetweenMs, cancellationToken);
 
     /// <summary>
     /// Applies <paramref name="query"/> to one window and reads it if it matches. The cheap native

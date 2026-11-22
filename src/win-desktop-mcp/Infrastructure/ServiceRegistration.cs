@@ -71,6 +71,8 @@ public static class ServiceRegistration
         services.AddSingleton<IWindowZOrder, WindowZOrderService>();
         // close_window's close under the target policy and the shell and host guards, and the reads of what a close leaves
         services.AddSingleton<IWindowClosing, WindowClosingService>();
+        // The batches of placements, state changes and closes, one window after another through the two services above
+        services.AddSingleton<IWindowBatch, WindowBatchService>();
         services.AddSingleton<IWindowService, WindowService>();
         // Verified close (roadmap M2.5): waits for closed windows and reads their prompts through UI Automation
         services.AddSingleton<IWindowCloseVerifier, WindowCloseVerifier>();

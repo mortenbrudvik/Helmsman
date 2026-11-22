@@ -15,8 +15,9 @@ public sealed class WiredWindowService : WindowService
         ITargetPolicy targetPolicy,
         WindowGeometryService geometry,
         WindowZOrderService zOrder,
-        WindowClosingService closing)
-        : base(monitorService, nativeWrapper, hostGuard, targetPolicy, geometry, zOrder, closing)
+        WindowClosingService closing,
+        WindowBatchService batch)
+        : base(monitorService, nativeWrapper, hostGuard, targetPolicy, geometry, zOrder, closing, batch)
     {
     }
 
@@ -39,6 +40,7 @@ public sealed class WiredWindowService : WindowService
         var geometry = new WindowGeometryService(monitorService, nativeWrapper, targetPolicy, calls, stateChangeTimeout);
         var zOrder = new WindowZOrderService(nativeWrapper, targetPolicy, calls, topmostPins ?? new TopmostPins());
         var closing = new WindowClosingService(monitorService, nativeWrapper, hostGuard, targetPolicy, virtualDesktops);
-        return new WiredWindowService(monitorService, nativeWrapper, hostGuard, targetPolicy, geometry, zOrder, closing);
+        var batch = new WindowBatchService(geometry, closing);
+        return new WiredWindowService(monitorService, nativeWrapper, hostGuard, targetPolicy, geometry, zOrder, closing, batch);
     }
 }
