@@ -8981,11 +8981,11 @@ descriptions.
   guard, input session, paste guard, takeover monitor and others) are required rather than optional, so a server built
   without one fails instead of skipping the check; the server always had them, so nothing changes for a client.
 
-Next release (since 4.0.0):
+Release 4.1.0 (process names read one way everywhere, capture files deleted after a day, and an upper bound on captured images):
 
-These changes are on the main branch since 4.0.0. The markers mean what they mean for 3.1.0 above: **Changed:** where a
-call that worked with 4.0.0 can now be refused or return something else. Two parameter descriptions changed, the
-capture tools' `outputPath` and `maxDimension`, both at the same length, so the tools/list sizes are those of 4.0.0.
+The markers mean what they mean for 3.1.0 above: **Changed:** where a call that worked with 4.0.0 can now be refused or
+return something else. Two parameter descriptions changed, the capture tools' `outputPath` and `maxDimension`, both at
+the same length, so the tools/list sizes are those of 4.0.0.
 
 - **A process name is read one way everywhere.** The target policy read a process name ignoring case, spaces and quotes
   around it, a folder and one `.exe`, while the tools' arguments that name a process read it three other ways: a quoted

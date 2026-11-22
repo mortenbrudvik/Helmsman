@@ -153,7 +153,7 @@ files are elsewhere, the notes below say so.
     an old profile as one of the server's own.
   - Temporary folders: captures written to a file without `outputPath` go to `%TEMP%\Helmsman\captures`, and
     temporary debug-browser profiles to `%TEMP%\Helmsman\browser-debug`. Helmsman does not clean up the old `%TEMP%`
-    folder: delete it by hand once no old server runs. Since the release after 4.0.0, Helmsman deletes its own capture
+    folder: delete it by hand once no old server runs. From 4.1.0 on, Helmsman deletes its own capture
     files in `%TEMP%\Helmsman\captures` once they are 24 hours old (see [Screenshot](docs/TOOLS.md#screenshot)); pass
     `outputPath` to keep a capture.
 
@@ -212,7 +212,7 @@ so `serverInfo.version` shows a different commit SHA (`X.Y.Z+<tag commit>` for t
 
 #### Verify a download
 
-Releases after 4.0.0 also carry `SHA256SUMS.txt`, with the SHA-256 of the zip and of each file in it
+Releases from 4.1.0 on also carry `SHA256SUMS.txt`, with the SHA-256 of the zip and of each file in it
 (`helmsman.exe`, `helmsman.pdb`); the same lines are at the top of the release notes. Download it next to the zip,
 and run this in PowerShell in that folder, or in the folder you extracted the zip to after copying the file there:
 

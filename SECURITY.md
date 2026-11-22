@@ -96,6 +96,6 @@ welcome as ordinary issues.
 
 ## Release files
 
-Each GitHub release after 4.0.0 carries `SHA256SUMS.txt`, with the SHA-256 of the zip and of the files in it, and a
+Each GitHub release from 4.1.0 on carries `SHA256SUMS.txt`, with the SHA-256 of the zip and of the files in it, and a
 build provenance attestation of the zip and `helmsman.exe`; [Verify a download](README.md#verify-a-download) shows how
 to check them and what they do and do not prove. The exe is not code-signed, so Windows SmartScreen may warn about it.
