@@ -87,8 +87,8 @@ jobs:
             ForEach-Object { [pscustomobject]@{ Name = $_.Node.testName; Outcome = $_.Node.outcome } })
           $skipped = @($tests | Where-Object { $_.Outcome -eq 'NotExecuted' })
           $executed = $tests.Count - $skipped.Count
-          # testName is the namespace-qualified method. The assembly is Helmsman.E2ETests,
-          # which does not appear in the result, so the hyphenated name matches nothing.
+          # testName is the namespace-qualified method; the assembly is not in it. Every end-to-end
+          # test is in a namespace under Helmsman.E2ETests (its assembly's name too), so the prefix counts them.
           $e2eSkipped = @($skipped | Where-Object { $_.Name -like 'Helmsman.E2ETests.*' }).Count
           Write-Host "Desktop tests without the opt-ins: $($skipped.Count) skipped ($e2eSkipped end-to-end), $executed executed."
           if ($executed -gt 0 -or $skipped.Count -eq 0) {
