@@ -55,18 +55,43 @@ public sealed partial class SettingNamesArchitectureTests
     [Fact]
     public void SettingNames_HandsOutNoEnvironmentReader()
     {
-        // A public delegate over the process environment would let an options class read its HELMSMAN_ name with no
-        // fallback, and the check above would not see it: it finds only calls of Environment.GetEnvironmentVariable(s).
-        var readers = typeof(SettingNames).GetMembers(BindingFlags.Public | BindingFlags.Static)
+        // A public delegate over the process environment (a field, a property, or a method that returns one) would let an
+        // options class read its HELMSMAN_ name with no fallback, and the check above would not see it: it finds only calls
+        // of Environment.GetEnvironmentVariable(s).
+        PublicDelegateMembers(typeof(SettingNames)).Should().BeEmpty(
+            "a caller passes null to SettingNames.Read for the process environment");
+    }
+
+    [Fact]
+    public void TheDelegateCheck_FindsAPublicStaticField_Property_AndMethodThatReturnsADelegate()
+    {
+        // Guards the guard: each way a type could hand out a reader is seen, and a method returning a string is not
+        PublicDelegateMembers(typeof(DelegateSamples)).Should().BeEquivalentTo(
+            nameof(DelegateSamples.Field), nameof(DelegateSamples.Property), "get_" + nameof(DelegateSamples.Property),
+            nameof(DelegateSamples.Method));
+    }
+
+    /// <summary>The names of the public static fields, properties and methods of <paramref name="type"/> that are or return a delegate.</summary>
+    private static IEnumerable<string> PublicDelegateMembers(Type type) =>
+        type.GetMembers(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
             .Where(member => member switch
             {
                 PropertyInfo property => typeof(Delegate).IsAssignableFrom(property.PropertyType),
                 FieldInfo field => typeof(Delegate).IsAssignableFrom(field.FieldType),
+                MethodInfo method => typeof(Delegate).IsAssignableFrom(method.ReturnType),
                 _ => false
             })
             .Select(member => member.Name);
 
-        readers.Should().BeEmpty("a caller passes null to SettingNames.Read for the process environment");
+    private static class DelegateSamples
+    {
+        public static readonly Func<string, string?> Field = _ => null;
+
+        public static Func<string, string?> Property { get; } = _ => null;
+
+        public static Func<string, string?> Method() => _ => null;
+
+        public static string? NotADelegate(string name) => name;
     }
 
     [Fact]
