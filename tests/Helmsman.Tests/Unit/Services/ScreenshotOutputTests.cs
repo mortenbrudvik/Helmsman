@@ -82,6 +82,7 @@ public sealed class ScreenshotOutputTests : IDisposable
         Path.GetDirectoryName(path).Should().Be(CaptureFileWriter.DefaultCaptureFolder);
         Path.GetFileName(path).Should().MatchRegex(@"^screenshot_\d{8}_\d{6}_[0-9a-f]{32}\.png$",
             "the name is the local time of the write and a new GUID");
+        CaptureFileWriter.IsOwnFileName(Path.GetFileName(path)).Should().BeTrue("the capture file sweep deletes it once it is old");
         File.ReadAllBytes(path).Length.Should().Be((int)capture.Metadata.ByteSize!.Value);
     }
 
@@ -98,6 +99,7 @@ public sealed class ScreenshotOutputTests : IDisposable
         // Assert
         capture.Metadata.ImageFormat.Should().Be("jpeg");
         Path.GetFileName(capture.Metadata.FilePath).Should().MatchRegex(@"^screenshot_\d{8}_\d{6}_[0-9a-f]{32}\.jpg$");
+        CaptureFileWriter.IsOwnFileName(Path.GetFileName(capture.Metadata.FilePath)).Should().BeTrue();
     }
 
     [Fact]

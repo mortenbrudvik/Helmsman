@@ -1244,7 +1244,7 @@
             ]
           },
           "outputPath": {
-            "description": "Absolute path on a drive letter (no network or device paths) of the image file for output 'file' or 'both', ending in .png, .jpg or .jpeg to match the format. The folder must exist; it is not created. Default: a new file in %TEMP%\\Helmsman\\captures.",
+            "description": "Absolute path on a drive letter (no network or device paths) of the image file for output 'file' or 'both', ending in .png, .jpg or .jpeg to match the format. The folder must exist. Default: a new file in %TEMP%\\Helmsman\\captures, kept for 24 hours.",
             "type": [
               "string",
               "null"
@@ -1446,7 +1446,7 @@
             ]
           },
           "outputPath": {
-            "description": "Absolute path on a drive letter (no network or device paths) of the image file for output 'file' or 'both', ending in .png, .jpg or .jpeg to match the format. The folder must exist; it is not created. Default: a new file in %TEMP%\\Helmsman\\captures.",
+            "description": "Absolute path on a drive letter (no network or device paths) of the image file for output 'file' or 'both', ending in .png, .jpg or .jpeg to match the format. The folder must exist. Default: a new file in %TEMP%\\Helmsman\\captures, kept for 24 hours.",
             "type": [
               "string",
               "null"
@@ -1702,7 +1702,7 @@
             ]
           },
           "outputPath": {
-            "description": "Absolute path on a drive letter (no network or device paths) of the image file for output 'file' or 'both', ending in .png, .jpg or .jpeg to match the format. The folder must exist; it is not created. Default: a new file in %TEMP%\\Helmsman\\captures.",
+            "description": "Absolute path on a drive letter (no network or device paths) of the image file for output 'file' or 'both', ending in .png, .jpg or .jpeg to match the format. The folder must exist. Default: a new file in %TEMP%\\Helmsman\\captures, kept for 24 hours.",
             "type": [
               "string",
               "null"
@@ -8315,7 +8315,7 @@
             ]
           },
           "outputPath": {
-            "description": "Absolute path on a drive letter (no network or device paths) of the image file for output 'file' or 'both', ending in .png, .jpg or .jpeg to match the format. The folder must exist; it is not created. Default: a new file in %TEMP%\\Helmsman\\captures.",
+            "description": "Absolute path on a drive letter (no network or device paths) of the image file for output 'file' or 'both', ending in .png, .jpg or .jpeg to match the format. The folder must exist. Default: a new file in %TEMP%\\Helmsman\\captures, kept for 24 hours.",
             "type": [
               "string",
               "null"

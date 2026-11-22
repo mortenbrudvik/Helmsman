@@ -158,6 +158,12 @@ public static class ServiceRegistration
         // Windows.Graphics.Capture for window captures (roadmap M7.1): its Direct3D device is made with the first capture
         services.AddSingleton<IGraphicsCaptureWrapper, NativeGraphicsCaptureWrapper>();
         services.AddSingleton<IScreenshotService, ScreenshotService>();
+        // The captures written without outputPath go to %TEMP%\Helmsman\captures; the server's own files there are deleted
+        // once they are a day old, by a sweep a minute after the server starts and every hour, outside any tool call
+        services.AddSingleton<ICaptureFolderFileSystem, CaptureFolderFileSystem>();
+        services.AddSingleton(sp => CaptureFileSweep.ForDefaultFolder(
+            sp.GetRequiredService<ICaptureFolderFileSystem>(), sp.GetService<ILogger<CaptureFileSweep>>()));
+        services.AddHostedService<CaptureFileSweepStartup>();
         // wait_for_visual (roadmap M6.4): frames compared by their signatures, with the capture checks, the policy's mask
         // of region and monitor reads, and the caret left out; the session lock for its warning (issue #17)
         services.AddSingleton<IVisualChangeService>(sp => new VisualChangeService(

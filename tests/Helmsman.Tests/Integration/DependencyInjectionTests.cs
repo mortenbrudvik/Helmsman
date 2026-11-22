@@ -701,6 +701,17 @@ public class DependencyInjectionTests : IDisposable
     }
 
     [Fact]
+    public void TheCaptureFileSweep_SweepsOnlyTheDefaultCapturesFolder_FromAHostedServiceThatStartsWithTheServer()
+    {
+        // Resolving them touches no file and starts no timer; only the folders are read here
+        var sweep = _serviceProvider.GetRequiredService<CaptureFileSweep>();
+
+        sweep.Folder.Should().Be(CaptureFileWriter.DefaultCaptureFolder);
+        sweep.ServerTempRoot.Should().Be(Path.Combine(Path.GetTempPath(), LayoutStorageOptions.AppDataFolderName));
+        _serviceProvider.GetServices<Microsoft.Extensions.Hosting.IHostedService>().Should().ContainSingle(s => s is CaptureFileSweepStartup);
+    }
+
+    [Fact]
     public void AddHelmsmanTools_RegistersTheInputGateFilter()
     {
         // Window-changing tools must not run between an input call's guard check and its input
