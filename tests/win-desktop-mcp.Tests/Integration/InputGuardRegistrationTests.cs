@@ -57,6 +57,7 @@ public sealed class InputGuardRegistrationTests : IDisposable
 
         Field(_provider.GetRequiredService<IWindowService>(), "_targetPolicy").Should().BeSameAs(policy);
         Field(_provider.GetRequiredService<IProcessTermination>(), "_targetPolicy").Should().BeSameAs(policy);
+        Field(_provider.GetRequiredService<IProcessListing>(), "_targetPolicy").Should().BeSameAs(policy);
 
         // The capture tools and the raw pixel reads (roadmap M6) share one capture check over the same policy
         var capturePolicy = _provider.GetRequiredService<ICaptureTargetPolicy>();

@@ -99,10 +99,10 @@ public static class ServiceRegistration
         services.AddSingleton(_ => new DebugBrowserLocator());
         // Plans every launch before anything starts (the checks above), and previews runAsAdmin (roadmap M6.5)
         services.AddSingleton<ILaunchPlanner, LaunchPlanner>();
-        // list_processes and the reads of a process's name and path (roadmap M6.6), under the target policy
         // The launches (launch tools, apply_layout, restore_workspace, the debug browser's start): reuseExisting, the start or
         // activation and the window wait, each after the planner above
         services.AddSingleton<IApplicationLauncher, ApplicationLauncher>();
+        // list_processes and the reads of a process's name and path (roadmap M6.6), under the target policy
         services.AddSingleton<IProcessListing, ProcessListingService>();
         // kill_process: the protected processes, the target policy and the agent's host, for its process tree too
         services.AddSingleton<IProcessTermination, ProcessTerminationService>();
