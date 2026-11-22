@@ -81,6 +81,9 @@ public partial class OldProductNameTests
         // The upgrade notes tell 3.x users where their named debug-browser profiles stay, since they are not copied.
         new("README.md", @"stays in\s+`%LOCALAPPDATA%\\WindowsAppManagerMcp\\browser-profiles\\<name>`",
             "the upgrade notes: where 3.x kept named debug-browser profiles, which are not copied"),
+        // The upgrade notes tell 3.x users which temporary folder 4.0.0 does not clean up.
+        new("README.md", @"What 3\.x left in\s+`%TEMP%\\WindowsAppManagerMcp`",
+            "the upgrade notes: the 3.x temporary folder, left for the user to delete"),
 
         // /update-plugin sends someone who has only the 3.x plugin installed to the upgrade notes.
         new(".claude/commands/update-plugin.md", @"If only the 3\.x plugin, `windows-app-manager@windows-app-manager-marketplace`, is",
