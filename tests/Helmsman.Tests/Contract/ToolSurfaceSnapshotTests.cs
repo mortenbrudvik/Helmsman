@@ -151,7 +151,7 @@ public class ToolSurfaceSnapshotTests
             var capabilities = node!["capabilities"]!;
             capabilities["resources"].Should().NotBeNull("the server serves resources ({0})", revision);
             capabilities["prompts"].Should().NotBeNull("the server serves prompts ({0})", revision);
-            capabilities["completions"].Should().NotBeNull("layout names complete in wam://layouts/{{name}} ({0})", revision);
+            capabilities["completions"].Should().NotBeNull("layout names complete in helmsman://layouts/{{name}} ({0})", revision);
             ((bool?)capabilities["resources"]!["subscribe"]).Should().NotBe(true, "nothing sends resource updates ({0})", revision);
         }
     }

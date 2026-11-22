@@ -236,7 +236,8 @@ public class ToolPayloadBudgetTests
     /// The token budget of resources/list, resources/templates/list and prompts/list together (roadmap M6.9), outside tools/list:
     /// clients list them when they connect, but Claude Code shows them to the user (as @-mentions and slash commands) rather
     /// than loading them into the model's context. A ratchet like <see cref="ToolListTokenBudget"/>, just above the measured
-    /// size: 646 tokens for two resources, one template and four prompts (October 2026). A change that adds a resource or
+    /// size: 646 tokens for two resources, one template and four prompts (October 2026), 650 after the scheme became helmsman://
+    /// (release 4.0.0). A change that adds a resource or
     /// prompt, or lengthens their descriptions, raises it by what the failure message measures.
     /// </summary>
     public const int ResourcesAndPromptsListTokenBudget = 655;

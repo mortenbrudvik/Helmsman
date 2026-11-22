@@ -8,7 +8,7 @@ using Helmsman.Resources;
 namespace Helmsman.Tests.Contract;
 
 /// <summary>
-/// Contract: the wam:// resources (roadmap M6.9) over MCP, through the production registrations with the contract services.
+/// Contract: the helmsman:// resources (roadmap M6.9) over MCP, through the production registrations with the contract services.
 /// Each returns, as application/json, exactly the JSON of the tool it mirrors (get_monitors, find_windows with no filter,
 /// get_layout) on every revision a client may negotiate, written with the relaxed encoder; a layout name no preset has is
 /// the error the SDK sends for a URI no resource matches; a resource is served exactly while the tool it mirrors is.
@@ -29,7 +29,7 @@ public class ResourceContractTests
                  {
                      (DesktopResources.MonitorsUri, "get_monitors", null),
                      (DesktopResources.WindowsUri, "find_windows", null),
-                     ("wam://layouts/layout-1", "get_layout", new() { ["name"] = "layout-1" }),
+                     ("helmsman://layouts/layout-1", "get_layout", new() { ["name"] = "layout-1" }),
                  })
         {
             // Act
@@ -85,7 +85,7 @@ public class ResourceContractTests
         await using var server = await StartAsync(services);
 
         // Act
-        var content = await ReadTextAsync(server, "wam://layouts/" + Uri.EscapeDataString(name));
+        var content = await ReadTextAsync(server, "helmsman://layouts/" + Uri.EscapeDataString(name));
 
         // Assert
         content.Text.Should().Contain($"\"name\":\"{name}\"");
@@ -102,13 +102,45 @@ public class ResourceContractTests
         await using var server = await StartAsync(services, revision: revision);
 
         // Act
-        var missingPreset = await ReadErrorAsync(server, "wam://layouts/nope");
-        var missingResource = await ReadErrorAsync(server, "wam://nothing-here");
+        var missingPreset = await ReadErrorAsync(server, "helmsman://layouts/nope");
+        var missingResource = await ReadErrorAsync(server, "helmsman://nothing-here");
 
         // Assert
         missingPreset.ErrorCode.Should().Be(missingResource.ErrorCode, "a client tells both apart from a failed read the same way ({0})", revision);
         missingPreset.ErrorCode.Should().Be(revision == null ? McpErrorCode.InvalidParams : McpErrorCode.ResourceNotFound);
         missingPreset.Message.Should().Contain("Layout preset 'nope' was not found. Call list_layouts to see the available presets.");
+    }
+
+    [Theory]
+    [MemberData(nameof(Revisions))]
+    public async Task AUriOfTheSchemeBefore4_0_0_IsAnUnknownResource_NotAFailedRead(string? revision)
+    {
+        // Arrange - 3.x served these as wam://...; 4.0.0 serves helmsman://... only, with no fallback
+        using var services = new ContractServices(ContractMode.Typical);
+        await using var server = await StartAsync(services, revision: revision);
+        var unknown = await ReadErrorAsync(server, "helmsman://nothing-here");
+
+        foreach (var oldUri in new[] { "wam://monitors", "wam://windows", "wam://layouts/layout-1" })
+        {
+            // Act
+            var error = await ReadErrorAsync(server, oldUri);
+
+            // Assert - the error of a URI no resource matches, and nothing was read
+            error.ErrorCode.Should().Be(unknown.ErrorCode, "{0} is a URI no resource matches", oldUri);
+            error.ErrorCode.Should().Be(revision == null ? McpErrorCode.InvalidParams : McpErrorCode.ResourceNotFound);
+            error.Message.Should().Contain("Unknown resource URI");
+        }
+
+        services.Monitors.Verify(m => m.GetAllMonitors(), Times.Never());
+        services.Layouts.Verify(l => l.GetPreset(It.IsAny<string>()), Times.Never());
+        var lines = server.Logs.Entries.Where(e => e.Category == ToolErrorReporting.CallLoggerCategory).Select(e => e.Message).ToList();
+        lines.Should().NotContain(line => line.Contains("unhandled"));
+        // The SDK logs each URI no resource matches as it always has; nothing else failed
+        server.Logs.Entries.Where(e => e.Level >= LogLevel.Error).Should().OnlyContain(e =>
+            e.Exception is McpProtocolException && e.Exception.Message.StartsWith("Unknown resource URI"));
+
+        // The server goes on serving its resources under the new scheme
+        (await ReadTextAsync(server, DesktopResources.MonitorsUri)).Uri.Should().Be("helmsman://monitors");
     }
 
     [Fact]
@@ -118,7 +150,7 @@ public class ResourceContractTests
         services.Layouts.Setup(l => l.GetStorageError()).Returns("The layouts folder cannot be written");
         await using var server = await StartAsync(services);
 
-        var error = await ReadErrorAsync(server, "wam://layouts/layout-1");
+        var error = await ReadErrorAsync(server, "helmsman://layouts/layout-1");
 
         error.Message.Should().Contain("The layouts folder cannot be written");
     }
@@ -138,8 +170,8 @@ public class ResourceContractTests
         // Assert
         error.Message.Should().Contain("InvalidOperationException: No monitors found");
         var lines = server.Logs.Entries.Where(e => e.Category == ToolErrorReporting.CallLoggerCategory).Select(e => e.Message).ToList();
-        lines.Should().Contain(line => line.StartsWith("Resource read 'wam://monitors'") && line.Contains("unhandled System.InvalidOperationException"));
-        lines.Should().Contain(line => line.StartsWith("Resource read 'wam://windows'") && line.EndsWith(": ok"));
+        lines.Should().Contain(line => line.StartsWith("Resource read 'helmsman://monitors'") && line.Contains("unhandled System.InvalidOperationException"));
+        lines.Should().Contain(line => line.StartsWith("Resource read 'helmsman://windows'") && line.EndsWith(": ok"));
         server.Logs.Entries.Should().Contain(e => e.Level == LogLevel.Error && e.Exception is InvalidOperationException);
     }
 
@@ -156,9 +188,9 @@ public class ResourceContractTests
 
         // Assert
         // The SDK answers a rethrown cancellation it did not ask for with its generic error; the filter adds no failure of its own
-        error.Message.Should().NotContain("Resource read 'wam://monitors' failed").And.NotContain(nameof(OperationCanceledException));
+        error.Message.Should().NotContain("Resource read 'helmsman://monitors' failed").And.NotContain(nameof(OperationCanceledException));
         var lines = server.Logs.Entries.Where(e => e.Category == ToolErrorReporting.CallLoggerCategory).Select(e => e.Message).ToList();
-        lines.Should().Contain(line => line.StartsWith("Resource read 'wam://monitors'") && line.EndsWith(": cancelled"));
+        lines.Should().Contain(line => line.StartsWith("Resource read 'helmsman://monitors'") && line.EndsWith(": cancelled"));
         lines.Should().NotContain(line => line.Contains("unhandled"));
         server.Logs.Entries.Should().NotContain(e => e.Level >= LogLevel.Error && e.Category == ToolErrorReporting.CallLoggerCategory);
     }
@@ -169,14 +201,14 @@ public class ResourceContractTests
         // Arrange - the URI is the client's text: a line break in it must not start a forged call-log line
         using var services = new ContractServices(ContractMode.Typical);
         await using var server = await StartAsync(services);
-        const string forged = "Resource read 'wam://monitors' (request 7) finished in 1 ms: ok";
+        const string forged = "Resource read 'helmsman://monitors' (request 7) finished in 1 ms: ok";
 
         // Act
-        await ReadErrorAsync(server, "wam://nothing\r\n" + forged + "\n" + forged + "\r" + forged);
+        await ReadErrorAsync(server, "helmsman://nothing\r\n" + forged + "\n" + forged + "\r" + forged);
 
         // Assert
         var lines = server.Logs.Entries.Where(e => e.Category == ToolErrorReporting.CallLoggerCategory).Select(e => e.Message).ToList();
-        lines.Should().ContainSingle(line => line.StartsWith("Resource read 'wam://nothing " + forged + " " + forged + " " + forged + "'"));
+        lines.Should().ContainSingle(line => line.StartsWith("Resource read 'helmsman://nothing " + forged + " " + forged + " " + forged + "'"));
         lines.Should().NotContain(line => line.Contains('\r') || line.Contains('\n'));
     }
 
@@ -190,7 +222,7 @@ public class ResourceContractTests
         // Act
         var layouts = await CompleteAsync(server, DesktopResources.LayoutUriTemplate, "LAYOUT-");
         var none = await CompleteAsync(server, DesktopResources.LayoutUriTemplate, "work");
-        var otherTemplate = await CompleteAsync(server, "wam://other/{name}", "layout");
+        var otherTemplate = await CompleteAsync(server, "helmsman://other/{name}", "layout");
 
         // Assert
         layouts.Values.Should().Equal(TypicalDesktop.Layouts.Select(l => l.Name));
@@ -225,7 +257,7 @@ public class ResourceContractTests
             // A resource that is not served is a URI no resource matches, not a failed read: the code of an unknown URI on
             // the client's default revision (2026-07-28), even when no resource at all is served
             (await ReadErrorAsync(server, DesktopResources.MonitorsUri)).ErrorCode.Should().Be(McpErrorCode.InvalidParams);
-            (await ReadErrorAsync(server, "wam://nothing-here")).ErrorCode.Should().Be(McpErrorCode.InvalidParams);
+            (await ReadErrorAsync(server, "helmsman://nothing-here")).ErrorCode.Should().Be(McpErrorCode.InvalidParams);
         }
 
         if (!expected.Contains(DesktopResources.LayoutUriTemplate))

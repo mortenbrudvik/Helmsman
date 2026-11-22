@@ -28,7 +28,7 @@ public class MonitorInfoTools
     public MonitorsResult GetMonitors() => ReadMonitors(_monitorService, _screen);
 
     /// <summary>
-    /// get_monitors' result, which the wam://monitors resource returns too (roadmap M6.9), so a change to one changes both.
+    /// get_monitors' result, which the helmsman://monitors resource returns too (roadmap M6.9), so a change to one changes both.
     /// </summary>
     internal static MonitorsResult ReadMonitors(IMonitorService monitorService, IScreenCaptureWrapper screen)
     {
@@ -45,7 +45,7 @@ public class MonitorInfoTools
     }
 
     /// <summary>
-    /// A monitor as get_monitors and the wam://monitors resource return it, with its identity and DPI
+    /// A monitor as get_monitors and the helmsman://monitors resource return it, with its identity and DPI
     /// (roadmap M6.7) and, given the <paramref name="primary"/>, where it is from it. A DPI Windows could not report is left
     /// out, with the scale factor derived from it, rather than reported as 100%.
     /// </summary>

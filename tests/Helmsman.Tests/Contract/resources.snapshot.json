@@ -4,14 +4,14 @@
     {
       "name": "monitors",
       "title": "Monitors",
-      "uri": "wam://monitors",
+      "uri": "helmsman://monitors",
       "description": "The monitors as get_monitors returns them: bounds, work areas, scale factors, the primary monitor and the virtual screen.",
       "mimeType": "application/json"
     },
     {
       "name": "windows",
       "title": "Windows",
-      "uri": "wam://windows",
+      "uri": "helmsman://windows",
       "description": "The user-facing app windows, front to back, as find_windows with no filter returns them: handle, title, process, class, bounds, visible frame and state.",
       "mimeType": "application/json"
     }
@@ -20,7 +20,7 @@
     {
       "name": "layout",
       "title": "Layout preset",
-      "uriTemplate": "wam://layouts/{name}",
+      "uriTemplate": "helmsman://layouts/{name}",
       "description": "A saved layout preset as get_layout returns it: each placement's window, monitor and position. A name no preset has is an error.",
       "mimeType": "application/json"
     }

@@ -23,14 +23,14 @@ public sealed record ServedResource(string UriTemplate, string Mirrors);
 public sealed record ServedPrompt(string Name, IReadOnlyList<string> Needs);
 
 /// <summary>
-/// The server's MCP resources and prompts (roadmap M6.9, owner decision D16): three read-only wam:// resources that return
+/// The server's MCP resources and prompts (roadmap M6.9, owner decision D16): three read-only helmsman:// resources that return
 /// what get_monitors, find_windows and get_layout return, and four prompts that write out the locate, act, verify loop of
 /// the plugin skill for clients without it. Tools stay the primary API: nothing here acts, and tools/list is unchanged.
 /// </summary>
 /// <remarks>
 /// <para>They follow the user's toolsets through the tools they rest on, not through toolsets of their own: a resource is
 /// served exactly while the tool it mirrors is, and a prompt only while every tool it needs is (<see cref="Prompts"/>), so
-/// WAM_TOOLSETS, WAM_EXCLUDE_TOOLS and WAM_READ_ONLY hide them as they hide those tools. A prompt also leaves out each step
+/// HELMSMAN_TOOLSETS, HELMSMAN_EXCLUDE_TOOLS and HELMSMAN_READ_ONLY hide them as they hide those tools. A prompt also leaves out each step
 /// whose tool is not served (<see cref="WorkflowPrompts"/>).</para>
 /// <para>resources/read and prompts/get pass none of the call-tool filters (audit, error reporting, undeclared arguments,
 /// input gate). They only read, as get_monitors and get_layout do, which are not audited either; this class logs each
@@ -39,7 +39,7 @@ public sealed record ServedPrompt(string Name, IReadOnlyList<string> Needs);
 public static class ResourcesAndPrompts
 {
     /// <summary>The URI scheme of every resource of the server.</summary>
-    public const string Scheme = "wam";
+    public const string Scheme = "helmsman";
 
     /// <summary>The resources, in the order the docs list them.</summary>
     public static IReadOnlyList<ServedResource> Resources { get; } =
@@ -62,7 +62,7 @@ public static class ResourcesAndPrompts
     ];
 
     /// <summary>
-    /// Registers the resources, the prompts, the completion of layout names in wam://layouts/{name}, and the filter that logs
+    /// Registers the resources, the prompts, the completion of layout names in helmsman://layouts/{name}, and the filter that logs
     /// each resource read and prompt request. <see cref="Toolsets.WithToolsets"/> later removes those whose tools are not served.
     /// </summary>
     public static IMcpServerBuilder AddHelmsmanResourcesAndPrompts(this IMcpServerBuilder builder)
@@ -116,7 +116,7 @@ public static class ResourcesAndPrompts
     }
 
     /// <summary>
-    /// completion/complete: the layout names that start with what the user typed, for the name of wam://layouts/{name} while
+    /// completion/complete: the layout names that start with what the user typed, for the name of helmsman://layouts/{name} while
     /// that resource is served; nothing for anything else (the prompts' arguments are free text).
     /// </summary>
     private static ValueTask<CompleteResult> CompleteAsync(RequestContext<CompleteRequestParams> request, CancellationToken cancellationToken)

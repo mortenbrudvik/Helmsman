@@ -108,7 +108,7 @@ public class ServerInfoToolContractTests
         var toolsets = Json(await all.CallToolAsync("get_server_info")).GetProperty("toolsets");
         var readOnlyToolsets = Json(await reading.CallToolAsync("get_server_info")).GetProperty("toolsets");
 
-        Names(toolsets, "resources").Should().Equal("wam://layouts/{name}", "wam://monitors", "wam://windows");
+        Names(toolsets, "resources").Should().Equal("helmsman://layouts/{name}", "helmsman://monitors", "helmsman://windows");
         Names(toolsets, "prompts").Should().Equal("arrange_workspace", "automate_app", "diagnose_click", "fill_form");
         Names(readOnlyToolsets, "prompts").Should().Equal("diagnose_click");
     }
