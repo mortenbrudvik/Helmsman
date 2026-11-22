@@ -26,7 +26,7 @@ public sealed record StepRunOutcome(RunStepsResult Result, IReadOnlyList<ImageCo
 /// <remarks>
 /// <para><b>Before the run</b> (<see cref="Check"/>), every step is checked and the whole run refused with InvalidArguments
 /// when one is wrong, so nothing was done: 1 to <see cref="MaxSteps"/> steps; unique ids; a tool named, and one the server
-/// serves (the toolsets, WAM_EXCLUDE_TOOLS and read-only mode apply to steps as to direct calls); arguments the tool
+/// serves (the toolsets, HELMSMAN_EXCLUDE_TOOLS and read-only mode apply to steps as to direct calls); arguments the tool
 /// declares, by their exact names as the SDK binds them; handles that are whole numbers (<see cref="HandleArguments"/>);
 /// at most <see cref="MaxTextLength"/> characters in all the steps' strings together; references that name an earlier
 /// step and an identifier (<see cref="ReferencePrefix"/>); and none of the arguments a step may not use: allowHostTarget,
@@ -55,7 +55,7 @@ public sealed record StepRunOutcome(RunStepsResult Result, IReadOnlyList<ImageCo
 /// stops it (OperationTimedOut; a wait step's timeoutMs, its tool's default when the step gives none, is cut to what is
 /// left, and a step still running then is
 /// cancelled), and once the run's window (or its dialog) has been in front, a window outside it in front stops it
-/// (TargetNotForeground): the user took the foreground, and the run does not take it back. With WAM_TAKEOVER_DETECTION=stop,
+/// (TargetNotForeground): the user took the foreground, and the run does not take it back. With HELMSMAN_TAKEOVER_DETECTION=stop,
 /// the user's keyboard or mouse input since the run held the gate stops it too (UserInterrupted, roadmap M7.4), as does a
 /// step that stopped for it; with warn the run goes on and its result has a warning. A failed step stops the run, unless it
 /// is optional; the steps after it are skipped. A step is never undone.</para>
@@ -143,7 +143,7 @@ public sealed partial class StepRunner
     private readonly INativeKeyboardLayoutWrapper? _keyboardLayout;
 
     /// <param name="keyGuard">
-    /// The server's destructive chords (WAM_DESTRUCTIVE_CHORDS): a step's keys may contain none of them, nor any of the
+    /// The server's destructive chords (HELMSMAN_DESTRUCTIVE_CHORDS): a step's keys may contain none of them, nor any of the
     /// default ones, whatever the variable says.
     /// </param>
     /// <param name="takeover">Takeover detection (roadmap M7.4), which watches the run unless its mode is off.</param>
@@ -200,8 +200,8 @@ public sealed partial class StepRunner
 
             if (dispatcher.InputSchemaOf(tool) is not { } schema)
             {
-                throw Invalid($"{label}: the server does not serve {tool} (its toolset is off, WAM_EXCLUDE_TOOLS names it, or " +
-                              "WAM_READ_ONLY is on); get_server_info says which tools are served. A step can call only a tool the " +
+                throw Invalid($"{label}: the server does not serve {tool} (its toolset is off, HELMSMAN_EXCLUDE_TOOLS names it, or " +
+                              "HELMSMAN_READ_ONLY is on); get_server_info says which tools are served. A step can call only a tool the " +
                               "server serves.");
             }
 
@@ -1208,7 +1208,7 @@ public sealed partial class StepRunner
 
     private static string UserInterrupted(CheckedStep step, bool during) =>
         $"The user used the keyboard or mouse {(during ? "during" : "before")} {Label(step, capital: false)}, so takeover " +
-        "detection (WAM_TAKEOVER_DETECTION=stop) stopped the run and the steps after it were skipped; the steps before it ran " +
+        "detection (HELMSMAN_TAKEOVER_DETECTION=stop) stopped the run and the steps after it were skipped; the steps before it ran " +
         "and are not undone. Do not try again at once: the user is using the computer. Ask the user before you go on.";
 
     private static string TimedOut(CheckedStep step, TimeSpan maxDuration, bool during) =>

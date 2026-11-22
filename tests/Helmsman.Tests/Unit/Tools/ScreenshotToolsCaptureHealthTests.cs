@@ -251,7 +251,7 @@ public class ScreenshotToolsCaptureHealthTests
         Minimized();
         var prompt = new nint(0x6100);
         _screenshots.Setup(s => s.WindowsShownByRestore(Window)).Returns([Window, prompt]);
-        _windows.Setup(w => w.EvaluateTargetPolicy(prompt)).Returns(TargetPolicyVerdict.Deny("keepass", "denied by WAM_DENY_PROCESSES"));
+        _windows.Setup(w => w.EvaluateTargetPolicy(prompt)).Returns(TargetPolicyVerdict.Deny("keepass", "denied by HELMSMAN_DENY_PROCESSES"));
 
         // Act
         var result = await CreateSut().CaptureWindow(handle: (long)Window, restoreIfMinimized: true);

@@ -3,9 +3,9 @@ using ModelContextProtocol.Server;
 
 namespace Helmsman.Infrastructure;
 
-/// <summary>A named group of tools that the user turns on or off with WAM_TOOLSETS (roadmap M2.14).</summary>
-/// <param name="Name">The name WAM_TOOLSETS uses, lower case.</param>
-/// <param name="OnByDefault">True when the toolset is served without WAM_TOOLSETS (it is part of "default").</param>
+/// <summary>A named group of tools that the user turns on or off with HELMSMAN_TOOLSETS (roadmap M2.14).</summary>
+/// <param name="Name">The name HELMSMAN_TOOLSETS uses, lower case.</param>
+/// <param name="OnByDefault">True when the toolset is served without HELMSMAN_TOOLSETS (it is part of "default").</param>
 /// <param name="Description">What the toolset's tools do, for the docs and the log.</param>
 /// <param name="Tools">The tools, by name.</param>
 public sealed record Toolset(string Name, bool OnByDefault, string Description, IReadOnlyList<string> Tools);
@@ -25,7 +25,7 @@ public sealed record MovedTool(string Tool, string FormerToolset, string? Replac
 /// <summary>
 /// The toolsets of a server: every tool belongs to at most one, and one toolset is always on (it reports the server's
 /// state and the user's control over it, which an agent needs whatever else is turned off). One tool of it can be
-/// always served: the tool that tells the agent which tools are off and why, which WAM_EXCLUDE_TOOLS cannot drop.
+/// always served: the tool that tells the agent which tools are off and why, which HELMSMAN_EXCLUDE_TOOLS cannot drop.
 /// </summary>
 public sealed class ToolsetCatalog
 {
@@ -106,7 +106,7 @@ public sealed class ToolsetCatalog
 
     /// <summary>
     /// The names of the tools and toolsets a major release removed (3.0.0: the nine tools 2.2.0 replaced and their
-    /// deprecated toolset). WAM_TOOLSETS and WAM_EXCLUDE_TOOLS read them as known names that serve nothing, so a value written
+    /// deprecated toolset). HELMSMAN_TOOLSETS and HELMSMAN_EXCLUDE_TOOLS read them as known names that serve nothing, so a value written
     /// for an older release does not make the server fail closed.
     /// </summary>
     public IReadOnlyList<string> RetiredNames { get; }
@@ -123,11 +123,11 @@ public sealed class ToolsetCatalog
     /// <summary>The toolsets, in the order the docs and get_server_info list them.</summary>
     public IReadOnlyList<Toolset> Toolsets { get; }
 
-    /// <summary>The toolset that is always served; WAM_TOOLSETS cannot turn it off (WAM_EXCLUDE_TOOLS can drop its tools).</summary>
+    /// <summary>The toolset that is always served; HELMSMAN_TOOLSETS cannot turn it off (HELMSMAN_EXCLUDE_TOOLS can drop its tools).</summary>
     public string AlwaysOn { get; }
 
     /// <summary>
-    /// The tool that is served whatever the variables say (WAM_EXCLUDE_TOOLS ignores it with a warning), or null. It must
+    /// The tool that is served whatever the variables say (HELMSMAN_EXCLUDE_TOOLS ignores it with a warning), or null. It must
     /// be a read-only tool of the always-on toolset.
     /// </summary>
     public string? AlwaysServedTool { get; }
@@ -153,7 +153,7 @@ public sealed class ToolsetCatalog
 /// variables read their names as retired ones. Of the tools M6 adds, the niche or heavy ones come in toolsets that are off
 /// by default (ocr, visual,
 /// windows-batch), and the small everyday steps (list_installed_apps, set_window_zorder, run_steps) join toolsets that are on
-/// (owner decision D2, October 2026): run_steps in a toolset of its own, steps (roadmap M6.2), so WAM_TOOLSETS=-steps drops
+/// (owner decision D2, October 2026): run_steps in a toolset of its own, steps (roadmap M6.2), so HELMSMAN_TOOLSETS=-steps drops
 /// it alone.
 /// </summary>
 public static class Toolsets
@@ -250,7 +250,7 @@ public static class Toolsets
         // It reports the toolsets in force and why a tool is missing, and the server instructions send the agent to it
         alwaysServedTool: "get_server_info",
         // Roadmap M6.1: each is served only while the toolset it came from is on too, so no configuration ('all' included)
-        // serves a tool it did not serve before 2.2.0, and WAM_EXCLUDE_TOOLS=windows still excludes it; get_server_info says
+        // serves a tool it did not serve before 2.2.0, and HELMSMAN_EXCLUDE_TOOLS=windows still excludes it; get_server_info says
         // where each went while it is off
         moved:
         [

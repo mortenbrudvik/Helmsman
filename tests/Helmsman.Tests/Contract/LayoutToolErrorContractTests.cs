@@ -46,7 +46,7 @@ public class LayoutToolErrorContractTests
     {
         // Arrange
         _layoutService.Setup(l => l.GetStorageError())
-            .Returns(@"The layouts folder 'C:\Locked\layouts' cannot be written. Set WAM_LAYOUTS_PATH to a writable folder.");
+            .Returns(@"The layouts folder 'C:\Locked\layouts' cannot be written. Set HELMSMAN_LAYOUTS_PATH to a writable folder.");
         await using var server = await StartServerAsync();
 
         // Act
@@ -56,7 +56,7 @@ public class LayoutToolErrorContractTests
         result.IsError.Should().BeTrue();
         var payload = ParsePayload(result);
         payload.GetProperty("errorCode").GetString().Should().Be(nameof(LayoutErrorCode.StorageUnavailable));
-        payload.GetProperty("error").GetString().Should().Contain(@"C:\Locked\layouts").And.Contain("WAM_LAYOUTS_PATH");
+        payload.GetProperty("error").GetString().Should().Contain(@"C:\Locked\layouts").And.Contain("HELMSMAN_LAYOUTS_PATH");
     }
 
     [Fact]

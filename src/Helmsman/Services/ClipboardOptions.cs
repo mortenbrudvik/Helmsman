@@ -1,3 +1,5 @@
+using Helmsman.Models;
+
 namespace Helmsman.Services;
 
 /// <summary>
@@ -12,7 +14,7 @@ namespace Helmsman.Services;
 public sealed record ClipboardOptions(bool AllowUserClipboard, string? Warning = null)
 {
     /// <summary>The environment variable.</summary>
-    public const string EnvironmentVariable = "WAM_ALLOW_USER_CLIPBOARD";
+    public const string EnvironmentVariable = SettingNames.AllowUserClipboard;
 
     private static readonly string[] OnValues = ["1", "true", "yes", "on"];
     private static readonly string[] OffValues = ["0", "false", "no", "off"];
@@ -26,7 +28,7 @@ public sealed record ClipboardOptions(bool AllowUserClipboard, string? Warning =
     /// </summary>
     public static ClipboardOptions FromEnvironment(Func<string, string?>? readVariable = null)
     {
-        var value = (readVariable ?? Environment.GetEnvironmentVariable)(EnvironmentVariable)?.Trim();
+        var value = SettingNames.Read(readVariable, EnvironmentVariable)?.Trim();
         if (string.IsNullOrEmpty(value) || OffValues.Contains(value, StringComparer.OrdinalIgnoreCase))
         {
             return Default;

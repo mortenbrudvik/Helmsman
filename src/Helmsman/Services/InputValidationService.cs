@@ -38,7 +38,7 @@ public partial class InputValidationService : IInputValidationService
     private readonly ProtocolAllowlist _protocols;
 
     /// <param name="protocols">
-    /// The URI schemes that are handed to their app; default the built-in ones plus WAM_ALLOWED_PROTOCOLS
+    /// The URI schemes that are handed to their app; default the built-in ones plus HELMSMAN_ALLOWED_PROTOCOLS
     /// (<see cref="ProtocolAllowlist.FromEnvironment"/>).
     /// </param>
     /// <param name="logger">Logs the schemes the user added, and as a warning the entries that were ignored, once.</param>

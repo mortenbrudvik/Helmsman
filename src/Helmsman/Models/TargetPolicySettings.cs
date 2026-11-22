@@ -32,13 +32,13 @@ public sealed record TargetPolicySettings(
     /// entry "default" puts the default list back in, and "none" alone turns the deny list off. Names may
     /// include a path or ".exe". The server logs the list in force when it starts.
     /// </summary>
-    public const string DenyVariable = "WAM_DENY_PROCESSES";
+    public const string DenyVariable = SettingNames.DenyProcesses;
 
     /// <summary>
     /// Environment variable with the only image names the agent may act on, separated by commas or
     /// semicolons. Unset: every process that is not denied.
     /// </summary>
-    public const string AllowVariable = "WAM_ALLOW_PROCESSES";
+    public const string AllowVariable = SettingNames.AllowProcesses;
 
     /// <summary>The value of <see cref="DenyListSource"/> when the default list applies.</summary>
     public const string DefaultSource = "default";
@@ -78,7 +78,7 @@ public sealed record TargetPolicySettings(
     public static TargetPolicySettings Default { get; } = new(DefaultDeniedProcesses, null, DefaultSource);
 
     /// <summary>Reads the policy from the server's environment.</summary>
-    public static TargetPolicySettings FromEnvironment() => FromEnvironment(Environment.GetEnvironmentVariable);
+    public static TargetPolicySettings FromEnvironment() => FromEnvironment(SettingNames.ProcessEnvironment);
 
     /// <summary>
     /// Reads the policy from <paramref name="readVariable"/>. An unset or empty variable keeps the default.
@@ -87,7 +87,7 @@ public sealed record TargetPolicySettings(
     {
         ArgumentNullException.ThrowIfNull(readVariable);
 
-        var denyTokens = Tokens(readVariable(DenyVariable));
+        var denyTokens = Tokens(SettingNames.Read(readVariable, DenyVariable));
         IReadOnlyList<string> denied;
         string source;
         if (denyTokens.Count == 0)
@@ -107,7 +107,7 @@ public sealed record TargetPolicySettings(
             source = DenyVariable;
         }
 
-        var allowTokens = Tokens(readVariable(AllowVariable));
+        var allowTokens = Tokens(SettingNames.Read(readVariable, AllowVariable));
         var allowed = allowTokens.Count == 0 ? null : Distinct(allowTokens);
 
         return new TargetPolicySettings(denied, allowed, source);

@@ -1,3 +1,5 @@
+using Helmsman.Models;
+
 namespace Helmsman.Services;
 
 /// <summary>
@@ -14,7 +16,7 @@ public sealed record AuditLogOptions(string Folder, TimeSpan Retention)
     /// Environment variable that overrides the audit folder. It should be an absolute path; environment variables
     /// inside it (e.g. <c>%USERPROFILE%</c>) are expanded. Tests point it, or <see cref="ForFolder"/>, at a temporary folder.
     /// </summary>
-    public const string FolderEnvironmentVariable = "WAM_AUDIT_PATH";
+    public const string FolderEnvironmentVariable = SettingNames.AuditPath;
 
     /// <summary>The audit folder's name under %LOCALAPPDATA%\Helmsman.</summary>
     public const string FolderName = "audit";
@@ -29,8 +31,8 @@ public sealed record AuditLogOptions(string Folder, TimeSpan Retention)
     /// Options for the running server: the folder from <see cref="FolderEnvironmentVariable"/> or
     /// <c>%LOCALAPPDATA%\Helmsman\audit</c>. Reading them touches no file.
     /// </summary>
-    public static AuditLogOptions FromEnvironment() => ForFolder(ResolveFolder(
-        Environment.GetEnvironmentVariable(FolderEnvironmentVariable),
+    public static AuditLogOptions FromEnvironment(Func<string, string?>? readVariable = null) => ForFolder(ResolveFolder(
+        SettingNames.Read(readVariable, FolderEnvironmentVariable),
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)));
 
     /// <summary>

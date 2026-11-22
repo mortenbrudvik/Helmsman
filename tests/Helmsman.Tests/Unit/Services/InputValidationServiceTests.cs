@@ -11,7 +11,7 @@ public class InputValidationServiceTests
 
     public InputValidationServiceTests()
     {
-        // The built-in protocols only, whatever WAM_ALLOWED_PROTOCOLS the test run has
+        // The built-in protocols only, whatever HELMSMAN_ALLOWED_PROTOCOLS the test run has
         _sut = new InputValidationService(ProtocolAllowlist.BuiltIn);
     }
 
@@ -144,7 +144,7 @@ public class InputValidationServiceTests
 
     #endregion
 
-    #region ValidateExecutable - Settings pages, Store apps and WAM_ALLOWED_PROTOCOLS (roadmap M2.7)
+    #region ValidateExecutable - Settings pages, Store apps and HELMSMAN_ALLOWED_PROTOCOLS (roadmap M2.7)
 
     [Theory]
     [InlineData("ms-settings:")]

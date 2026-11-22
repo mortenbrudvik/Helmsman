@@ -333,7 +333,7 @@ public class InputTargetGuardTests
     [Fact]
     public void Keyboard_ConfiguredChordList_IsUsed()
     {
-        // Arrange - WAM_DESTRUCTIVE_CHORDS="^{F4}"
+        // Arrange - HELMSMAN_DESTRUCTIVE_CHORDS="^{F4}"
         _inFront = Notepad;
         var options = InputGuardOptions.FromEnvironment(name => name == InputGuardOptions.DestructiveChordsVariable ? "^{F4}" : null);
         var sut = CreateSut(options);
@@ -599,7 +599,7 @@ public class InputTargetGuardTests
     [Fact]
     public void Policy_AllowList_RefusesEveryOtherWindow()
     {
-        // Arrange - WAM_ALLOW_PROCESSES=notepad
+        // Arrange - HELMSMAN_ALLOW_PROCESSES=notepad
         _policy = TargetPolicySettings.FromEnvironment(name => name == TargetPolicySettings.AllowVariable ? "notepad" : null);
         var sut = CreateSut();
 
@@ -2123,7 +2123,7 @@ public class InputTargetGuardTests
     [Fact]
     public void Keyboard_WinR_IsRefusedEvenWhenTheDestructiveChordRuleIsOff()
     {
-        // WAM_DESTRUCTIVE_CHORDS=none turns off the chords that need a target; Win+R and Win+X are not among them
+        // HELMSMAN_DESTRUCTIVE_CHORDS=none turns off the chords that need a target; Win+R and Win+X are not among them
         var options = InputGuardOptions.FromEnvironment(name => name == InputGuardOptions.DestructiveChordsVariable ? "none" : null);
         _inFront = Notepad;
 

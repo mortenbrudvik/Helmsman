@@ -112,12 +112,12 @@ public sealed class DesktopStateService : IDesktopStateService
     public string? ScreenshotUnavailable() => _captureServed
         ? null
         : "A screenshot needs capture_window, which this server does not serve: the user turned captures off (the capture " +
-          "toolset, WAM_EXCLUDE_TOOLS or read-only mode). Leave the screenshot out; the rest of the observation does not need it.";
+          "toolset, HELMSMAN_EXCLUDE_TOOLS or read-only mode). Leave the screenshot out; the rest of the observation does not need it.";
 
     public string? StateUnavailable() => _stateServed
         ? null
         : "observe returns get_desktop_state's observation, and this server does not serve get_desktop_state: the user turned " +
-          "it off (the elements toolset or WAM_EXCLUDE_TOOLS). Leave observe out.";
+          "it off (the elements toolset or HELMSMAN_EXCLUDE_TOOLS). Leave observe out.";
 
     public async Task<DesktopStateSnapshot> GetStateAsync(DesktopStateRequest request, CancellationToken cancellationToken)
     {

@@ -1,3 +1,5 @@
+using Helmsman.Models;
+
 namespace Helmsman.Infrastructure;
 
 /// <summary>
@@ -30,9 +32,9 @@ namespace Helmsman.Infrastructure;
 /// </summary>
 public sealed class ToolsetSelection
 {
-    public const string ToolsetsVariable = "WAM_TOOLSETS";
-    public const string ExcludeToolsVariable = "WAM_EXCLUDE_TOOLS";
-    public const string ReadOnlyVariable = "WAM_READ_ONLY";
+    public const string ToolsetsVariable = SettingNames.Toolsets;
+    public const string ExcludeToolsVariable = SettingNames.ExcludeTools;
+    public const string ReadOnlyVariable = SettingNames.ReadOnly;
 
     /// <summary>The <see cref="ToolsetsVariable"/> entry for the toolsets that are on by default.</summary>
     public const string DefaultKeyword = "default";
@@ -137,7 +139,7 @@ public sealed class ToolsetSelection
 
     /// <summary>
     /// Every toolset, nothing excluded, not read-only: the whole tool surface. The registration uses it when it is given
-    /// no selection, so the tests, the tools/list snapshot and the CI guard (WAM_TOOLSETS=all) see every tool.
+    /// no selection, so the tests, the tools/list snapshot and the CI guard (HELMSMAN_TOOLSETS=all) see every tool.
     /// </summary>
     public static ToolsetSelection All(ToolsetCatalog? catalog = null)
     {
@@ -146,7 +148,7 @@ public sealed class ToolsetSelection
     }
 
     /// <summary>The selection the server's environment makes from <see cref="Toolsets.Server"/>.</summary>
-    public static ToolsetSelection FromEnvironment() => FromEnvironment(Environment.GetEnvironmentVariable, Toolsets.Server);
+    public static ToolsetSelection FromEnvironment() => FromEnvironment(SettingNames.ProcessEnvironment, Toolsets.Server);
 
     /// <summary>The selection the variables <paramref name="environment"/> returns make from <paramref name="catalog"/>.</summary>
     public static ToolsetSelection FromEnvironment(Func<string, string?> environment, ToolsetCatalog catalog)
@@ -155,18 +157,18 @@ public sealed class ToolsetSelection
         ArgumentNullException.ThrowIfNull(catalog);
 
         var warnings = new List<string>();
-        var (enabled, source) = ReadToolsets(environment(ToolsetsVariable), catalog, warnings);
-        var (excluded, unreadable) = ReadExcludedTools(environment(ExcludeToolsVariable), catalog, warnings);
+        var (enabled, source) = ReadToolsets(SettingNames.Read(environment, ToolsetsVariable), catalog, warnings);
+        var (excluded, unreadable) = ReadExcludedTools(SettingNames.Read(environment, ExcludeToolsVariable), catalog, warnings);
         if (unreadable.Count > 0)
         {
-            // Fail closed, as for an unknown -name of WAM_TOOLSETS: the entry was meant to remove a tool or toolset
+            // Fail closed, as for an unknown -name of HELMSMAN_TOOLSETS: the entry was meant to remove a tool or toolset
             warnings.Add($"{ExcludeToolsVariable}: ignoring {string.Join(", ", unreadable.Select(e => $"'{e}'"))} could serve tools " +
                          $"the user meant to turn off, so only the '{catalog.AlwaysOn}' toolset is on, to be safe. Correct the " +
                          "value to serve more tools.");
             (enabled, source) = (new[] { catalog.AlwaysOn }, ExcludeToolsVariable);
         }
 
-        var readOnly = ReadReadOnly(environment(ReadOnlyVariable), warnings);
+        var readOnly = ReadReadOnly(SettingNames.Read(environment, ReadOnlyVariable), warnings);
         var selection = new ToolsetSelection(catalog, enabled, source, excluded, readOnly, warnings);
         warnings.AddRange(selection.MovedWarnings());
         return selection;
@@ -194,7 +196,7 @@ public sealed class ToolsetSelection
     }
 
     /// <summary>
-    /// True when the toolsets in force serve the tool, whatever WAM_EXCLUDE_TOOLS and WAM_READ_ONLY say: its toolset is on,
+    /// True when the toolsets in force serve the tool, whatever HELMSMAN_EXCLUDE_TOOLS and HELMSMAN_READ_ONLY say: its toolset is on,
     /// and so is the toolset it moved out of, if it moved (roadmap M6.1). A tool that no toolset names is served.
     /// </summary>
     private bool ServedByToolsets(string toolName)
@@ -349,7 +351,7 @@ public sealed class ToolsetSelection
         foreach (var entry in Split(value))
         {
             var tool = catalog.ToolNames.FirstOrDefault(name => string.Equals(name, entry, StringComparison.OrdinalIgnoreCase));
-            // A toolset's name stands for its tools and the tools that moved out of it (roadmap M6.1): WAM_EXCLUDE_TOOLS=windows
+            // A toolset's name stands for its tools and the tools that moved out of it (roadmap M6.1): HELMSMAN_EXCLUDE_TOOLS=windows
             // written before 2.2.0 meant the window batches too
             IReadOnlyList<string>? tools = tool != null
                 ? [tool]

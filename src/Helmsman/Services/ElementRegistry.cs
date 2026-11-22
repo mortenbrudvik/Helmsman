@@ -104,7 +104,7 @@ public sealed class ElementRegistry : IElementRegistry
     /// <param name="capacity">How many refs to keep.</param>
     /// <param name="firstWindowNumber">The number of the first window (tests pass 1).</param>
     /// <param name="clock">The clock of the entries' last use.</param>
-    /// <param name="providerContains">WAM_UIA_PROVIDER_CONTAINS: whether the provider narrows a selector's contains name search
+    /// <param name="providerContains">HELMSMAN_UIA_PROVIDER_CONTAINS: whether the provider narrows a selector's contains name search
     /// (roadmap M3.F12); without it, off.</param>
     public ElementRegistry(
         IUiaTree tree, IUiaWorker worker, INativeWindowWrapper windows, int capacity, int firstWindowNumber, TimeProvider clock,

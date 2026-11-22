@@ -1,8 +1,8 @@
 namespace Helmsman.Tests.Unit.Services;
 
 /// <summary>
-/// Unit tests for the server-enforced target policy (roadmap M1.12): how WAM_DENY_PROCESSES and
-/// WAM_ALLOW_PROCESSES are read, and which process names the policy refuses. Environment variables are
+/// Unit tests for the server-enforced target policy (roadmap M1.12): how HELMSMAN_DENY_PROCESSES and
+/// HELMSMAN_ALLOW_PROCESSES are read, and which process names the policy refuses. Environment variables are
 /// passed in as a lookup function; the real environment is never read or changed.
 /// </summary>
 public class TargetPolicyTests

@@ -15,7 +15,7 @@ namespace Helmsman.Services;
 public sealed record UiaEngineOptions(UiaEngine Engine, string Source, string? Warning = null)
 {
     /// <summary>The environment variable: uia3 or uia2.</summary>
-    public const string EnvironmentVariable = "WAM_UIA_ENGINE";
+    public const string EnvironmentVariable = SettingNames.UiaEngine;
 
     /// <summary>The UIA3 engine, by default.</summary>
     public static UiaEngineOptions Default { get; } = new(UiaEngine.Uia3, "default");
@@ -26,7 +26,7 @@ public sealed record UiaEngineOptions(UiaEngine Engine, string Source, string? W
     /// </summary>
     public static UiaEngineOptions FromEnvironment(Func<string, string?>? readVariable = null)
     {
-        var value = (readVariable ?? Environment.GetEnvironmentVariable)(EnvironmentVariable)?.Trim();
+        var value = SettingNames.Read(readVariable, EnvironmentVariable)?.Trim();
         if (string.IsNullOrEmpty(value))
         {
             return Default;

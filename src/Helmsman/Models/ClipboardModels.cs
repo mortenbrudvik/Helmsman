@@ -32,7 +32,7 @@ public enum ClipboardContentOrigin
     AgentInput,
 
     /// <summary>
-    /// The user or another app: read only because the user allowed it (WAM_ALLOW_USER_CLIPBOARD, or a yes to the
+    /// The user or another app: read only because the user allowed it (HELMSMAN_ALLOW_USER_CLIPBOARD, or a yes to the
     /// question).
     /// </summary>
     User

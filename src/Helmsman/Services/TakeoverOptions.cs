@@ -9,7 +9,7 @@ namespace Helmsman.Services;
 public sealed class TakeoverOptions
 {
     /// <summary>The environment variable that sets the mode: off (the default), warn or stop.</summary>
-    public const string EnvironmentVariable = "WAM_TAKEOVER_DETECTION";
+    public const string EnvironmentVariable = SettingNames.TakeoverDetection;
 
     /// <summary>The source of a mode that is not configured.</summary>
     public const string DefaultSource = "default";
@@ -43,7 +43,7 @@ public sealed class TakeoverOptions
     /// </summary>
     public static TakeoverOptions FromEnvironment(Func<string, string?>? readVariable = null)
     {
-        var value = (readVariable ?? Environment.GetEnvironmentVariable)(EnvironmentVariable)?.Trim();
+        var value = SettingNames.Read(readVariable, EnvironmentVariable)?.Trim();
         if (string.IsNullOrEmpty(value))
         {
             return Default;

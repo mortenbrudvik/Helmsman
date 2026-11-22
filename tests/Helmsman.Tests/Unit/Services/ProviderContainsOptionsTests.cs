@@ -1,7 +1,7 @@
 namespace Helmsman.Tests.Unit.Services;
 
 /// <summary>
-/// WAM_UIA_PROVIDER_CONTAINS (roadmap M3.F12): the provider narrows a contains name search only when it is exactly 1, until
+/// HELMSMAN_UIA_PROVIDER_CONTAINS (roadmap M3.F12): the provider narrows a contains name search only when it is exactly 1, until
 /// a real desktop confirms the substring search.
 /// </summary>
 public class ProviderContainsOptionsTests

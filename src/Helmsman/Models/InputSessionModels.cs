@@ -347,7 +347,7 @@ public enum PauseHotkeyState
     /// <summary>Windows refused to register it, usually because another program already has the chord.</summary>
     Failed,
 
-    /// <summary>Turned off by the user (WAM_PAUSE_HOTKEY=none).</summary>
+    /// <summary>Turned off by the user (HELMSMAN_PAUSE_HOTKEY=none).</summary>
     Disabled,
 
     /// <summary>
@@ -361,7 +361,7 @@ public enum PauseHotkeyState
 /// <summary>The pause hotkey and whether it works.</summary>
 /// <param name="Chord">The chord, such as "Ctrl+Alt+Shift+Pause"; null when it is turned off.</param>
 /// <param name="State">Whether it is registered.</param>
-/// <param name="Source">Where the chord comes from: "default" or "WAM_PAUSE_HOTKEY".</param>
+/// <param name="Source">Where the chord comes from: "default" or "HELMSMAN_PAUSE_HOTKEY".</param>
 /// <param name="Error">Why it could not be registered, or why the configured chord was not used.</param>
 public sealed record PauseHotkeyStatus(string? Chord, PauseHotkeyState State, string Source, string? Error = null);
 

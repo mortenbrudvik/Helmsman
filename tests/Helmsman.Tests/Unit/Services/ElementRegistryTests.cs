@@ -725,7 +725,7 @@ public class ElementRegistryTests
     public void Resolve_ByAContainsSelector_NarrowsTheSearchInTheProviderWhenAsked_OrSearchesWithoutWhereTheEngineRefuses(
         bool providerContains, bool refuses)
     {
-        // Arrange - with WAM_UIA_PROVIDER_CONTAINS=1 the provider tests the name's text (roadmap M3.F12), unless the engine
+        // Arrange - with HELMSMAN_UIA_PROVIDER_CONTAINS=1 the provider tests the name's text (roadmap M3.F12), unless the engine
         // refuses the substring flag; a level too wide to split, so the provider searches it
         var sut = CreateSut(providerContains: providerContains);
         var save = Button("Save document");

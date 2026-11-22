@@ -415,7 +415,7 @@ public class ElementActionToolTests
     [InlineData(ObserveMode.Screenshot)]
     public async Task Observe_IsRefusedBeforeAnythingIsDone_WhenGetDesktopStateIsNotServed(ObserveMode observe)
     {
-        // Arrange - WAM_TOOLSETS=-elements: the observation is get_desktop_state's read, which the user turned off
+        // Arrange - HELMSMAN_TOOLSETS=-elements: the observation is get_desktop_state's read, which the user turned off
         var sut = CreateObservingSut();
         _desktopState.Setup(s => s.StateUnavailable()).Returns("The observation needs get_desktop_state, which this server does not serve.");
 

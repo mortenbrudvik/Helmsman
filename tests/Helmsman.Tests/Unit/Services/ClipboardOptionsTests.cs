@@ -1,6 +1,6 @@
 namespace Helmsman.Tests.Unit.Services;
 
-/// <summary>WAM_ALLOW_USER_CLIPBOARD: reading the user's clipboard without asking is the user's choice, and off by default.</summary>
+/// <summary>HELMSMAN_ALLOW_USER_CLIPBOARD: reading the user's clipboard without asking is the user's choice, and off by default.</summary>
 public class ClipboardOptionsTests
 {
     private static ClipboardOptions Read(string? value) =>

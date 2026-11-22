@@ -41,7 +41,7 @@ public static class ToolSurface
     private static readonly Lazy<Task<JsonArray>> LazyDefaultTools = new(() => ListToolsFromServerAsync(revision: null, DefaultSelection));
 
     /// <summary>
-    /// The toolsets a server started without WAM_TOOLSETS, WAM_EXCLUDE_TOOLS and WAM_READ_ONLY serves: the default surface
+    /// The toolsets a server started without HELMSMAN_TOOLSETS, HELMSMAN_EXCLUDE_TOOLS and HELMSMAN_READ_ONLY serves: the default surface
     /// that every user pays for unless they change it (roadmap M6.1).
     /// </summary>
     public static ToolsetSelection DefaultSelection => ToolsetSelection.FromEnvironment(_ => null, Toolsets.Server);

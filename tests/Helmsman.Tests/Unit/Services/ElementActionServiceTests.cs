@@ -2069,7 +2069,7 @@ public sealed class ElementActionServiceTests : IDisposable
     [Fact]
     public async Task SetValue_ModePaste_IsRefused_WhenTheUserTurnedClipboardWritesOff()
     {
-        // Arrange - WAM_EXCLUDE_TOOLS=set_clipboard: the user's clipboard must not be replaced
+        // Arrange - HELMSMAN_EXCLUDE_TOOLS=set_clipboard: the user's clipboard must not be replaced
         var toolsets = ToolsetSelection.FromEnvironment(
             name => name == ToolsetSelection.ExcludeToolsVariable ? "set_clipboard" : null, Toolsets.Server);
         var name = RefOf(Edit(new FakeValuePattern("old")));

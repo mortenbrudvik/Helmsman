@@ -374,7 +374,7 @@ public class PressKeysParserTests
     [Fact]
     public void TheGuard_ReadsAChordWithAKeyNamedByItsVirtualKey_AsItsSendKeysSpelling()
     {
-        // A destructive chord configured as ^{OEM_2} (WAM_DESTRUCTIVE_CHORDS) is the press_keys chord ctrl+oem_2
+        // A destructive chord configured as ^{OEM_2} (HELMSMAN_DESTRUCTIVE_CHORDS) is the press_keys chord ctrl+oem_2
         var options = InputGuardOptions.FromEnvironment(name => name == InputGuardOptions.DestructiveChordsVariable ? "^{OEM_2}" : null);
 
         options.FindDestructiveChord(Us("ctrl+oem_2").Events).Should().NotBeNull();

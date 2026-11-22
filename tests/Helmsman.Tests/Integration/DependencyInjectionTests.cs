@@ -118,7 +118,7 @@ public class DependencyInjectionTests : IDisposable
         // collaborator, so it is enough that the one the container holds runs in the mode the server reads
         var monitor = _serviceProvider.GetRequiredService<ITakeoverMonitor>();
 
-        // The mode the user set (WAM_TAKEOVER_DETECTION), whatever it is on the machine that runs the tests; off when unset
+        // The mode the user set (HELMSMAN_TAKEOVER_DETECTION), whatever it is on the machine that runs the tests; off when unset
         // is TakeoverOptions' own rule (UserTakeoverMonitorTests.Options_ReadTheMode_FromTheEnvironment)
         monitor.Mode.Should().Be(TakeoverOptions.FromEnvironment().Mode, "the monitor uses the mode the server reads from its environment");
         _serviceProvider.GetRequiredService<TakeoverOptions>().Mode.Should().Be(monitor.Mode);
@@ -182,7 +182,7 @@ public class DependencyInjectionTests : IDisposable
         registry.Count.Should().Be(0);
 
         // The production constructor numbers windows from a random start in eight million (the test-only one takes it); both
-        // take WAM_UIA_PROVIDER_CONTAINS (roadmap M3.F12), which the container holds as read from the environment
+        // take HELMSMAN_UIA_PROVIDER_CONTAINS (roadmap M3.F12), which the container holds as read from the environment
         var production = typeof(ElementRegistry).GetConstructors()
             .Single(c => c.GetParameters().Length == 4);
         production.GetParameters().Select(p => p.ParameterType).Should()
@@ -678,7 +678,7 @@ public class DependencyInjectionTests : IDisposable
 
         // Assert
         folder.Should().Be(AuditLogOptions.FromEnvironment().Folder);
-        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(AuditLogOptions.FolderEnvironmentVariable)))
+        if (string.IsNullOrWhiteSpace(SettingNames.Read(null, AuditLogOptions.FolderEnvironmentVariable)))
         {
             folder.Should().Be(Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), LayoutStorageOptions.AppDataFolderName, "audit"));
@@ -716,7 +716,7 @@ public class DependencyInjectionTests : IDisposable
 
         // Assert
         layoutsPath.Should().Be(expected);
-        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(LayoutStorageOptions.LayoutsPathEnvironmentVariable)))
+        if (string.IsNullOrWhiteSpace(SettingNames.Read(null, LayoutStorageOptions.LayoutsPathEnvironmentVariable)))
         {
             layoutsPath.Should().Be(Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),

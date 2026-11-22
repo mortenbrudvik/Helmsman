@@ -10,7 +10,7 @@ namespace Helmsman.Services;
 /// </summary>
 /// <remarks>
 /// The browser loads the URL itself, so this is not launch_application's <see cref="ProtocolAllowlist"/>, which hands a
-/// URI to the app registered for its scheme; that list's user additions (WAM_ALLOWED_PROTOCOLS) name external apps and are
+/// URI to the app registered for its scheme; that list's user additions (HELMSMAN_ALLOWED_PROTOCOLS) name external apps and are
 /// not used here. Its <see cref="ProtocolAllowlist.BlockedSchemes"/> (javascript:, data:, vbscript: and the rest) are
 /// refused as they are everywhere, and so is everything else a tab can show: file: (a local file or folder, which the
 /// agent could then read through get_browser_content, a read this server does not otherwise give), the browsers' own pages

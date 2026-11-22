@@ -1090,7 +1090,7 @@ public class StepRunnerTests
         // Assert
         run.Result.StoppedBy.Should().Be(StepStopReason.UserInterrupted);
         run.Result.ErrorCode.Should().Be("UserInterrupted");
-        run.Result.Error.Should().Contain("before step 2").And.Contain("WAM_TAKEOVER_DETECTION=stop");
+        run.Result.Error.Should().Contain("before step 2").And.Contain("HELMSMAN_TAKEOVER_DETECTION=stop");
         run.Result.Steps[0].Status.Should().Be(StepStatus.Ok);
         run.Result.Steps[1].Status.Should().Be(StepStatus.Skipped);
         _dispatcher.Calls.Should().ContainSingle();
@@ -1143,7 +1143,7 @@ public class StepRunnerTests
         // Assert
         run.Result.Success.Should().BeTrue();
         run.Result.StoppedBy.Should().BeNull();
-        run.Result.Warning.Should().Contain("WAM_TAKEOVER_DETECTION=warn").And.Contain("the steps ran");
+        run.Result.Warning.Should().Contain("HELMSMAN_TAKEOVER_DETECTION=warn").And.Contain("the steps ran");
         _dispatcher.Calls.Should().HaveCount(2);
     }
 

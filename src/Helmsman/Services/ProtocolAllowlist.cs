@@ -1,16 +1,17 @@
 using System.Text.RegularExpressions;
+using Helmsman.Models;
 
 namespace Helmsman.Services;
 
 /// <summary>
 /// The URI schemes launch_application hands to their registered app (roadmap M2.7): the built-in ones, plus the
-/// schemes the user lists in WAM_ALLOWED_PROTOCOLS. The schemes in <see cref="BlockedSchemes"/> are refused whatever
+/// schemes the user lists in HELMSMAN_ALLOWED_PROTOCOLS. The schemes in <see cref="BlockedSchemes"/> are refused whatever
 /// the variable says, and file: URIs are always validated as the path they name.
 /// </summary>
 public sealed partial class ProtocolAllowlist
 {
     /// <summary>The environment variable with the user's extra schemes, such as "vscode,ms-teams,spotify".</summary>
-    public const string Variable = "WAM_ALLOWED_PROTOCOLS";
+    public const string Variable = SettingNames.AllowedProtocols;
 
     /// <summary>
     /// Schemes that are always allowed. ms-settings opens a Settings page; Store apps start through
@@ -71,7 +72,7 @@ public sealed partial class ProtocolAllowlist
 
     /// <summary>Reads <see cref="Variable"/> from the environment (or <paramref name="read"/>).</summary>
     public static ProtocolAllowlist FromEnvironment(Func<string, string?>? read = null) =>
-        Parse((read ?? Environment.GetEnvironmentVariable)(Variable));
+        Parse(SettingNames.Read(read, Variable));
 
     /// <summary>
     /// Parses a list of scheme names separated by commas, semicolons or whitespace; a trailing colon is allowed

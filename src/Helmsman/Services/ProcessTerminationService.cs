@@ -302,7 +302,7 @@ public sealed class ProcessTerminationService : IProcessTermination
                 ErrorCode: nameof(ProcessErrorCode.ProtectedProcess));
         }
 
-        // The user's policy (WAM_DENY_PROCESSES, WAM_ALLOW_PROCESSES); no argument overrides it
+        // The user's policy (HELMSMAN_DENY_PROCESSES, HELMSMAN_ALLOW_PROCESSES); no argument overrides it
         if (_targetPolicy.Evaluate([processName]) is { Allowed: false } verdict)
         {
             return new KillResult(

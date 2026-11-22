@@ -68,7 +68,7 @@ public enum WindowErrorCode
     ConfirmationRequired = 24,
 
     /// <summary>
-    /// The server's target policy (WAM_DENY_PROCESSES, WAM_ALLOW_PROCESSES) refuses the window's process
+    /// The server's target policy (HELMSMAN_DENY_PROCESSES, HELMSMAN_ALLOW_PROCESSES) refuses the window's process
     /// (roadmap M1.12). force does not override it. Nothing was sent.
     /// </summary>
     TargetDeniedByPolicy = 25,
@@ -351,7 +351,7 @@ public enum ProcessErrorCode
     InvalidTimeout = 13,
 
     /// <summary>
-    /// The server's target policy (WAM_DENY_PROCESSES, WAM_ALLOW_PROCESSES) refuses the process (roadmap
+    /// The server's target policy (HELMSMAN_DENY_PROCESSES, HELMSMAN_ALLOW_PROCESSES) refuses the process (roadmap
     /// M1.12). Nothing was done.
     /// </summary>
     TargetDeniedByPolicy = 14,
@@ -487,8 +487,8 @@ public enum ScreenshotErrorCode
     CaptureFailed = 10,
 
     /// <summary>
-    /// capture_window and capture_with_elements: the server's target policy (WAM_DENY_PROCESSES,
-    /// WAM_ALLOW_PROCESSES) refuses the window's process (roadmap M1.12). Nothing was captured or read.
+    /// capture_window and capture_with_elements: the server's target policy (HELMSMAN_DENY_PROCESSES,
+    /// HELMSMAN_ALLOW_PROCESSES) refuses the window's process (roadmap M1.12). Nothing was captured or read.
     /// </summary>
     TargetDeniedByPolicy = 11,
 
@@ -716,7 +716,7 @@ public enum ClipboardErrorCode
 
     /// <summary>
     /// get_clipboard: the clipboard holds content the agent did not put there (the user or another app copied it), and
-    /// reading the user's clipboard is not allowed: WAM_ALLOW_USER_CLIPBOARD is off and the user was not asked, or the
+    /// reading the user's clipboard is not allowed: HELMSMAN_ALLOW_USER_CLIPBOARD is off and the user was not asked, or the
     /// clipboard changed while they were asked. Nothing was read.
     /// </summary>
     ClipboardNotFromAgent = 1,

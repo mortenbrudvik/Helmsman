@@ -7,7 +7,7 @@ namespace Helmsman.Services.Interfaces;
 /// call) and reach their control patterns. The services use UI Automation only through this seam, so their
 /// traversal and filter logic can be unit tested with an in-memory tree. Two engines implement it (roadmap M3.2):
 /// Native/Uia3Tree over the COM client (IUIAutomation, the default) and Native/UiaTree over the managed client
-/// (System.Windows.Automation); WAM_UIA_ENGINE chooses (UiaEngineOptions).
+/// (System.Windows.Automation); HELMSMAN_UIA_ENGINE chooses (UiaEngineOptions).
 /// </summary>
 /// <remarks>
 /// <para>Every call can cross into another process and block until that process answers, so callers
@@ -307,7 +307,7 @@ public readonly record struct UiaRect(double X, double Y, double Width, double H
 
 /// <summary>
 /// The engine cannot express a search condition (<see cref="IUiaTree.FindAll"/>): the managed client
-/// (WAM_UIA_ENGINE=uia2) has no id for the AppBar and SemanticZoom control types. The caller can test that criterion on
+/// (HELMSMAN_UIA_ENGINE=uia2) has no id for the AppBar and SemanticZoom control types. The caller can test that criterion on
 /// the server instead. Not a <see cref="NotSupportedException"/>: that is a provider that does not support a call
 /// (UIA_E_NOTSUPPORTED), which fails only the part of a search it was asked for.
 /// </summary>

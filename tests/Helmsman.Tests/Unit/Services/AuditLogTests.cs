@@ -46,7 +46,7 @@ public sealed class AuditLogTests : IDisposable
     [Fact]
     public void Options_DefaultToTheAuditFolderUnderLocalAppData_OrTheOverride()
     {
-        AuditLogOptions.FolderEnvironmentVariable.Should().Be("WAM_AUDIT_PATH");
+        AuditLogOptions.FolderEnvironmentVariable.Should().Be("HELMSMAN_AUDIT_PATH");
         AuditLogOptions.DefaultRetention.Should().Be(TimeSpan.FromDays(7));
         AuditLogOptions.ResolveFolder(null, @"C:\Users\someone\AppData\Local")
             .Should().Be(@"C:\Users\someone\AppData\Local\Helmsman\audit");

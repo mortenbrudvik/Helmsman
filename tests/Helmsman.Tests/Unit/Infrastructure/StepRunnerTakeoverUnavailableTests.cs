@@ -58,7 +58,7 @@ public class StepRunnerTakeoverUnavailableTests
         // Assert
         run.Result.Success.Should().BeTrue("detection that does not work runs the steps as with off");
         _dispatcher.Calls.Should().Be(2);
-        run.Result.Warning.Should().Contain($"WAM_TAKEOVER_DETECTION={name}").And.Contain("did not work while the steps ran")
+        run.Result.Warning.Should().Contain($"HELMSMAN_TAKEOVER_DETECTION={name}").And.Contain("did not work while the steps ran")
             .And.Contain("not watched").And.Contain(ThreadStopped);
         monitor.Last!.Disposed.Should().BeTrue("the watch ends with the run");
     }
@@ -117,7 +117,7 @@ public class StepRunnerTakeoverUnavailableTests
 
         // Assert
         run.Result.Success.Should().BeTrue();
-        run.Result.Warning.Should().Contain("WAM_TAKEOVER_DETECTION=warn").And.Contain("the steps ran").And.NotContain("did not work");
+        run.Result.Warning.Should().Contain("HELMSMAN_TAKEOVER_DETECTION=warn").And.Contain("the steps ran").And.NotContain("did not work");
     }
 
     /// <summary>Serves mouse_click with the parameters its real schema declares, and answers every call with success.</summary>

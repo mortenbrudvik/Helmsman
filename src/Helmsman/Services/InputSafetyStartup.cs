@@ -6,8 +6,8 @@ using Helmsman.Services.Interfaces;
 namespace Helmsman.Services;
 
 /// <summary>
-/// Logs the safety settings in force once, when the server starts: the target policy (WAM_DENY_PROCESSES,
-/// WAM_ALLOW_PROCESSES) and the destructive chords (WAM_DESTRUCTIVE_CHORDS), and as a warning the chord
+/// Logs the safety settings in force once, when the server starts: the target policy (HELMSMAN_DENY_PROCESSES,
+/// HELMSMAN_ALLOW_PROCESSES) and the destructive chords (HELMSMAN_DESTRUCTIVE_CHORDS), and as a warning the chord
 /// entries that were ignored. A mistyped setting is otherwise easy to miss, and these settings protect the
 /// user's password managers and terminal.
 /// </summary>

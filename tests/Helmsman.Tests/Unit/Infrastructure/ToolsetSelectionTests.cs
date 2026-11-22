@@ -3,7 +3,7 @@ using Helmsman.Infrastructure;
 namespace Helmsman.Tests.Unit.Infrastructure;
 
 /// <summary>
-/// How WAM_TOOLSETS, WAM_EXCLUDE_TOOLS and WAM_READ_ONLY choose the tools a server serves (roadmap M2.14), over a
+/// How HELMSMAN_TOOLSETS, HELMSMAN_EXCLUDE_TOOLS and HELMSMAN_READ_ONLY choose the tools a server serves (roadmap M2.14), over a
 /// fixture catalog with an always-on toolset, a toolset that is on by default and an opt-in one. Pure: the variables
 /// come from a lookup function.
 /// </summary>
@@ -351,8 +351,8 @@ public class ToolsetSelectionTests
         selection.Warnings.Should().BeEmpty();
         selection.InstructionsNote.Should().BeNull("an opt-in toolset that is off is not something the user turned off");
         selection.Moved.Should().Equal(
-            "In the batch toolset, which is off (WAM_TOOLSETS=+batch serves it): batch_act.",
-            "In the old toolset, which is off (WAM_TOOLSETS=+old serves it): old_look (use look_tool), old_act (use act_tool with mode 'x').");
+            "In the batch toolset, which is off (HELMSMAN_TOOLSETS=+batch serves it): batch_act.",
+            "In the old toolset, which is off (HELMSMAN_TOOLSETS=+old serves it): old_look (use look_tool), old_act (use act_tool with mode 'x').");
     }
 
     [Theory]
@@ -402,7 +402,7 @@ public class ToolsetSelectionTests
     [InlineData("old")]
     public void ExcludingAMovedToolThatIsNotServed_IsNoError_AndTurnsNothingElseOff(string exclude)
     {
-        // A WAM_EXCLUDE_TOOLS written before the move names a tool the default no longer serves: it must not fail closed
+        // A HELMSMAN_EXCLUDE_TOOLS written before the move names a tool the default no longer serves: it must not fail closed
         var selection = Select(exclude: exclude, catalog: WithMoves);
 
         selection.Source.Should().Be(ToolsetSelection.DefaultKeyword);
@@ -416,7 +416,7 @@ public class ToolsetSelectionTests
     [Fact]
     public void ExcludingTheToolsetAToolCameFrom_ExcludesTheMovedToolToo()
     {
-        // WAM_EXCLUDE_TOOLS=input written before the move meant every input tool, the deprecated click included
+        // HELMSMAN_EXCLUDE_TOOLS=input written before the move meant every input tool, the deprecated click included
         var selection = Select("+old,+batch", exclude: "basic", catalog: WithMoves);
 
         selection.ExcludedTools.Should().Equal("look_tool", "act_tool", "batch_act", "old_look", "old_act");

@@ -533,6 +533,6 @@ public class ClipboardServiceTests
 
         _ = new ClipboardService(_clipboard, _origin, ClipboardOptions.FromEnvironment(_ => "maybe"), logger);
 
-        logger.Entries.Should().ContainSingle().Which.Message.Should().Contain("WAM_ALLOW_USER_CLIPBOARD 'maybe'");
+        logger.Entries.Should().ContainSingle().Which.Message.Should().Contain("HELMSMAN_ALLOW_USER_CLIPBOARD 'maybe'");
     }
 }

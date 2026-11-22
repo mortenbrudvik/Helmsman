@@ -70,7 +70,7 @@ public class InputSimulationServiceTakeoverTests
         result.Success.Should().BeFalse();
         result.ErrorCode.Should().Be(InputErrorCode.UserInterrupted);
         result.CharactersTyped.Should().Be(128);
-        result.Error.Should().StartWith("Typing stopped after 128 of 200 characters").And.Contain("WAM_TAKEOVER_DETECTION=stop");
+        result.Error.Should().StartWith("Typing stopped after 128 of 200 characters").And.Contain("HELMSMAN_TAKEOVER_DETECTION=stop");
         _input.Batches.Should().HaveCount(2);
         monitor.Watches.Should().Be(1);
         monitor.Last!.Disposed.Should().BeTrue("the watch ends with the call");
@@ -90,7 +90,7 @@ public class InputSimulationServiceTakeoverTests
         // Assert
         result.Success.Should().BeTrue();
         result.CharactersTyped.Should().Be(200);
-        result.Warning.Should().Contain("WAM_TAKEOVER_DETECTION=warn");
+        result.Warning.Should().Contain("HELMSMAN_TAKEOVER_DETECTION=warn");
     }
 
     [Fact]
@@ -147,7 +147,7 @@ public class InputSimulationServiceTakeoverTests
         result.Success.Should().BeFalse();
         result.ErrorCode.Should().Be(InputErrorCode.UserInterrupted);
         result.Pressed.Should().BeTrue();
-        result.Error.Should().Contain("went back to the from point (100, 100)").And.Contain("WAM_TAKEOVER_DETECTION=stop");
+        result.Error.Should().Contain("went back to the from point (100, 100)").And.Contain("HELMSMAN_TAKEOVER_DETECTION=stop");
         _input.Batches.Count.Should().BeLessThan(10, "the moves stopped at the user's input");
         VerifyNothingIsDown();
     }
@@ -169,7 +169,7 @@ public class InputSimulationServiceTakeoverTests
 
         result.Success.Should().BeTrue("detection that does not work runs the operation as with off");
         result.CharactersTyped.Should().Be(200);
-        result.Warning.Should().Contain($"WAM_TAKEOVER_DETECTION={name}").And.Contain("did not work while the text was typed")
+        result.Warning.Should().Contain($"HELMSMAN_TAKEOVER_DETECTION={name}").And.Contain("did not work while the text was typed")
             .And.Contain("not watched").And.Contain(HooksFailed);
     }
 
@@ -182,7 +182,7 @@ public class InputSimulationServiceTakeoverTests
             .DragAsync(request, InputTarget.None, InputTarget.None, false, CancellationToken.None);
 
         result.Success.Should().BeTrue();
-        result.Warning.Should().Contain("WAM_TAKEOVER_DETECTION=stop").And.Contain("did not work while the drag ran").And.Contain(HooksFailed);
+        result.Warning.Should().Contain("HELMSMAN_TAKEOVER_DETECTION=stop").And.Contain("did not work while the drag ran").And.Contain(HooksFailed);
         VerifyNothingIsDown();
     }
 
@@ -272,7 +272,7 @@ public class InputSimulationServiceTakeoverTests
         var result = await CreateSut(monitor).TypeTextAsync(new string('x', 200));
 
         result.Success.Should().BeTrue();
-        result.Warning.Should().Contain("WAM_TAKEOVER_DETECTION=warn").And.NotContain("did not work");
+        result.Warning.Should().Contain("HELMSMAN_TAKEOVER_DETECTION=warn").And.NotContain("did not work");
     }
 
     [Fact]
@@ -283,7 +283,7 @@ public class InputSimulationServiceTakeoverTests
 
         var result = await CreateSut(monitor).TypeTextAsync(new string('x', 200));
 
-        result.Warning.Should().Contain("WAM_TAKEOVER_DETECTION=warn").And.NotContain("did not work");
+        result.Warning.Should().Contain("HELMSMAN_TAKEOVER_DETECTION=warn").And.NotContain("did not work");
     }
 
     [Fact]
@@ -299,7 +299,7 @@ public class InputSimulationServiceTakeoverTests
 
         // Assert
         result.Success.Should().BeTrue();
-        result.Warning.Should().Contain("WAM_TAKEOVER_DETECTION=warn").And.Contain("the drag ran");
+        result.Warning.Should().Contain("HELMSMAN_TAKEOVER_DETECTION=warn").And.Contain("the drag ran");
         VerifyNothingIsDown();
     }
 }

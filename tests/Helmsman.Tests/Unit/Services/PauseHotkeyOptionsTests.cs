@@ -1,7 +1,7 @@
 namespace Helmsman.Tests.Unit.Services;
 
 /// <summary>
-/// The pause hotkey setting (WAM_PAUSE_HOTKEY, roadmap M1.10): which chords are accepted, what a bad value
+/// The pause hotkey setting (HELMSMAN_PAUSE_HOTKEY, roadmap M1.10): which chords are accepted, what a bad value
 /// does (the default stays in force), and which keys count as pressing the chord. Pure: the environment is a
 /// dictionary.
 /// </summary>

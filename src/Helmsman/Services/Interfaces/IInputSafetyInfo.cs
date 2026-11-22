@@ -17,9 +17,9 @@ public interface IInputSafetyInfo
 
 /// <summary>The safety settings in force.</summary>
 /// <param name="Host">What the host guard recorded at server start: the agent's host processes and windows.</param>
-/// <param name="Policy">The target policy (WAM_DENY_PROCESSES, WAM_ALLOW_PROCESSES).</param>
+/// <param name="Policy">The target policy (HELMSMAN_DENY_PROCESSES, HELMSMAN_ALLOW_PROCESSES).</param>
 /// <param name="DestructiveChords">The send_keys chords that need windowHandle, in send_keys syntax.</param>
-/// <param name="DestructiveChordSource">"default", or WAM_DESTRUCTIVE_CHORDS.</param>
+/// <param name="DestructiveChordSource">"default", or HELMSMAN_DESTRUCTIVE_CHORDS.</param>
 public sealed record InputSafetySnapshot(
     HostSnapshot Host,
     TargetPolicySettings Policy,

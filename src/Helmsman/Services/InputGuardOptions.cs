@@ -1,3 +1,5 @@
+using Helmsman.Models;
+
 namespace Helmsman.Services;
 
 /// <summary>
@@ -28,7 +30,7 @@ public sealed record InputGuardOptions(
     /// alone turns the rule off. Entries are in send_keys syntax (<c>#</c> is the Windows key). An entry that is
     /// not one chord is ignored and logged, and the default list then stays in force as well.
     /// </summary>
-    public const string DestructiveChordsVariable = "WAM_DESTRUCTIVE_CHORDS";
+    public const string DestructiveChordsVariable = SettingNames.DestructiveChords;
 
     /// <summary>The value of <see cref="DestructiveChordSource"/> when the default list applies.</summary>
     public const string DefaultSource = "default";
@@ -98,14 +100,14 @@ public sealed record InputGuardOptions(
     public static InputGuardOptions Default { get; } = FromEnvironment(_ => null);
 
     /// <summary>Reads the options from the server's environment.</summary>
-    public static InputGuardOptions FromEnvironment() => FromEnvironment(Environment.GetEnvironmentVariable);
+    public static InputGuardOptions FromEnvironment() => FromEnvironment(SettingNames.ProcessEnvironment);
 
     /// <summary>Reads the options from <paramref name="readVariable"/>; an unset or empty variable keeps the defaults.</summary>
     public static InputGuardOptions FromEnvironment(Func<string, string?> readVariable)
     {
         ArgumentNullException.ThrowIfNull(readVariable);
 
-        var entries = (readVariable(DestructiveChordsVariable) ?? string.Empty)
+        var entries = (SettingNames.Read(readVariable, DestructiveChordsVariable) ?? string.Empty)
             .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
         if (entries.Length == 0)
         {

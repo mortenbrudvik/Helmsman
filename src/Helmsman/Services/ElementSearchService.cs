@@ -123,7 +123,7 @@ public sealed partial class ElementSearchService : IElementSearchService
     /// (roadmap M3.3). The server always passes it; without it no window is warmed up.</param>
     /// <param name="popups">The windows of the windowAndPopups and desktop scopes (roadmap M3.5). The server always passes
     /// it; without it every search covers the window alone.</param>
-    /// <param name="providerContains">WAM_UIA_PROVIDER_CONTAINS: whether the provider narrows a contains name search (roadmap
+    /// <param name="providerContains">HELMSMAN_UIA_PROVIDER_CONTAINS: whether the provider narrows a contains name search (roadmap
     /// M3.F12); without it, off.</param>
     public ElementSearchService(
         IUiaTree tree,

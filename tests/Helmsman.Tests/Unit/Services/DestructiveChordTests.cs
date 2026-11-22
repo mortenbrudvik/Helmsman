@@ -2,7 +2,7 @@ namespace Helmsman.Tests.Unit.Services;
 
 /// <summary>
 /// Unit tests for the destructive-chord rule (roadmap M1.5): which key chords send_keys refuses without an
-/// explicit target, how the chord list is read from WAM_DESTRUCTIVE_CHORDS, and how a parsed key sequence
+/// explicit target, how the chord list is read from HELMSMAN_DESTRUCTIVE_CHORDS, and how a parsed key sequence
 /// is turned into chords. Pure: nothing is sent.
 /// </summary>
 public class DestructiveChordTests
@@ -263,7 +263,7 @@ public class DestructiveChordTests
 
     #endregion
 
-    #region WAM_DESTRUCTIVE_CHORDS
+    #region HELMSMAN_DESTRUCTIVE_CHORDS
 
     [Fact]
     public void FromEnvironment_ReplacesTheDefaults()
@@ -305,7 +305,7 @@ public class DestructiveChordTests
     [Fact]
     public void FromEnvironment_CommaSeparatedList_IsInvalid_SoTheDefaultsStay()
     {
-        // Copying WAM_DENY_PROCESSES' comma style: one entry that is not one chord
+        // Copying HELMSMAN_DENY_PROCESSES' comma style: one entry that is not one chord
         var options = Options("%{F4},^w");
 
         options.InvalidChordEntries.Should().Equal("%{F4},^w");

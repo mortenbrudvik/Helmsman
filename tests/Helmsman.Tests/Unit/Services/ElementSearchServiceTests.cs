@@ -15,7 +15,7 @@ public class ElementSearchServiceTests
     private readonly Mock<INativeWindowWrapper> _windows = new();
     private readonly ElementRegistry _registry;
 
-    // WAM_UIA_PROVIDER_CONTAINS: off, as by default
+    // HELMSMAN_UIA_PROVIDER_CONTAINS: off, as by default
     private ProviderContainsOptions _providerContains = ProviderContainsOptions.Default;
 
     public ElementSearchServiceTests()
@@ -130,7 +130,7 @@ public class ElementSearchServiceTests
     [InlineData(5, true)]
     public async Task Find_ByContains_NarrowedByTheProvider_ReportsWhatTheServerAloneReports(int maxResults, bool enabledOnly)
     {
-        // Arrange - with WAM_UIA_PROVIDER_CONTAINS=1 the UIA3 engine lets the provider test the text (roadmap M3.F12); off
+        // Arrange - with HELMSMAN_UIA_PROVIDER_CONTAINS=1 the UIA3 engine lets the provider test the text (roadmap M3.F12); off
         // (the default), the same engine searches as before, the server testing every name
         _providerContains = new ProviderContainsOptions(Enabled: true);
         var serverTree = new FakeUiaTree().WithWindow(Handle, Files());
@@ -161,7 +161,7 @@ public class ElementSearchServiceTests
     [Fact]
     public async Task Find_ByContains_ByDefault_LeavesTheNameToTheServer()
     {
-        // Arrange - WAM_UIA_PROVIDER_CONTAINS not set: the provider's condition is the one of before roadmap M3.F12, until a
+        // Arrange - HELMSMAN_UIA_PROVIDER_CONTAINS not set: the provider's condition is the one of before roadmap M3.F12, until a
         // real desktop confirms Windows' substring search
         _tree.WithWindow(Handle, Files());
         var conditions = new List<UiaCondition>();

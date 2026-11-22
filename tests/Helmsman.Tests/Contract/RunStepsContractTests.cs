@@ -223,9 +223,9 @@ public class RunStepsContractTests
     [Fact]
     public async Task AStepToolTheToolsetsTurnedOff_IsRefusedUpfront()
     {
-        // Arrange - WAM_EXCLUDE_TOOLS takes type_text out of the tool collection, so a step cannot call it either
+        // Arrange - HELMSMAN_EXCLUDE_TOOLS takes type_text out of the tool collection, so a step cannot call it either
         using var services = new ContractServices(ContractMode.Typical);
-        var toolsets = ToolsetSelection.FromEnvironment(name => name == "WAM_EXCLUDE_TOOLS" ? "type_text" : null, Toolsets.Server);
+        var toolsets = ToolsetSelection.FromEnvironment(name => name == "HELMSMAN_EXCLUDE_TOOLS" ? "type_text" : null, Toolsets.Server);
         await using var server = await StartAsync(services, toolsets);
 
         // Act
@@ -239,9 +239,9 @@ public class RunStepsContractTests
     }
 
     [Theory]
-    [InlineData("WAM_READ_ONLY", "1")]
-    [InlineData("WAM_TOOLSETS", "-steps")]
-    [InlineData("WAM_EXCLUDE_TOOLS", "steps")]
+    [InlineData("HELMSMAN_READ_ONLY", "1")]
+    [InlineData("HELMSMAN_TOOLSETS", "-steps")]
+    [InlineData("HELMSMAN_EXCLUDE_TOOLS", "steps")]
     public async Task RunSteps_IsNotServed_InReadOnlyMode_OrWithoutItsToolset(string variable, string value)
     {
         using var services = new ContractServices(ContractMode.Typical);

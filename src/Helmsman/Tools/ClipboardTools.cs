@@ -35,7 +35,7 @@ public class ClipboardTools
                  "it waits up to 1 s for the app to copy (NothingCopied when it did not). Anything else is the user's " +
                  "(ClipboardNotFromAgent): the server asks the user when the client can ask, once per content " +
                  "(ConfirmationDeclined when they do not allow it; one question at a time), or returns it when the user set " +
-                 "WAM_ALLOW_USER_CLIPBOARD. The same rule holds for pasting: send_keys '^v' is refused (PasteNotAllowed) unless " +
+                 "HELMSMAN_ALLOW_USER_CLIPBOARD. The same rule holds for pasting: send_keys '^v' is refused (PasteNotAllowed) unless " +
                  "get_clipboard would return the content. " +
                  "Content marked private, as password managers mark passwords, is never returned (ClipboardPrivate). " +
                  "FormatNotAvailable lists the formats the clipboard holds. Long content is cut to maxLength (truncated, length). " +

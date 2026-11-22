@@ -117,7 +117,7 @@ public enum StepStopReason
     [JsonStringEnumMemberName("foregroundMoved")]
     ForegroundMoved,
 
-    /// <summary>With WAM_TAKEOVER_DETECTION=stop: the user used the keyboard or mouse during the run (UserInterrupted).</summary>
+    /// <summary>With HELMSMAN_TAKEOVER_DETECTION=stop: the user used the keyboard or mouse during the run (UserInterrupted).</summary>
     [JsonStringEnumMemberName("userInterrupted")]
     UserInterrupted
 }
@@ -163,7 +163,7 @@ public record StepOutcome(
 /// <param name="ErrorCode">The code of what stopped the run (the failed step's own code).</param>
 /// <param name="Error">What stopped the run, and what that means for the steps after it.</param>
 /// <param name="Warning">
-/// Takeover detection (roadmap M7.4, TakeoverMessages.For): with WAM_TAKEOVER_DETECTION=warn, the user used the keyboard or
+/// Takeover detection (roadmap M7.4, TakeoverMessages.For): with HELMSMAN_TAKEOVER_DETECTION=warn, the user used the keyboard or
 /// mouse during the run; with warn or stop, detection did not work for all or part of the run, so the user's input was not
 /// watched then. Null otherwise.
 /// </param>

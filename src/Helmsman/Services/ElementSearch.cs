@@ -56,7 +56,7 @@ public sealed record ElementSearchOutcome(
 /// returning what it found. The limits are checked between provider calls, not inside one: a part's FindAll is a single
 /// call that returns every match of that part (a level wider than <see cref="MaxExpandWidth"/>, such as a list of ten
 /// thousand rows, is one part). The UIA3 engine's transaction timeout ends such a call after about 5 s (a
-/// TimeoutException, which ends the search with what it found); under the managed engine (WAM_UIA_ENGINE=uia2) only the
+/// TimeoutException, which ends the search with what it found); under the managed engine (HELMSMAN_UIA_ENGINE=uia2) only the
 /// caller's worker deadline abandons it, and the stuck thread counts against the application until it returns. Searching
 /// a wide level child by child instead would turn one call into thousands.</para>
 /// <para>Order: the matches of the expanded levels first, nearest the root first, then those of each part in tree order.</para>
@@ -79,7 +79,7 @@ public sealed record ElementSearchOutcome(
 /// ran too long) ends the search and goes to the caller.</para>
 /// <para>Narrowing (roadmap M3.F12): a caller whose client filter tests a name that contains a text can pass a substring
 /// condition (<see cref="ElementCriteria.NameNarrowing"/>) that every element the filter accepts also matches (the server's
-/// callers pass it only with WAM_UIA_PROVIDER_CONTAINS=1, <see cref="ProviderContainsOptions"/>, until Windows' substring
+/// callers pass it only with HELMSMAN_UIA_PROVIDER_CONTAINS=1, <see cref="ProviderContainsOptions"/>, until Windows' substring
 /// search is checked on a real desktop). Under the UIA3
 /// engine it is added to the condition, so the provider returns, and the limits count, only the elements whose names have the
 /// text in them; the filter still runs on every element returned, so a provider that ignores the condition or misapplies it

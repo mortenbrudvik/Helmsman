@@ -32,7 +32,7 @@ public sealed class ClipboardService : IClipboardService
     /// <param name="clipboard">The clipboard.</param>
     /// <param name="origin">Which content the agent put there.</param>
     /// <param name="options">The user's setting; default <see cref="ClipboardOptions.Default"/>.</param>
-    /// <param name="logger">Logs a value of WAM_ALLOW_USER_CLIPBOARD that was not understood.</param>
+    /// <param name="logger">Logs a value of HELMSMAN_ALLOW_USER_CLIPBOARD that was not understood.</param>
     /// <param name="copyWait">How long a read waits for a pending copy; default <see cref="CopyWait"/>.</param>
     public ClipboardService(
         INativeClipboardWrapper clipboard,

@@ -7,7 +7,7 @@ namespace Helmsman.Tests.Contract;
 /// <summary>
 /// Contract: the tools roadmap M6.1 took off the default surface. 3.0.0 removed the nine tools that another tool replaced
 /// in 2.2.0 (owner decision D1): no selection serves them, a call to one fails with ToolRemoved and names the tool to call
-/// instead, never forwarded to it, and a WAM_TOOLSETS or WAM_EXCLUDE_TOOLS value written for 2.x that names them or their
+/// instead, never forwarded to it, and a HELMSMAN_TOOLSETS or HELMSMAN_EXCLUDE_TOOLS value written for 2.x that names them or their
 /// deprecated toolset still reads without failing closed. The three geometry batches only moved, to the opt-in
 /// windows-batch toolset (owner decision D4): each is served only while the windows toolset is on too, and get_server_info
 /// says where they went. In-process servers with the production registrations; no tool acts on the desktop.
@@ -100,7 +100,7 @@ public class RemovedToolsContractTests
     [MemberData(nameof(Removed))]
     public async Task ACallToARemovedTool_IsToolRemoved_NamingItsReplacement_AndIsNotForwarded(string tool, string replacement)
     {
-        // Arrange - every tool served, as WAM_TOOLSETS=all
+        // Arrange - every tool served, as HELMSMAN_TOOLSETS=all
         using var services = new ContractServices(ContractMode.Typical);
         await using var server = await InProcessMcpServer.StartAsync(
             [], builder => builder.AddHelmsmanTools(), configureServices: services.Register);
@@ -125,7 +125,7 @@ public class RemovedToolsContractTests
     [InlineData("CLICK,Deprecated")]
     public async Task ExcludingARemovedOrUnservedTool_DoesNotFailClosed(string exclude)
     {
-        // A WAM_EXCLUDE_TOOLS written for 2.x names tools 3.0.0 removed or the default does not serve; it must not cut the
+        // A HELMSMAN_EXCLUDE_TOOLS written for 2.x names tools 3.0.0 removed or the default does not serve; it must not cut the
         // server down to the server toolset (as an unknown name does)
         var selection = Select(null, exclude);
 

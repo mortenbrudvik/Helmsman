@@ -11,7 +11,7 @@ namespace Helmsman.Tests.Fixtures;
 /// </summary>
 public static class Permissive
 {
-    /// <summary>Target policy settings that deny no process (WAM_DENY_PROCESSES=none, no allow list).</summary>
+    /// <summary>Target policy settings that deny no process (HELMSMAN_DENY_PROCESSES=none, no allow list).</summary>
     public static TargetPolicySettings NoDenials { get; } = new([], null, "test");
 
     /// <summary>A target policy that denies nothing: <see cref="TargetPolicyExtensions.DeniesAnything"/> is false.</summary>
@@ -53,7 +53,7 @@ public static class Permissive
     /// <summary>An input session over a <see cref="FakeInputWrapper"/> that the user never pauses.</summary>
     public static IInputSession Session => new InputSession(new FakeInputWrapper());
 
-    /// <summary>Takeover detection off (WAM_TAKEOVER_DETECTION unset): nothing is watched.</summary>
+    /// <summary>Takeover detection off (HELMSMAN_TAKEOVER_DETECTION unset): nothing is watched.</summary>
     public static ITakeoverMonitor Takeover => new StubTakeoverMonitor(TakeoverMode.Off);
 
     /// <summary>A paste guard that lets every batch paste.</summary>

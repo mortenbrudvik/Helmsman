@@ -1,6 +1,6 @@
 namespace Helmsman.Tests.Unit.Services;
 
-/// <summary>WAM_UIA_ENGINE (roadmap M3.2): the UIA3 engine by default, the managed client as the fallback.</summary>
+/// <summary>HELMSMAN_UIA_ENGINE (roadmap M3.2): the UIA3 engine by default, the managed client as the fallback.</summary>
 public class UiaEngineOptionsTests
 {
     private static UiaEngineOptions Read(string? value) =>

@@ -38,8 +38,8 @@ public sealed record ServerInfoResult(
 public sealed record PinnedWindowInfo(long Handle, string? Title, string? ProcessName);
 
 /// <summary>The UI Automation engine behind get_ui_elements, get_focused_element, get_element_at_point and verified close.</summary>
-/// <param name="Engine">Uia3 (the COM client, the default) or Uia2 (the managed client, WAM_UIA_ENGINE=uia2).</param>
-/// <param name="Source">"default", or WAM_UIA_ENGINE.</param>
+/// <param name="Engine">Uia3 (the COM client, the default) or Uia2 (the managed client, HELMSMAN_UIA_ENGINE=uia2).</param>
+/// <param name="Source">"default", or HELMSMAN_UIA_ENGINE.</param>
 /// <param name="ConnectionTimeoutMs">How long a UIA3 call waits to connect to an application; null for Uia2, which has none.</param>
 /// <param name="TransactionTimeoutMs">How long a UIA3 call waits for an application to answer; null for Uia2, which has none.</param>
 public sealed record UiAutomationInfo(
@@ -126,15 +126,15 @@ public sealed record InputControlInfo(bool Paused, string? PausedBy, DateTimeOff
 
 /// <summary>The safety settings the user chose.</summary>
 /// <param name="DeniedProcesses">Apps the agent may not act on (TargetDeniedByPolicy).</param>
-/// <param name="DenyListSource">"default", or WAM_DENY_PROCESSES.</param>
+/// <param name="DenyListSource">"default", or HELMSMAN_DENY_PROCESSES.</param>
 /// <param name="AllowedProcesses">When set, the only apps the agent may act on; null when every app that is not denied is allowed.</param>
 /// <param name="DestructiveChords">The send_keys chords that need windowHandle (DestructiveChordNeedsTarget).</param>
-/// <param name="DestructiveChordSource">"default", or WAM_DESTRUCTIVE_CHORDS.</param>
+/// <param name="DestructiveChordSource">"default", or HELMSMAN_DESTRUCTIVE_CHORDS.</param>
 /// <param name="UserClipboardAllowed">
-/// WAM_ALLOW_USER_CLIPBOARD: true when get_clipboard returns what the user or another app copied without asking (content
+/// HELMSMAN_ALLOW_USER_CLIPBOARD: true when get_clipboard returns what the user or another app copied without asking (content
 /// marked private never); false when only the agent's own content is, and the user's only after a yes.
 /// </param>
-/// <param name="AllowedProtocols">The URI schemes launch_application opens: the built-in ones, then those WAM_ALLOWED_PROTOCOLS adds.</param>
+/// <param name="AllowedProtocols">The URI schemes launch_application opens: the built-in ones, then those HELMSMAN_ALLOWED_PROTOCOLS adds.</param>
 public sealed record SafetySettingsInfo(
     IReadOnlyList<string> DeniedProcesses,
     string DenyListSource,
@@ -145,19 +145,19 @@ public sealed record SafetySettingsInfo(
     IReadOnlyList<string>? AllowedProtocols = null);
 
 /// <summary>Where the server keeps its files.</summary>
-/// <param name="Layouts">The layout presets folder (WAM_LAYOUTS_PATH).</param>
+/// <param name="Layouts">The layout presets folder (HELMSMAN_LAYOUTS_PATH).</param>
 /// <param name="AuditLog">
-/// The folder of the audit log of input and destructive actions (roadmap M2.17, WAM_AUDIT_PATH): one
+/// The folder of the audit log of input and destructive actions (roadmap M2.17, HELMSMAN_AUDIT_PATH): one
 /// <c>&lt;yyyy-MM-dd&gt;.jsonl</c> file per day, kept for 7 days. Null when the server has no audit log.
 /// </param>
 public sealed record ServerPathsInfo(string Layouts, string? AuditLog = null);
 
-/// <summary>The tools the server serves (WAM_TOOLSETS, WAM_EXCLUDE_TOOLS, WAM_READ_ONLY).</summary>
+/// <summary>The tools the server serves (HELMSMAN_TOOLSETS, HELMSMAN_EXCLUDE_TOOLS, HELMSMAN_READ_ONLY).</summary>
 /// <param name="Enabled">The toolsets served.</param>
-/// <param name="Disabled">The toolsets not served; WAM_TOOLSETS turns them on.</param>
-/// <param name="Source">"default", WAM_TOOLSETS, WAM_EXCLUDE_TOOLS (an entry it could not read left only the server toolset on), or "all".</param>
+/// <param name="Disabled">The toolsets not served; HELMSMAN_TOOLSETS turns them on.</param>
+/// <param name="Source">"default", HELMSMAN_TOOLSETS, HELMSMAN_EXCLUDE_TOOLS (an entry it could not read left only the server toolset on), or "all".</param>
 /// <param name="ReadOnly">True when only tools annotated read-only are served.</param>
-/// <param name="ExcludedTools">Tools WAM_EXCLUDE_TOOLS leaves out.</param>
+/// <param name="ExcludedTools">Tools HELMSMAN_EXCLUDE_TOOLS leaves out.</param>
 /// <param name="ServedTools">How many tools tools/list lists.</param>
 /// <param name="Moved">
 /// Where the tools that moved out of a toolset in force went (roadmap M6.1), one sentence per toolset that is off: for

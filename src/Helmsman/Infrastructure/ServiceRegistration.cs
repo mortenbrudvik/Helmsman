@@ -23,11 +23,11 @@ public static class ServiceRegistration
     /// <param name="layoutStorage">
     /// Creates the layout storage options when <see cref="ILayoutService"/> is first resolved. Defaults to
     /// <see cref="LayoutStorageOptions.FromEnvironment"/>: %LOCALAPPDATA%\Helmsman\layouts or
-    /// WAM_LAYOUTS_PATH, outside the versioned plugin folder. Tests pass a temporary folder.
+    /// HELMSMAN_LAYOUTS_PATH, outside the versioned plugin folder. Tests pass a temporary folder.
     /// </param>
     /// <param name="auditLog">
     /// Creates the audit log's options when <see cref="IAuditLog"/> is first resolved (roadmap M2.17). Defaults to
-    /// <see cref="AuditLogOptions.FromEnvironment"/>: %LOCALAPPDATA%\Helmsman\audit or WAM_AUDIT_PATH.
+    /// <see cref="AuditLogOptions.FromEnvironment"/>: %LOCALAPPDATA%\Helmsman\audit or HELMSMAN_AUDIT_PATH.
     /// Nothing is written until an audited tool is called; tests that call one pass a temporary folder.
     /// </param>
     public static IServiceCollection AddHelmsmanServices(
@@ -36,8 +36,8 @@ public static class ServiceRegistration
         Func<AuditLogOptions>? auditLog = null)
     {
         ArgumentNullException.ThrowIfNull(services);
-        var createLayoutStorage = layoutStorage ?? LayoutStorageOptions.FromEnvironment;
-        var createAuditLog = auditLog ?? AuditLogOptions.FromEnvironment;
+        var createLayoutStorage = layoutStorage ?? (() => LayoutStorageOptions.FromEnvironment());
+        var createAuditLog = auditLog ?? (() => AuditLogOptions.FromEnvironment());
 
         // Services
         services.AddSingleton<INativeWindowWrapper, NativeWindowWrapper>();
@@ -81,7 +81,7 @@ public static class ServiceRegistration
         services.AddSingleton<IWindowCloseVerifier, WindowCloseVerifier>();
         // The close tools' checks, closes, waits and results below the tool layer, through the window service's close guards
         services.AddSingleton<IWindowCloseService, WindowCloseService>();
-        // The URI schemes launch_application hands to their app (the built-in ones plus WAM_ALLOWED_PROTOCOLS), read once: the
+        // The URI schemes launch_application hands to their app (the built-in ones plus HELMSMAN_ALLOWED_PROTOCOLS), read once: the
         // validation enforces them, and get_server_info and the log at start report them
         services.AddSingleton(_ => ProtocolAllowlist.FromEnvironment());
         services.AddSingleton<IInputValidationService, InputValidationService>();
@@ -176,7 +176,7 @@ public static class ServiceRegistration
         services.AddSingleton<IUIElementService, UIElementService>();
         // UI Automation tree seam (UIElementService) and single-element reads (get_focused_element,
         // get_element_at_point); UiaWorker runs every UI Automation read under a deadline. The engine (roadmap M3.2):
-        // the COM client (Uia3Tree) unless WAM_UIA_ENGINE=uia2 chooses the managed one (UiaTree); neither touches UI
+        // the COM client (Uia3Tree) unless HELMSMAN_UIA_ENGINE=uia2 chooses the managed one (UiaTree); neither touches UI
         // Automation before its first read
         services.AddSingleton(_ => UiaEngineOptions.FromEnvironment());
         services.AddSingleton<IUiaTree>(sp => sp.GetRequiredService<UiaEngineOptions>().Engine == UiaEngine.Uia2
@@ -191,7 +191,7 @@ public static class ServiceRegistration
             sp.GetRequiredService<IUiaTree>(), sp.GetRequiredService<INativeWindowWrapper>(),
             sp.GetRequiredService<INativeProcessWrapper>(), policy: sp.GetRequiredService<ITargetPolicy>()));
         // Element refs (roadmap M3.4): the read tools register the elements they return, find_ui_elements searches with
-        // the provider evaluating its criteria, and the tools that act on a ref resolve it here. WAM_UIA_PROVIDER_CONTAINS=1
+        // the provider evaluating its criteria, and the tools that act on a ref resolve it here. HELMSMAN_UIA_PROVIDER_CONTAINS=1
         // lets the UIA3 provider narrow a contains name search too (roadmap M3.F12; off until checked on a real desktop)
         services.AddSingleton(_ => ProviderContainsOptions.FromEnvironment());
         services.AddSingleton<IElementRegistry, ElementRegistry>();
@@ -303,21 +303,21 @@ public static class ServiceRegistration
         services.AddHostedService<InputSafetyStartup>(); // logs the settings in force at start
 
         // The user's control over the server's input (roadmap M1.10): every batch goes through the input session,
-        // and the pause hotkey (WAM_PAUSE_HOTKEY) runs on its own thread, started when the server starts
+        // and the pause hotkey (HELMSMAN_PAUSE_HOTKEY) runs on its own thread, started when the server starts
         services.AddSingleton(_ => PauseHotkeyOptions.FromEnvironment());
         services.AddSingleton<INativeHotkeyWrapper, NativeHotkeyWrapper>();
         services.AddSingleton<IPauseHotkey, PauseHotkeyListener>();
         services.AddSingleton<IInputSession, InputSession>();
         services.AddHostedService<InputSessionStartup>(); // starts the hotkey; releases held input when the server stops
 
-        // Takeover detection (roadmap M7.4, opt-in with WAM_TAKEOVER_DETECTION): low-level keyboard and mouse hooks on their own
+        // Takeover detection (roadmap M7.4, opt-in with HELMSMAN_TAKEOVER_DETECTION): low-level keyboard and mouse hooks on their own
         // thread, installed only while type_text, drag or run_steps runs; nothing is started with mode off
         services.AddSingleton(_ => TakeoverOptions.FromEnvironment());
         services.AddSingleton<INativeLowLevelInputWrapper, NativeLowLevelInputWrapper>();
         services.AddSingleton<ITakeoverMonitor, UserTakeoverMonitor>();
 
         // The clipboard (roadmap M2.16): get_clipboard returns only what the agent put there unless the user allows more
-        // (WAM_ALLOW_USER_CLIPBOARD, or a yes when asked); the input service tells the origin about the agent's copies
+        // (HELMSMAN_ALLOW_USER_CLIPBOARD, or a yes when asked); the input service tells the origin about the agent's copies
         // (and the window they went to, which must be in front when the copy happens), and pastes only what
         // get_clipboard would return (the paste guard)
         services.AddSingleton<INativeClipboardWrapper, NativeClipboardWrapper>();
@@ -442,7 +442,7 @@ public static class ServiceRegistration
             .WithServerTools<ClipboardTools>()
             // run_steps (roadmap M6.2): its steps call the tools above through these same filters
             .WithServerTools<StepSequenceTools>()
-            // The wam:// resources and the prompts (roadmap M6.9), with their own request log
+            // The helmsman:// resources and the prompts (roadmap M6.9), with their own request log
             .AddHelmsmanResourcesAndPrompts()
             // Last: removes the tools the user's toolsets, exclusions or read-only mode leave out, and the resources and
             // prompts whose tools are then not served

@@ -300,7 +300,7 @@ public class ToolsetContractTests
     [Fact]
     public async Task GetServerInfo_IsServed_EvenWhenExcluded()
     {
-        // It is how the agent finds out which tools are off and why, so WAM_EXCLUDE_TOOLS cannot drop it
+        // It is how the agent finds out which tools are off and why, so HELMSMAN_EXCLUDE_TOOLS cannot drop it
         var selection = ToolsetSelection.FromEnvironment(
             name => name == ToolsetSelection.ExcludeToolsVariable ? "get_server_info,kill_process" : null, Toolsets.Server);
         await using var server = await InProcessMcpServer.StartAsync([], builder => builder.AddHelmsmanTools(selection));

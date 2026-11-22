@@ -18,11 +18,11 @@ builder.Logging.AddConsole(options =>
 builder.Logging.AddHelmsmanLogLevels();
 
 // Register services and MCP tool classes (shared with DependencyInjectionTests, see ServiceRegistration).
-// Layout presets live in %LOCALAPPDATA%\Helmsman\layouts or WAM_LAYOUTS_PATH, outside the
+// Layout presets live in %LOCALAPPDATA%\Helmsman\layouts or HELMSMAN_LAYOUTS_PATH, outside the
 // versioned plugin folder (LayoutStorageOptions.FromEnvironment).
 builder.Services.AddHelmsmanServices();
 
-// The toolsets, excluded tools and read-only mode the user chose (WAM_TOOLSETS, WAM_EXCLUDE_TOOLS, WAM_READ_ONLY),
+// The toolsets, excluded tools and read-only mode the user chose (HELMSMAN_TOOLSETS, HELMSMAN_EXCLUDE_TOOLS, HELMSMAN_READ_ONLY),
 // read before the tool registrations; ServerStartupLog logs them and what they leave out
 var toolsets = ToolsetSelection.FromEnvironment();
 

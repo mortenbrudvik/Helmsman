@@ -220,7 +220,7 @@ public class DesktopStateContractTests
     [InlineData("send_keys", "observe")]
     public async Task AScreenshot_IsRefusedBeforeAnythingIsReadOrDone_WhenTheUserTurnedCapturesOff(string tool, string argument)
     {
-        // Arrange - WAM_TOOLSETS=-capture
+        // Arrange - HELMSMAN_TOOLSETS=-capture
         using var services = new ContractServices(ContractMode.Typical);
         var toolsets = ToolsetSelection.FromEnvironment(
             name => name == ToolsetSelection.ToolsetsVariable ? "-capture" : null, Toolsets.Server);

@@ -89,7 +89,7 @@ public class PauseHotkeyListenerTests
         sut.Start(() => { });
 
         sut.Status.State.Should().Be(PauseHotkeyState.Failed);
-        sut.Status.Error.Should().Contain("another program already uses this chord").And.Contain("tries again").And.Contain("WAM_PAUSE_HOTKEY");
+        sut.Status.Error.Should().Contain("another program already uses this chord").And.Contain("tries again").And.Contain("HELMSMAN_PAUSE_HOTKEY");
         _native.Registered.Should().BeEmpty();
     }
 

@@ -216,7 +216,7 @@ public sealed class ServerInfoServiceTests : IDisposable
     [Fact]
     public void Read_ReportsTheClipboardAndProtocolSettings_AndWarnsAboutWhatWasIgnored()
     {
-        // Arrange - a mistyped WAM_ALLOW_USER_CLIPBOARD, and a WAM_ALLOWED_PROTOCOLS with one usable and two ignored entries
+        // Arrange - a mistyped HELMSMAN_ALLOW_USER_CLIPBOARD, and a HELMSMAN_ALLOWED_PROTOCOLS with one usable and two ignored entries
         var clipboard = ClipboardOptions.FromEnvironment(_ => "ture");
         var protocols = ProtocolAllowlist.Parse("vscode, javascript, 1bad");
 
@@ -227,8 +227,8 @@ public sealed class ServerInfoServiceTests : IDisposable
         // Assert
         info.Safety.UserClipboardAllowed.Should().BeFalse();
         info.Safety.AllowedProtocols.Should().Equal("http", "https", "mailto", "tel", "ms-settings", "vscode");
-        info.Warnings.Should().Contain(w => w.Contains("WAM_ALLOW_USER_CLIPBOARD") && w.Contains("'ture'"));
-        info.Warnings.Should().Contain(w => w.Contains("WAM_ALLOWED_PROTOCOLS") && w.Contains("'javascript'") && w.Contains("'1bad'"));
+        info.Warnings.Should().Contain(w => w.Contains("HELMSMAN_ALLOW_USER_CLIPBOARD") && w.Contains("'ture'"));
+        info.Warnings.Should().Contain(w => w.Contains("HELMSMAN_ALLOWED_PROTOCOLS") && w.Contains("'javascript'") && w.Contains("'1bad'"));
     }
 
     [Fact]
@@ -261,7 +261,7 @@ public sealed class ServerInfoServiceTests : IDisposable
             _layouts.Object, _windows.Object, uiaEngine: new UiaEngineOptions(UiaEngine.Uia2, UiaEngineOptions.EnvironmentVariable))
             .Read(Connection, 48);
 
-        info.UiAutomation.Should().Be(new UiAutomationInfo(UiaEngine.Uia2, "WAM_UIA_ENGINE", null, null));
+        info.UiAutomation.Should().Be(new UiAutomationInfo(UiaEngine.Uia2, "HELMSMAN_UIA_ENGINE", null, null));
     }
 
     [Fact]
@@ -273,7 +273,7 @@ public sealed class ServerInfoServiceTests : IDisposable
             _layouts.Object, _windows.Object, uiaEngine: options).Read(Connection, 48);
 
         info.UiAutomation!.Engine.Should().Be(UiaEngine.Uia3);
-        info.Warnings.Should().ContainSingle().Which.Should().Contain("WAM_UIA_ENGINE").And.Contain("'managed'");
+        info.Warnings.Should().ContainSingle().Which.Should().Contain("HELMSMAN_UIA_ENGINE").And.Contain("'managed'");
     }
 
     [Fact]

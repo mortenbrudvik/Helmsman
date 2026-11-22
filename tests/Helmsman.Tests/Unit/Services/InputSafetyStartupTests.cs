@@ -4,7 +4,7 @@ namespace Helmsman.Tests.Unit.Services;
 
 /// <summary>
 /// The safety settings in force are logged once when the server starts, so a mistyped
-/// WAM_DENY_PROCESSES or WAM_DESTRUCTIVE_CHORDS shows up in the server log. Pure: settings are built
+/// HELMSMAN_DENY_PROCESSES or HELMSMAN_DESTRUCTIVE_CHORDS shows up in the server log. Pure: settings are built
 /// from lookup functions, and the logger records in memory.
 /// </summary>
 public class InputSafetyStartupTests
@@ -23,7 +23,7 @@ public class InputSafetyStartupTests
         // Assert
         var entry = _logger.Entries.Should().ContainSingle().Subject;
         entry.Level.Should().Be(LogLevel.Information);
-        entry.Message.Should().Contain("KeePass").And.Contain("from default").And.Contain("%{F4}").And.Contain("WAM_ALLOW_PROCESSES not set");
+        entry.Message.Should().Contain("KeePass").And.Contain("from default").And.Contain("%{F4}").And.Contain("HELMSMAN_ALLOW_PROCESSES not set");
     }
 
     [Fact]

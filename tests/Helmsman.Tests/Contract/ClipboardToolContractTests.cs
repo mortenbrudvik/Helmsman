@@ -10,7 +10,7 @@ namespace Helmsman.Tests.Contract;
 /// Contract: get_clipboard and set_clipboard over MCP (roadmap M2.16), with the real ClipboardTools and ClipboardService
 /// over a fake clipboard. Reading the user's own clipboard is the user's decision, never the model's: the server asks the
 /// user when the client can ask (elicitation), returns the content only after a ticked yes, and only the content that was
-/// there when they were asked; WAM_ALLOW_USER_CLIPBOARD skips the question. No argument the model sets can do either.
+/// there when they were asked; HELMSMAN_ALLOW_USER_CLIPBOARD skips the question. No argument the model sets can do either.
 /// </summary>
 public sealed class ClipboardToolContractTests
 {

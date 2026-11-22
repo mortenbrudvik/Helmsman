@@ -40,7 +40,7 @@ public static class AuditLogToolFilter
     /// its steps, and every audited step writes its own line as a direct call would, with the request id
     /// "&lt;run's id&gt;#&lt;step&gt;");
     /// and get_clipboard, the one read that can return the user's own clipboard (after their yes, or with
-    /// WAM_ALLOW_USER_CLIPBOARD), recorded with its format, origin and length, never its content. Other read-only tools are
+    /// HELMSMAN_ALLOW_USER_CLIPBOARD), recorded with its format, origin and length, never its content. Other read-only tools are
     /// never audited. The captures are left out: they are destructive only through overwrite:true of an image file, and
     /// are observation, called too often for their lines to help. A contract test checks that every other destructive
     /// tool, and every input tool, is here.

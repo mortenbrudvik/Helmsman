@@ -24,8 +24,8 @@ public interface IClipboardPasteGuard
 /// <para>
 /// Input that pastes (<see cref="ClipboardOrigin.PasteTrigger"/>) is sent only when the clipboard holds what set_clipboard
 /// put there, the agent's own copy (<see cref="IClipboardOrigin"/>), or content the user let the agent read (a yes to
-/// get_clipboard's question, or WAM_ALLOW_USER_CLIPBOARD); and never content marked private unless set_clipboard put it
-/// there. Win+V (clipboard history, which holds the user's earlier copies) is sent only with WAM_ALLOW_USER_CLIPBOARD.
+/// get_clipboard's question, or HELMSMAN_ALLOW_USER_CLIPBOARD); and never content marked private unless set_clipboard put it
+/// there. Win+V (clipboard history, which holds the user's earlier copies) is sent only with HELMSMAN_ALLOW_USER_CLIPBOARD.
 /// A clipboard that cannot be checked refuses the paste.
 /// </para>
 /// <para>

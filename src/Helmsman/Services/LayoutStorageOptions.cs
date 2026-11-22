@@ -1,3 +1,5 @@
+using Helmsman.Models;
+
 namespace Helmsman.Services;
 
 /// <summary>
@@ -32,7 +34,7 @@ public sealed record LayoutStorageOptions(
     /// Environment variable that overrides the layouts folder. It should be an absolute path;
     /// environment variables inside it (e.g. <c>%USERPROFILE%</c>) are expanded.
     /// </summary>
-    public const string LayoutsPathEnvironmentVariable = "WAM_LAYOUTS_PATH";
+    public const string LayoutsPathEnvironmentVariable = SettingNames.LayoutsPath;
 
     /// <summary>
     /// Folder name under %LOCALAPPDATA% used by this server.
@@ -96,8 +98,8 @@ public sealed record LayoutStorageOptions(
     /// Options for the running server: the folder from <see cref="LayoutsPathEnvironmentVariable"/> or
     /// %LOCALAPPDATA%, legacy folders next to this and other installed plugin versions, and the bundled samples.
     /// </summary>
-    public static LayoutStorageOptions FromEnvironment() => Create(
-        Environment.GetEnvironmentVariable(LayoutsPathEnvironmentVariable),
+    public static LayoutStorageOptions FromEnvironment(Func<string, string?>? readVariable = null) => Create(
+        SettingNames.Read(readVariable, LayoutsPathEnvironmentVariable),
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         AppContext.BaseDirectory,
         LoadEmbeddedSamples());

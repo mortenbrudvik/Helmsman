@@ -7,7 +7,7 @@ namespace Helmsman.Native;
 
 /// <summary>
 /// <see cref="IUiaTree"/> over the managed UI Automation client (System.Windows.Automation), the "UIA2" engine:
-/// the fallback behind WAM_UIA_ENGINE=uia2 (roadmap M3.2; <see cref="Uia3Tree"/> is the default). Its own methods
+/// the fallback behind HELMSMAN_UIA_ENGINE=uia2 (roadmap M3.2; <see cref="Uia3Tree"/> is the default). Its own methods
 /// only read; its pattern objects act, for the action tools.
 /// </summary>
 /// <remarks>
@@ -623,7 +623,7 @@ public sealed class UiaTree : IUiaTree
             PropertyValue(property.Property, property.Value),
             property.IgnoreCase ? PropertyConditionFlags.IgnoreCase : PropertyConditionFlags.None),
         UiaPropertyContainsCondition => throw new UiaConditionNotSupportedException(
-            "The managed UI Automation client (WAM_UIA_ENGINE=uia2) cannot search for a substring; the UIA3 engine can."),
+            "The managed UI Automation client (HELMSMAN_UIA_ENGINE=uia2) cannot search for a substring; the UIA3 engine can."),
         UiaAndCondition { Conditions.Count: 1 } single => ToCondition(single.Conditions[0]),
         UiaAndCondition and => new AndCondition(and.Conditions.Select(ToCondition).ToArray()),
         UiaOrCondition { Conditions.Count: 1 } single => ToCondition(single.Conditions[0]),
@@ -668,7 +668,7 @@ public sealed class UiaTree : IUiaTree
                  throw new ArgumentException($"'{value}' is not a control type name.", nameof(value));
         return ControlType.LookupById(id) ??
                throw new UiaConditionNotSupportedException(
-                   $"The managed UI Automation client (WAM_UIA_ENGINE=uia2) cannot search for {value} elements; the UIA3 engine can.");
+                   $"The managed UI Automation client (HELMSMAN_UIA_ENGINE=uia2) cannot search for {value} elements; the UIA3 engine can.");
     }
 
     /// <summary>The seam's pattern object for a managed pattern, chosen by the requested type (a TablePattern is also a GridPattern).</summary>

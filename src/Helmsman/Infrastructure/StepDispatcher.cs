@@ -25,7 +25,7 @@ public interface IStepDispatcher
 /// ModelContextProtocol 2.2.0): its own audit line (roadmap M2.17) with the request id "&lt;run's id&gt;#&lt;step&gt;", its own
 /// call-log lines, the refusal of an argument it does not declare (roadmap M3.F42), the error contract (roadmap M2.1), and
 /// the input gate filter, which the run's lease passes (<see cref="Services.InputGate.Lease"/>). A tool the toolsets,
-/// WAM_EXCLUDE_TOOLS or read-only mode leave out is not in the server's tool collection, so it is never served here
+/// HELMSMAN_EXCLUDE_TOOLS or read-only mode leave out is not in the server's tool collection, so it is never served here
 /// either. A step's own progress is not forwarded: its request carries no progress token, and the run reports its own.
 /// </summary>
 public sealed class McpStepDispatcher : IStepDispatcher

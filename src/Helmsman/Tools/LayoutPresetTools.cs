@@ -34,7 +34,7 @@ public class LayoutPresetTools
     }
 
     [McpServerTool(Name = "list_layouts", Title = "List Layouts", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
-    [Description(@"List the saved layout presets (name, description, window count), then any invalid preset file, with its error. Presets are JSON files in %LOCALAPPDATA%\Helmsman\layouts (or the folder in the WAM_LAYOUTS_PATH environment variable); the samples work-setup, dual-monitor and focus-mode are added on first run.")]
+    [Description(@"List the saved layout presets (name, description, window count), then any invalid preset file, with its error. Presets are JSON files in %LOCALAPPDATA%\Helmsman\layouts (or the folder in the HELMSMAN_LAYOUTS_PATH environment variable); the samples work-setup, dual-monitor and focus-mode are added on first run.")]
     public IReadOnlyList<LayoutSummaryDto> ListLayouts()
     {
         ThrowIfStorageUnavailable();
@@ -276,7 +276,7 @@ public class LayoutPresetTools
     }
 
     /// <summary>
-    /// What get_layout and the wam://layouts/{name} resource (roadmap M6.9) say about a name no preset has, naming the files
+    /// What get_layout and the helmsman://layouts/{name} resource (roadmap M6.9) say about a name no preset has, naming the files
     /// that are not valid presets (<see cref="LayoutService.NotFoundNote"/>): the one that may hold it, and how many others.
     /// </summary>
     /// <param name="invalidFiles">The layouts folder's invalid files; null for none known.</param>
@@ -284,7 +284,7 @@ public class LayoutPresetTools
         $"Layout preset '{name}' was not found. Call list_layouts to see the available presets." + LayoutService.NotFoundNote(name, invalidFiles);
 
     /// <summary>
-    /// get_layout's result, which the wam://layouts/{name} resource returns too (roadmap M6.9), so a change to one changes
+    /// get_layout's result, which the helmsman://layouts/{name} resource returns too (roadmap M6.9), so a change to one changes
     /// both.
     /// </summary>
     internal static LayoutDetailDto ToDetailDto(LayoutPreset preset) => new(

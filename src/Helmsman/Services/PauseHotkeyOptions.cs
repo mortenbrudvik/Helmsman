@@ -10,7 +10,7 @@ namespace Helmsman.Services;
 public sealed class PauseHotkeyOptions
 {
     /// <summary>The environment variable that sets the chord, such as "Ctrl+Alt+F12", or "none" to turn it off.</summary>
-    public const string EnvironmentVariable = "WAM_PAUSE_HOTKEY";
+    public const string EnvironmentVariable = SettingNames.PauseHotkey;
 
     /// <summary>The default chord.</summary>
     public const string DefaultChord = "Ctrl+Alt+Shift+Pause";
@@ -45,7 +45,7 @@ public sealed class PauseHotkeyOptions
     /// </summary>
     public static PauseHotkeyOptions FromEnvironment(Func<string, string?>? readVariable = null)
     {
-        var value = (readVariable ?? Environment.GetEnvironmentVariable)(EnvironmentVariable)?.Trim();
+        var value = SettingNames.Read(readVariable, EnvironmentVariable)?.Trim();
         if (string.IsNullOrEmpty(value) || value.Equals("default", StringComparison.OrdinalIgnoreCase))
         {
             return Default;

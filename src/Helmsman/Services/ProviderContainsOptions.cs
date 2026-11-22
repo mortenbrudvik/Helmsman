@@ -1,3 +1,4 @@
+using Helmsman.Models;
 using Helmsman.Services.Interfaces;
 
 namespace Helmsman.Services;
@@ -15,14 +16,14 @@ namespace Helmsman.Services;
 public sealed record ProviderContainsOptions(bool Enabled)
 {
     /// <summary>The environment variable: 1 turns the narrowing on.</summary>
-    public const string EnvironmentVariable = "WAM_UIA_PROVIDER_CONTAINS";
+    public const string EnvironmentVariable = SettingNames.UiaProviderContains;
 
     /// <summary>Off: nameMatch contains is tested on the server alone.</summary>
     public static ProviderContainsOptions Default { get; } = new(false);
 
     /// <summary>Reads <see cref="EnvironmentVariable"/>: exactly 1 (around spaces) turns it on; anything else leaves it off.</summary>
     public static ProviderContainsOptions FromEnvironment(Func<string, string?>? readVariable = null) =>
-        (readVariable ?? Environment.GetEnvironmentVariable)(EnvironmentVariable)?.Trim() == "1" ? new(true) : Default;
+        SettingNames.Read(readVariable, EnvironmentVariable)?.Trim() == "1" ? new(true) : Default;
 
     /// <summary>The narrowing for <paramref name="criteria"/> when it is on, else null.</summary>
     public UiaCondition? NarrowingFor(ElementCriteria criteria) => Enabled ? criteria.NameNarrowing : null;

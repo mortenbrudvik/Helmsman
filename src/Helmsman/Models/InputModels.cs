@@ -465,7 +465,7 @@ public enum InputErrorCode
     /// <summary>The session is locked.</summary>
     SessionLocked = 28,
 
-    /// <summary>The server's target policy (WAM_DENY_PROCESSES, WAM_ALLOW_PROCESSES) refuses the window's process.</summary>
+    /// <summary>The server's target policy (HELMSMAN_DENY_PROCESSES, HELMSMAN_ALLOW_PROCESSES) refuses the window's process.</summary>
     TargetDeniedByPolicy = 29,
 
     /// <summary>windowHandle is not a window, or the window has closed.</summary>
@@ -624,7 +624,7 @@ public enum InputErrorCode
     // Takeover detection (roadmap M7.4). Input may have been sent before the stop.
 
     /// <summary>
-    /// type_text, drag and run_steps with WAM_TAKEOVER_DETECTION=stop: the user used the keyboard or mouse while the operation
+    /// type_text, drag and run_steps with HELMSMAN_TAKEOVER_DETECTION=stop: the user used the keyboard or mouse while the operation
     /// ran, so it stopped between two batches (or two steps) and released what it held. The result says how far it got. Do
     /// not retry at once: the user is using the computer; ask the user before you go on.
     /// </summary>
