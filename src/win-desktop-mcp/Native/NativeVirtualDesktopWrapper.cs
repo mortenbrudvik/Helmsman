@@ -20,68 +20,20 @@ public sealed class NativeVirtualDesktopWrapper : INativeVirtualDesktopWrapper
 
     private static readonly Guid VirtualDesktopManagerClsid = new("aa509086-5ca9-4c25-8f95-589d3c07b48a");
 
-    private const int Running = 0, Finished = 1, Abandoned = 2;
-
-    /// <summary>Calls that missed the deadline and have not returned yet.</summary>
-    private int _abandoned;
+    private readonly DeadlineWorker _reads = new("Virtual desktop read", ApartmentState.MTA, Deadline);
 
     public IReadOnlyList<VirtualDesktopPlacement> GetPlacements(IReadOnlyList<nint> windows)
     {
         ArgumentNullException.ThrowIfNull(windows);
         var unknown = Enumerable.Repeat(VirtualDesktopPlacement.Unknown, windows.Count).ToArray();
-        if (windows.Count == 0 || Volatile.Read(ref _abandoned) > 0)
+        if (windows.Count == 0)
         {
             return unknown;
         }
 
+        // No manager (an older or stripped-down Windows), or it failed: the placements stay unknown
         var handles = windows.ToArray();
-        VirtualDesktopPlacement[]? answers = null;
-        var state = Running;
-        var finished = new ManualResetEventSlim();
-        var worker = new Thread(() =>
-        {
-            try
-            {
-                answers = Read(handles);
-            }
-            catch (Exception)
-            {
-                // No manager (an older or stripped-down Windows), or it failed: the placements stay unknown
-            }
-            finally
-            {
-                if (Interlocked.Exchange(ref state, Finished) == Abandoned)
-                {
-                    Interlocked.Decrement(ref _abandoned);
-                }
-
-                finished.Set();
-            }
-        })
-        {
-            IsBackground = true,
-            Name = "Virtual desktop read"
-        };
-
-        try
-        {
-            worker.SetApartmentState(ApartmentState.MTA);
-            worker.UnsafeStart();
-        }
-        catch (Exception)
-        {
-            // The thread could not be started
-            return unknown;
-        }
-
-        // The event is not disposed: an abandoned worker still sets it when the manager answers
-        if (!finished.Wait(Deadline) && Interlocked.CompareExchange(ref state, Abandoned, Running) == Running)
-        {
-            Interlocked.Increment(ref _abandoned);
-            return unknown;
-        }
-
-        return Volatile.Read(ref answers) ?? unknown;
+        return _reads.Run(() => Read(handles), fallback: unknown);
     }
 
     private static VirtualDesktopPlacement[] Read(nint[] windows)
