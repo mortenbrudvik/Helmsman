@@ -92,6 +92,45 @@ public class HostPasteRefusalTests
         }
     }
     [Fact]
+    public void AClick_ToAConfirmedHost_WhileTheSessionReportsAServerHeldModifier_IsRefused_AndNothingIsSent()
+    {
+        // A session whose release reports success but that still lists Ctrl as held by the server: the click would be a chord
+        var session = new ServerHoldsCtrl(new InputSession(_input));
+        var sut = new InputSimulationService(TestDataFactory.CreateMockMonitorService().Object, _input, _guard.Object, session,
+            Permissive.PasteGuard, Permissive.Takeover, keyboardLayout: new FakeKeyboardLayoutWrapper());
+
+        var result = sut.MouseClick(400, 300, MouseButton.Primary, 1, [], Confirmed);
+
+        result.ErrorCode.Should().Be(InputErrorCode.InvalidArguments, result.Error);
+        _input.Batches.Should().BeEmpty("no SendInput call reached the input wrapper");
+    }
+
+    /// <summary>An input session that reports the left Ctrl as held by the server, whatever its release did; all else is the real session's.</summary>
+    private sealed class ServerHoldsCtrl(InputSession inner) : IInputSession
+    {
+        public IReadOnlyList<HeldInput> ServerHeld => [HeldInput.Modifier(0xA2)];
+        public bool IsPaused => inner.IsPaused;
+        public InputPauseState PauseState => inner.PauseState;
+        public CancellationToken PauseToken => inner.PauseToken;
+        public string? PauseChord => inner.PauseChord;
+        public bool Pause(string source) => inner.Pause(source);
+        public bool Resume(string source, long? pauseNumber = null) => inner.Resume(source, pauseNumber);
+        public void TogglePauseByHotkey() => inner.TogglePauseByHotkey();
+        public void ShareDesktopPause(IDesktopPauseFlag flag) => inner.ShareDesktopPause(flag);
+        public bool SharesDesktopPause => inner.SharesDesktopPause;
+        public bool IsSharedPauseUnreadable => inner.IsSharedPauseUnreadable;
+        public bool IsPauseChordHeld(IReadOnlyList<HeldInput> modifiersDown) => inner.IsPauseChordHeld(modifiersDown);
+        public string? FindPauseChord(IReadOnlyList<InputEvent> events) => inner.FindPauseChord(events);
+        public InputSendOutcome Send(IReadOnlyList<InputEvent> events) => inner.Send(events);
+        public bool? SetCursorPos(int x, int y) => inner.SetCursorPos(x, y);
+        public IReadOnlyList<HeldInput> ReadModifiersDown() => inner.ReadModifiersDown();
+        public InputReleaseOutcome ReleaseHeldInput(string reason) => inner.ReleaseHeldInput(reason);
+        public InputReleaseOutcome ReleaseModifiers(IReadOnlyList<HeldInput> keys, string reason) => inner.ReleaseModifiers(keys, reason);
+        public InputReleaseRecord? LastRelease => inner.LastRelease;
+        public IDisposable? TryOpenResumeQuestion() => inner.TryOpenResumeQuestion();
+    }
+
+    [Fact]
     public async Task TypeText_TheSynCharacter_ToAConfirmedHost_IsRefusedAtSendTime()
     {
         // Characters sent as themselves read no layout: the question's approval says so (0)

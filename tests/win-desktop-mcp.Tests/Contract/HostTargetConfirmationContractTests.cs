@@ -831,6 +831,29 @@ public sealed class HostTargetConfirmationContractTests : IDisposable
     }
 
     [Fact]
+    public async Task TheTwoCallMenuRoute_AMenuOpenAfterAnApprovedClick_StopsTheNextCallsKeys_AndNoKeyIsSent()
+    {
+        // Arrange - a first, approved call clicks the host; after it, the host's thread is in menu mode (the click, or the
+        // user, opened a menu whose letters could pick Paste)
+        At(Terminal);
+        await using var server = await StartAsync(Answer.Yes);
+        AssertSent("mouse_click", await server.CallToolAsync("mouse_click", Call("mouse_click", Terminal)));
+        var terminalThread = (uint)(long)Terminal + 1;
+        _threads.Setup(t => t.GetGuiThreadInfo(terminalThread))
+            .Returns(new GuiThreadInfo(GuiThreadInfo.InMenuModeFlag, Terminal, Terminal, 0, Terminal));
+        var callsBefore = _input.Invocations.Count(i => i.Method.Name == nameof(INativeInputWrapper.SendInput));
+        var keys = Call("send_keys", Terminal);
+        keys["keys"] = "ep";
+
+        // Act
+        var result = await server.CallToolAsync("send_keys", keys);
+
+        // Assert
+        Payload(result).GetProperty("errorCode").GetString().Should().Be(nameof(InputErrorCode.TargetInMenuMode), Payload(result).ToString());
+        _input.Invocations.Count(i => i.Method.Name == nameof(INativeInputWrapper.SendInput)).Should().Be(callsBefore, "no key was sent");
+    }
+
+    [Fact]
     public async Task CapsLockToggledWhileTheUserAnswers_IsRefused_AndNothingIsSent()
     {
         // With Caps Lock on, the letter keys type other characters than the user was shown

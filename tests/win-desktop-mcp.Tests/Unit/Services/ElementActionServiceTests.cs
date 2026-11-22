@@ -1773,6 +1773,76 @@ public sealed class ElementActionServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task SetValue_ModeType_ToAConfirmedHostOnARussianLayout_SendsCtrlAThenTheText_AsTheQuestionShowed()
+    {
+        // Arrange - the element's window is the agent's host, its keyboard layout Russian; the real input service sends, into a
+        // fake input wrapper, and the user is asked through an MCP client
+        var value = new FakeValuePattern("old");
+        var name = RefOf(Edit(value));
+        var wrapper = new FakeInputWrapper();
+        using var session = new InputSession(wrapper);
+        wrapper.BeforeSend = batch =>
+        {
+            if (batch.Any(e => e.Kind == InputEventKind.Unicode))
+            {
+                value.Value = "да";
+            }
+        };
+        var input = new InputSimulationService(TestDataFactory.CreateMockMonitorService().Object, wrapper,
+            TestDataFactory.CreateAllowingInputGuard(Main).Object, session, Permissive.PasteGuard, Permissive.Takeover,
+            keyboardLayout: new FakeKeyboardLayoutWrapper { Layout = FakeKeyboardLayoutWrapper.Russian });
+        var service = new ElementActionService(_tree, _worker, _registry, _guard.Object, session, _runner, _probe.Object, input,
+            _foreground.Object, _windows.Object, _clipboard.Object)
+        {
+            SettleDelay = TimeSpan.Zero,
+            GateTimeout = TimeSpan.FromSeconds(10),
+            Clock = _clock,
+            Sleep = _clock.Advance
+        };
+        _guard.Setup(g => g.HostWindowToConfirm(It.Is<InputTarget>(t => t.WindowHandle == Handle && t.AllowHostTarget)))
+            .Returns(new HostWindowToConfirm(Main, false));
+        var questions = new List<string>();
+        var options = new ModelContextProtocol.Client.McpClientOptions
+        {
+            Handlers = new ModelContextProtocol.Client.McpClientHandlers
+            {
+                ElicitationHandler = (request, _) =>
+                {
+                    lock (questions)
+                    {
+                        questions.Add(request!.Message);
+                    }
+
+                    return ValueTask.FromResult(new ModelContextProtocol.Protocol.ElicitResult
+                    {
+                        Action = "accept",
+                        Content = new Dictionary<string, JsonElement> { [UserConfirmation.ConfirmField] = JsonSerializer.SerializeToElement(true) }
+                    });
+                }
+            }
+        };
+        var tools = new ElementActionTools(service, Mock.Of<IElementSearchService>(), _registry, new HostTargetConfirmation(_guard.Object, session));
+        await using var server = await InProcessMcpServer.StartAsync([], builder => builder.AddToolErrorReporting().WithServerTools(tools),
+            clientOptions: options);
+
+        // Act
+        var result = await server.CallToolAsync("element_action", new Dictionary<string, object?>
+        {
+            ["action"] = "set_value", ["ref"] = name, ["value"] = "да", ["mode"] = "type", ["allowHostTarget"] = true
+        });
+
+        // Assert - Ctrl+A, then the text as characters, as the question showed them
+        var payload = JsonDocument.Parse(result.Content.OfType<ModelContextProtocol.Protocol.TextContentBlock>().Single().Text).RootElement;
+        payload.GetProperty("success").GetBoolean().Should().BeTrue(payload.ToString());
+        var chords = SendKeysParser.Chords(wrapper.Batches.SelectMany(b => b).ToList());
+        chords.Should().Equal(
+            new KeyChord(KeyModifiers.Control, InputEventKind.VirtualKey, 0x41),
+            new KeyChord(KeyModifiers.None, InputEventKind.Unicode, 'д'),
+            new KeyChord(KeyModifiers.None, InputEventKind.Unicode, 'а'));
+        questions.Should().ContainSingle().Which.Should().Contain("select all (Ctrl+A), then type").And.Contain("⟦да⟧");
+    }
+
+    [Fact]
     public async Task SetValue_ModeType_FocusesTheElement_SelectsAll_AndTypes_ThroughTheGuardedInput()
     {
         // Arrange
