@@ -19,6 +19,8 @@ public class WindowManagerToolsTests
 
     private WindowManagerTools CreateSut() => new WindowManagerTools(_mockWindowService.Object, _mockForegroundService.Object, Permissive.Session);
 
+    private WindowCloseTools CreateCloseSut() => new WindowCloseTools(_mockWindowService.Object, Permissive.Session);
+
     #region SetWindowBounds Tests
 
     [Fact]
@@ -320,7 +322,7 @@ public class WindowManagerToolsTests
         // Arrange
         _mockWindowService.Setup(w => w.IsValidWindow(It.IsAny<nint>()))
             .Returns(false);
-        var sut = CreateSut();
+        var sut = CreateCloseSut();
 
         // Act
         var result = await sut.CloseWindow(99999);
@@ -337,7 +339,7 @@ public class WindowManagerToolsTests
         var handle = new nint(12345);
         _mockWindowService.Setup(w => w.IsValidWindow(handle)).Returns(true);
         _mockWindowService.Setup(w => w.CloseWindow(handle, false)).Returns(WindowCloseResult.Sent(handle));
-        var sut = CreateSut();
+        var sut = CreateCloseSut();
 
         // Act
         var result = await sut.CloseWindow(12345, waitMs: 0);
@@ -355,7 +357,7 @@ public class WindowManagerToolsTests
         _mockWindowService.Setup(w => w.IsValidWindow(handle)).Returns(true);
         _mockWindowService.Setup(w => w.CloseWindow(handle, false))
             .Returns(WindowCloseResult.Failed(handle, WindowErrorCode.CloseFailed, "Windows did not accept the close message"));
-        var sut = CreateSut();
+        var sut = CreateCloseSut();
 
         // Act
         var result = await sut.CloseWindow(12345, waitMs: 0);

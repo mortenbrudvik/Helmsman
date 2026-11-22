@@ -33,7 +33,7 @@ public class FixtureDialogTests
         // Arrange - closing the document with unsaved changes shows the fixture's save prompt (Yes, No, Cancel)
         using var e2e = E2ESession.Start(DesktopTier.Input, _output, new FixtureLaunchOptions { OpenDocument = true });
         var document = e2e.Fixture.WaitForEvent(FixtureContract.Events.DocumentOpened).GetHandle("hwnd");
-        var closing = await e2e.Server.Get<WindowManagerTools>().CloseWindow(document, waitMs: 10_000);
+        var closing = await e2e.Server.Get<WindowCloseTools>().CloseWindow(document, waitMs: 10_000);
         _output.WriteLine($"close_window {document}: {closing}");
         e2e.Fixture.WaitForEvent(FixtureContract.Events.DocumentClosePrompted, e => e.GetHandle("hwnd") == document);
 

@@ -9,7 +9,7 @@ namespace WinDesktopMcp.Tests.Contract;
 /// <summary>
 /// Contract: what an MCP client gets back when close_window or close_windows_batch meets a protected
 /// window (roadmap M1.7), and what a verified close reports (roadmap M2.5): closed, or promptShown with the prompt.
-/// Runs the real WindowManagerTools, WindowService and WindowCloseVerifier through an in-process MCP server, with the
+/// Runs the real WindowCloseTools, WindowService and WindowCloseVerifier through an in-process MCP server, with the
 /// server's error reporting filter, a mocked native window wrapper and a mocked host guard, so the close message that
 /// is or is not posted is a mock call, never a real one. A window that gets WM_CLOSE is gone afterwards (IsWindow
 /// false), unless a test gives it a prompt.
@@ -295,7 +295,7 @@ public class WindowCloseToolContractTests
             [],
             builder => builder
                 .AddToolErrorReporting()
-                .WithServerTools(new WindowManagerTools(windowService, Mock.Of<IForegroundService>(), Permissive.Session,
+                .WithServerTools(new WindowCloseTools(windowService, Permissive.Session,
                     closeVerifier: new WindowCloseVerifier(windowService, pollInterval: TimeSpan.FromMilliseconds(5),
                         promptCheckInterval: TimeSpan.FromMilliseconds(10)))));
     }

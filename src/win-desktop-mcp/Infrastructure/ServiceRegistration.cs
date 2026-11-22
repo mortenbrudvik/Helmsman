@@ -316,6 +316,7 @@ public static class ServiceRegistration
         // MCP tool classes
         services.AddSingleton<WindowFinderTools>();
         services.AddSingleton<WindowManagerTools>();
+        services.AddSingleton<WindowCloseTools>();
         services.AddSingleton<MonitorInfoTools>();
         services.AddSingleton<AppLauncherTools>();
         services.AddSingleton<LayoutPresetTools>();
@@ -402,6 +403,7 @@ public static class ServiceRegistration
             // values the input schema lists and that are bound strictly (ToolJson, roadmap M2.2)
             .WithServerTools<WindowFinderTools>()
             .WithServerTools<WindowManagerTools>()
+            .WithServerTools<WindowCloseTools>()
             .WithServerTools<MonitorInfoTools>()
             .WithServerTools<AppLauncherTools>()
             .WithServerTools<LayoutPresetTools>()

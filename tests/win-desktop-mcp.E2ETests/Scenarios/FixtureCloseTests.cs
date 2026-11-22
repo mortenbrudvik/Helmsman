@@ -28,7 +28,7 @@ public class FixtureCloseTests
         // Arrange - the document starts with unsaved changes, so closing it shows the fixture's save prompt
         using var e2e = E2ESession.Start(DesktopTier.Input, _output, new FixtureLaunchOptions { OpenDocument = true });
         var document = e2e.Fixture.WaitForEvent(FixtureContract.Events.DocumentOpened).GetHandle("hwnd");
-        var tools = e2e.Server.Get<WindowManagerTools>();
+        var tools = e2e.Server.Get<WindowCloseTools>();
         var hostGuard = e2e.Server.Get<IHostGuard>();
         _output.WriteLine($"Host guard: {hostGuard.Host}");
         hostGuard.IsHostWindow(document).Should().BeFalse(

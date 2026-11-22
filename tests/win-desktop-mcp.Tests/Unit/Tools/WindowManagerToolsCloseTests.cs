@@ -33,10 +33,10 @@ public class WindowManagerToolsCloseTests
     }
 
     /// <summary>The tools, with the calling test's flow tagged so the gate checks see its own calls only.</summary>
-    private WindowManagerTools CreateSut()
+    private WindowCloseTools CreateSut()
     {
         _flow = InputGate.TagFlow();
-        return new(_windowService.Object, Mock.Of<IForegroundService>(), Permissive.Session, closeVerifier: _verifier.Object, gateWaitTimeout: TimeSpan.FromSeconds(5));
+        return new(_windowService.Object, Permissive.Session, closeVerifier: _verifier.Object, gateWaitTimeout: TimeSpan.FromSeconds(5));
     }
 
     private static WindowCloseRequest[] Requests(params long[] handles) => handles.Select(h => new WindowCloseRequest(h)).ToArray();
@@ -183,7 +183,7 @@ public class WindowManagerToolsCloseTests
         // Arrange
         using var session = new InputSession(new FakeInputWrapper());
         session.Pause(InputControlSources.Hotkey);
-        var sut = new WindowManagerTools(_windowService.Object, Mock.Of<IForegroundService>(), session, closeVerifier: _verifier.Object);
+        var sut = new WindowCloseTools(_windowService.Object, session, closeVerifier: _verifier.Object);
 
         // Act
         var act = () => sut.CloseWindow(12345);

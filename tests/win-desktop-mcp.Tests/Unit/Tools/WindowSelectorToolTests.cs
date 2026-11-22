@@ -45,6 +45,9 @@ public class WindowSelectorToolTests
     private WindowManagerTools CreateWindowTools(IInputSession? session = null) =>
         new(_windows.Object, Mock.Of<IForegroundService>(), session ?? Permissive.Session, gateWaitTimeout: TimeSpan.FromSeconds(10));
 
+    private WindowCloseTools CreateCloseTools(IInputSession? session = null) =>
+        new(_windows.Object, session ?? Permissive.Session, gateWaitTimeout: TimeSpan.FromSeconds(10));
+
     #region The single-window tools
 
     [Fact]
@@ -210,7 +213,7 @@ public class WindowSelectorToolTests
         session.Pause(InputControlSources.Hotkey);
 
         // Act
-        var act = () => CreateWindowTools(session).CloseWindow(window: NotepadSelector);
+        var act = () => CreateCloseTools(session).CloseWindow(window: NotepadSelector);
 
         // Assert
         (await act.Should().ThrowAsync<ToolErrorException>()).Which.ErrorCode.Should().Be(nameof(WindowErrorCode.PausedByUser));
@@ -304,7 +307,7 @@ public class WindowSelectorToolTests
     {
         // Arrange - the close guards (shell, agent host, policy) are the window service's own CloseWindow checks
         _windows.Setup(w => w.CloseWindow((nint)Notepad, false)).Returns(WindowCloseResult.Sent((nint)Notepad));
-        var tools = CreateWindowTools();
+        var tools = CreateCloseTools();
 
         // Act
         var result = await tools.CloseWindow(window: NotepadSelector, waitMs: 0);
@@ -323,7 +326,7 @@ public class WindowSelectorToolTests
             .Returns(TestDataFactory.CreateWindowInfo((int)Notepad, "Windows PowerShell", "WindowsTerminal", 300));
 
         // Act
-        var act = () => CreateWindowTools().CloseWindow(window: NotepadSelector, waitMs: 0);
+        var act = () => CreateCloseTools().CloseWindow(window: NotepadSelector, waitMs: 0);
 
         // Assert
         (await act.Should().ThrowAsync<ToolErrorException>()).Which.ErrorCode.Should().Be(nameof(WindowErrorCode.HandleMismatch));
@@ -337,7 +340,7 @@ public class WindowSelectorToolTests
         var foreground = new WindowSelector { Foreground = true };
         _windows.Setup(w => w.CloseWindowsBatchAsync(It.IsAny<IReadOnlyList<nint>>(), It.IsAny<bool>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((IReadOnlyList<nint> handles, bool _, int _, CancellationToken _) => handles.Select(WindowCloseResult.Sent).ToList());
-        var tools = CreateWindowTools();
+        var tools = CreateCloseTools();
 
         // Act
         var closeWindow = () => tools.CloseWindow(window: foreground, force: true, waitMs: 0);
@@ -364,7 +367,7 @@ public class WindowSelectorToolTests
         _windows.Setup(w => w.ResolveWindow(notepadInFront)).Returns(WindowResolution.Found(NotepadWindow));
         _windows.Setup(w => w.CloseWindow((nint)Notepad, false)).Returns(WindowCloseResult.Sent((nint)Notepad));
 
-        var result = await CreateWindowTools().CloseWindow(window: notepadInFront, waitMs: 0);
+        var result = await CreateCloseTools().CloseWindow(window: notepadInFront, waitMs: 0);
 
         result.Success.Should().BeTrue();
         _windows.Verify(w => w.CloseWindow((nint)Notepad, false), Times.Once);
@@ -373,7 +376,7 @@ public class WindowSelectorToolTests
     [Fact]
     public async Task CloseWindow_WithAnAmbiguousSelector_ClosesNothing()
     {
-        var act = () => CreateWindowTools().CloseWindow(window: ChromeSelector);
+        var act = () => CreateCloseTools().CloseWindow(window: ChromeSelector);
 
         (await act.Should().ThrowAsync<ToolErrorException>()).Which.ErrorCode.Should().Be("AmbiguousWindow");
         _windows.Verify(w => w.CloseWindow(It.IsAny<nint>(), It.IsAny<bool>()), Times.Never);
@@ -385,7 +388,7 @@ public class WindowSelectorToolTests
     [InlineData(false, false, "notepad")]
     public async Task CloseApplication_WithAWindowAndAnotherTarget_IsInvalidArguments(bool handle, bool processId, string? processName)
     {
-        var act = () => CreateWindowTools().CloseApplication(
+        var act = () => CreateCloseTools().CloseApplication(
             handle: handle ? Notepad : null, window: NotepadSelector, processId: processId ? 200 : null, processName: processName);
 
         (await act.Should().ThrowAsync<ToolErrorException>()).Which.ErrorCode.Should().Be(ToolErrorReporting.InvalidArgumentsErrorCode);
@@ -396,7 +399,7 @@ public class WindowSelectorToolTests
     [Fact]
     public async Task CloseApplication_WithAnAmbiguousSelector_ClosesNothing()
     {
-        var act = () => CreateWindowTools().CloseApplication(window: ChromeSelector);
+        var act = () => CreateCloseTools().CloseApplication(window: ChromeSelector);
 
         (await act.Should().ThrowAsync<ToolErrorException>()).Which.ErrorCode.Should().Be("AmbiguousWindow");
         _windows.Verify(w => w.CloseWindow(It.IsAny<nint>(), It.IsAny<bool>()), Times.Never);

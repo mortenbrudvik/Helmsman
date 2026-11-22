@@ -25,12 +25,12 @@ public class WindowManagerToolsCloseDiagnosticsTests
         Report(h => new CloseObservation(h, CloseStatus.Closed));
     }
 
-    private WindowManagerTools CreateSut()
+    private WindowCloseTools CreateSut()
     {
         InputGate.TagFlow();
         var factory = LoggerFactory.Create(builder => builder.AddProvider(_logs));
-        return new(_windowService.Object, Mock.Of<IForegroundService>(), Permissive.Session, closeVerifier: _verifier.Object,
-            gateWaitTimeout: TimeSpan.FromSeconds(5), logger: factory.CreateLogger<WindowManagerTools>());
+        return new(_windowService.Object, Permissive.Session, closeVerifier: _verifier.Object,
+            gateWaitTimeout: TimeSpan.FromSeconds(5), logger: factory.CreateLogger<WindowCloseTools>());
     }
 
     private void Report(Func<nint, CloseObservation> observe) =>

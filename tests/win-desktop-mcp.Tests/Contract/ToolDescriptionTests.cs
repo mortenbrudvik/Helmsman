@@ -329,7 +329,7 @@ public class ToolDescriptionTests
         // The threshold is written out in the [Description] strings, which cannot interpolate the int constant
         var text = ServerToolCatalog.AllDescriptions().Single(d => d.Source == source).Text;
 
-        text.Should().ContainEquivalentOf($"more than {WinDesktopMcp.Tools.WindowManagerTools.MaxCloseBatchWithoutConfirm} windows");
+        text.Should().ContainEquivalentOf($"more than {WinDesktopMcp.Tools.WindowCloseTools.MaxCloseBatchWithoutConfirm} windows");
     }
 
     [Fact]
