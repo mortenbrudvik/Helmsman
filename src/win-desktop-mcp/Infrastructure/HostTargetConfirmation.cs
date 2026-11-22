@@ -22,6 +22,19 @@ public sealed class HostConfirmation
     public HostTargetApproval? For(nint window) => _approved.TryGetValue(window, out var approval) ? approval : null;
 }
 
+/// <summary>What a call would send to the agent's host window, for the user's question.</summary>
+/// <param name="Tool">The tool.</param>
+/// <param name="Action">
+/// What the call does when it sends no characters or keys (a click: its button and point), or what its characters are for
+/// ("set_value on the Button 'Allow'"); null for none.
+/// </param>
+/// <param name="Content">
+/// The characters and keys the call sends, built from the value the call sends (InputPreview), only when the user is asked;
+/// null when it sends none. The function returns null when the call is refused anyway before anything is sent (keys that do
+/// not parse): the user is not asked then, and without an approval nothing reaches the host.
+/// </param>
+public sealed record HostInput(string Tool, string? Action = null, Func<InputPreview?>? Content = null);
+
 /// <summary>
 /// Asks the user, through the client, before a call's allowHostTarget sends input to the agent's own host window.
 /// </summary>
@@ -33,27 +46,25 @@ public interface IHostTargetConfirmation
     /// </summary>
     /// <param name="server">The call's server, through which the client is asked; null when the call has none.</param>
     /// <param name="targets">The call's targets, as the tool resolved them.</param>
-    /// <param name="input">What the call sends, as the question shows it (the tool, and a bounded description).</param>
+    /// <param name="input">What the call sends, which the question shows in full.</param>
     /// <param name="cancellationToken">The call's cancellation.</param>
-    /// <exception cref="ToolErrorException">ConfirmationRequired or ConfirmationDeclined: nothing may be sent.</exception>
-    Task<HostConfirmation> ConfirmAsync(McpServer? server, IReadOnlyList<InputTarget> targets, string input, CancellationToken cancellationToken);
+    /// <exception cref="ToolErrorException">
+    /// TextTooLong (the input does not fit a question whole), ConfirmationRequired or ConfirmationDeclined: nothing may be sent.
+    /// </exception>
+    Task<HostConfirmation> ConfirmAsync(McpServer? server, IReadOnlyList<InputTarget> targets, HostInput input, CancellationToken cancellationToken);
 }
 
 /// <summary>The server's <see cref="IHostTargetConfirmation"/>.</summary>
 public sealed class HostTargetConfirmation : IHostTargetConfirmation
 {
-    /// <summary>The most characters of a typed text the question shows.</summary>
-    public const int MaxTextPreviewLength = 40;
-
-    /// <summary>The most characters of a key spec the question shows.</summary>
-    public const int MaxKeysPreviewLength = 60;
-
-    /// <summary>A text to type, for the question: its length and its start on one line, cut at <see cref="MaxTextPreviewLength"/>.</summary>
-    public static string TextPreview(string? text) =>
-        $"{text?.Length ?? 0} characters: {UserConfirmation.Quote(text, MaxTextPreviewLength)}";
-
-    /// <summary>Keys to send, for the question: on one line, cut at <see cref="MaxKeysPreviewLength"/>.</summary>
-    public static string KeysPreview(string? keys) => UserConfirmation.Quote(keys, MaxKeysPreviewLength);
+    /// <summary>
+    /// The most characters the input may take as the question shows it (<see cref="ShownInput"/>: an escaped character or a
+    /// key counts as its marker's length). The user approves only input they see whole, so longer input to the host is
+    /// refused (TextTooLong) rather than shown cut: a harmless start could hide a command after it. About four lines of a
+    /// client's question, as long as the longest question of the close tools; it also keeps type_text below its auto-paste
+    /// threshold for plain text.
+    /// </summary>
+    public const int MaxShownLength = 300;
 
     private readonly IInputTargetGuard _guard;
     private readonly IInputSession _session;
@@ -80,10 +91,11 @@ public sealed class HostTargetConfirmation : IHostTargetConfirmation
     /// that cannot ask is ConfirmationRequired (no argument stands in for the user), and anything but a ticked yes in time,
     /// including a client that fails to ask, is ConfirmationDeclined. Nothing is remembered: every call asks again.
     /// </summary>
-    public async Task<HostConfirmation> ConfirmAsync(McpServer? server, IReadOnlyList<InputTarget> targets, string input,
+    public async Task<HostConfirmation> ConfirmAsync(McpServer? server, IReadOnlyList<InputTarget> targets, HostInput input,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(targets);
+        ArgumentNullException.ThrowIfNull(input);
 
         var hosts = new Dictionary<nint, HostWindowToConfirm>();
         foreach (var target in targets)
@@ -102,6 +114,25 @@ public sealed class HostTargetConfirmation : IHostTargetConfirmation
 
         var windows = hosts.Values.DistinctBy(w => w.Window.Handle).ToList();
         var names = string.Join(" and ", windows.Select(w => Name(w.Window)));
+
+        // The question shows every character and key that would be sent, or the call is refused: never a cut preview
+        InputPreview? content = null;
+        if (input.Content != null)
+        {
+            content = input.Content();
+            if (content == null)
+            {
+                return HostConfirmation.None;
+            }
+
+            if (content.Shown.Length > MaxShownLength)
+            {
+                throw new ToolErrorException(nameof(InputErrorCode.TextTooLong),
+                    $"Input to {names}, the agent's own host, is shown to the user in full before it is sent, and this input shows " +
+                    $"as {content.Shown.Length} characters, more than the {MaxShownLength} a question shows whole. Nothing was sent, " +
+                    "and the user was not asked. Send less per call: split it into several calls, each of which the user confirms.");
+            }
+        }
         if (!UserConfirmation.CanAsk(server))
         {
             throw new ToolErrorException(nameof(WindowErrorCode.ConfirmationRequired),
@@ -111,7 +142,7 @@ public sealed class HostTargetConfirmation : IHostTargetConfirmation
                 "this step themselves.");
         }
 
-        var answer = await UserConfirmation.AskAsync(server!, Question(windows, input), Title, _answerTimeout, cancellationToken)
+        var answer = await UserConfirmation.AskAsync(server!, Question(windows, input, content), Title, _answerTimeout, cancellationToken)
             .ConfigureAwait(false);
         if (!answer.Confirmed)
         {
@@ -124,15 +155,36 @@ public sealed class HostTargetConfirmation : IHostTargetConfirmation
     }
 
     /// <summary>
-    /// The question: which window (title and process), that it is the agent's own, and what the call sends there, every part
-    /// from another app or from the agent quoted on one line and cut short (<see cref="UserConfirmation.Quote(string?)"/>).
+    /// The question: which window (its title quoted on one line, <see cref="UserConfirmation.Quote(string?)"/>, and its
+    /// process), that it is the agent's own, and what the call sends there: the action, and every character and key it sends
+    /// between ⟦ and ⟧ (<see cref="ShownInput"/>), saying first when it presses Enter or types a line break, which can run a
+    /// command in a terminal.
     /// </summary>
-    private static string Question(IReadOnlyList<HostWindowToConfirm> windows, string input) =>
-        "The AI agent asks to send input to the terminal, editor or chat app it runs in (this window, or a dialog or menu it " +
-        "opens). Input there can answer the agent's own permission prompts or run commands.\n" +
-        $"{(windows.Count == 1 ? "Window" : "Windows")}: {string.Join("; ", windows.Select(w => Name(w.Window) + (w.OnlyWhileAncestorsUnknown ? ", possibly the agent's own window" : string.Empty)))}\n" +
-        $"Input: {input}\n" +
-        "Allow it, for this call only?";
+    private static string Question(IReadOnlyList<HostWindowToConfirm> windows, HostInput input, InputPreview? content)
+    {
+        var question = new System.Text.StringBuilder(
+            "The AI agent asks to send input to the terminal, editor or chat app it runs in (this window, or a dialog or menu it " +
+            "opens). Input there can answer the agent's own permission prompts or run commands.\n");
+        question.Append(windows.Count == 1 ? "Window: " : "Windows: ")
+            .Append(string.Join("; ", windows.Select(w => Name(w.Window) + (w.OnlyWhileAncestorsUnknown ? ", possibly the agent's own window" : string.Empty))))
+            .Append('\n');
+        var tool = input.Action == null ? input.Tool : $"{input.Tool} ({input.Action})";
+        if (content == null)
+        {
+            question.Append($"It will send: {tool}.\n");
+        }
+        else
+        {
+            var then = content.PressesEnter ? ", and press Enter, which in a terminal runs the command"
+                : content.TypesLineBreak ? ", with line breaks, which in a terminal can run the command"
+                : string.Empty;
+            question.Append($"{tool} will {content.How} in this window{then}:\n")
+                .Append(ShownInput.Open).Append(content.Shown).Append(ShownInput.Close).Append('\n')
+                .Append(ShownInput.Legend).Append('\n');
+        }
+
+        return question.Append("Allow it, for this call only?").ToString();
+    }
 
     private static string Name(WindowSummary window) =>
         $"{(string.IsNullOrEmpty(window.Title) ? "an untitled window" : UserConfirmation.Quote(window.Title))} ({window.ProcessName}, PID {window.ProcessId})";

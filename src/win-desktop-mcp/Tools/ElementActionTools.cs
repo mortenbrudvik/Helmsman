@@ -113,8 +113,8 @@ public partial class ElementActionTools
                      "the pointer and takes the foreground).")]
         ElementActionFallback fallback = ElementActionFallback.None,
         [Description("Allow acting on the agent's own host window (its terminal, editor or chat app). Works only with ref or " +
-                     "handle (or window.handle); the server asks the user first (ConfirmationDeclined, ConfirmationRequired). Use " +
-                     "only when the user asked for it. Default: false")]
+                     "handle (or window.handle); the server asks the user first, showing value whole (ConfirmationDeclined, " +
+                     "ConfirmationRequired; over 300 characters: TextTooLong). Use only when the user asked for it. Default: false")]
         bool allowHostTarget = false,
         [Description(MaxScrollsDescription)]
         int maxScrolls = 0,
@@ -136,7 +136,7 @@ public partial class ElementActionTools
         // The user's yes to acting on the agent's own host window, asked once the window is known (allowHostTarget)
         HostTargetApproval? confirmedHost = null;
         Task<HostTargetApproval?> ConfirmAsync(nint window, string? element) =>
-            ConfirmHostAsync(server, window, allowHostTarget, action, element, value, cancellationToken);
+            ConfirmHostAsync(server, window, allowHostTarget, action, mode, element, value, cancellationToken);
 
         // The request once its element is named by a ref: the one passed, or the one the criteria found
         ElementActionRequest RequestFor(string elementRef) =>
@@ -344,17 +344,26 @@ public partial class ElementActionTools
     /// Asks the user before allowHostTarget acts on the agent's own host window <paramref name="window"/> (nothing is asked for
     /// another window, or without allowHostTarget), before any action takes the input gate; the approval for the request.
     /// </summary>
-    /// <exception cref="ToolErrorException">ConfirmationRequired or ConfirmationDeclined: nothing is done.</exception>
+    /// <exception cref="ToolErrorException">TextTooLong, ConfirmationRequired or ConfirmationDeclined: nothing is done.</exception>
     private async Task<HostTargetApproval?> ConfirmHostAsync(McpServer? server, nint window, bool allowHostTarget, ElementActionKind action,
-        string? element, string? value, CancellationToken cancellationToken)
+        ElementValueMode mode, string? element, string? value, CancellationToken cancellationToken)
     {
         if (!allowHostTarget || window == nint.Zero)
         {
             return null;
         }
 
-        var input = $"element_action: {ToolEnum<ElementActionKind>.Name(action)}{(element == null ? string.Empty : $" on {element}")}" +
-                    (value == null ? string.Empty : $", the value {HostTargetConfirmation.TextPreview(value)}");
+        // The value is shown whole, as typed text is: set_value and append_text put it in the element (mode type and paste send
+        // it as input), and the other actions' value says what they do (a toggle state, a number, a menu path)
+        var how = action switch
+        {
+            ElementActionKind.SetValue => mode switch { ElementValueMode.Type => "type", ElementValueMode.Paste => "paste", _ => "set the value to" },
+            ElementActionKind.AppendText => mode switch { ElementValueMode.Type => "type at the end", ElementValueMode.Paste => "paste at the end", _ => "append" },
+            _ => "use the value"
+        };
+        var input = new HostInput("element_action",
+            $"{ToolEnum<ElementActionKind>.Name(action)}{(element == null ? string.Empty : $" on {element}")}",
+            value == null ? null : () => InputPreview.OfText(value, $"{how} these {value.Length} characters"));
         var confirmed = await _hostConfirmation.ConfirmAsync(server, [InputTarget.Window(window, allowHostTarget: true)], input, cancellationToken)
             .ConfigureAwait(false);
         return confirmed.For(window);

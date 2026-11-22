@@ -67,7 +67,7 @@ public static class Permissive
 
     private sealed class NeverAsks : IHostTargetConfirmation
     {
-        public Task<HostConfirmation> ConfirmAsync(McpServer? server, IReadOnlyList<InputTarget> targets, string input,
+        public Task<HostConfirmation> ConfirmAsync(McpServer? server, IReadOnlyList<InputTarget> targets, HostInput input,
             CancellationToken cancellationToken) => Task.FromResult(WinDesktopMcp.Infrastructure.HostConfirmation.None);
     }
 

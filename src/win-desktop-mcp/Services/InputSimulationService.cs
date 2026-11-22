@@ -543,10 +543,7 @@ public partial class InputSimulationService : IInputSimulationService
 
         // auto pastes long text where a paste puts in what typing would: not with delayMs, and not when line breaks or tabs
         // are to press keys
-        var pastes = method == TextInputMethod.Paste ||
-                     (method == TextInputMethod.Auto && _pasteClipboard != null && length > AutoPasteThreshold && delayBetweenKeysMs == 0 &&
-                      (controlChars is null or TextControlChars.Unicode || typed.AsSpan().IndexOfAny('\n', '\t') < 0) &&
-                      pasteIsPauseChord == null);
+        var pastes = WouldPaste(method, typed, length, delayBetweenKeysMs, controlChars, pasteIsPauseChord);
         var planned = pastes ? pasteMethod : typingMethod;
         if (pastes && PasteRefusalBeforeInput(method == TextInputMethod.Paste, length, delayBetweenKeysMs, pasteIsPauseChord) is { } pasteRefused)
         {
@@ -813,6 +810,70 @@ public partial class InputSimulationService : IInputSimulationService
         }
 
         return (characters, InputErrorCode.None, null);
+    }
+
+    /// <summary>Whether type_text pastes <paramref name="typed"/> rather than types it: method paste, or auto as it decides.</summary>
+    private bool WouldPaste(TextInputMethod method, string typed, int length, int delayBetweenKeysMs, TextControlChars? controlChars,
+        string? pasteIsPauseChord) =>
+        method == TextInputMethod.Paste ||
+        (method == TextInputMethod.Auto && _pasteClipboard != null && length > AutoPasteThreshold && delayBetweenKeysMs == 0 &&
+         (controlChars is null or TextControlChars.Unicode || typed.AsSpan().IndexOfAny('\n', '\t') < 0) &&
+         pasteIsPauseChord == null);
+
+    public InputPreview? PreviewText(string text, int delayBetweenKeysMs, TextControlChars? controlChars, TextInputMethod method)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return null;
+        }
+
+        // As TypeTextAsync reads the text: its line breaks normalized, its method decided, its characters made events
+        var typed = NormalizeLineBreaks(text);
+        var length = CountCharacters(typed);
+        delayBetweenKeysMs = Math.Clamp(delayBetweenKeysMs, 0, 100);
+        if (WouldPaste(method, typed, length, delayBetweenKeysMs, controlChars, _session.FindPauseChord(PasteKeys(KeyboardLayout.Invariant))))
+        {
+            return InputPreview.OfText(typed, $"paste these {length} characters (Ctrl+V)" +
+                                              (method == TextInputMethod.Auto ? ", or type them when the clipboard cannot be lent," : string.Empty));
+        }
+
+        if (controlChars == null && typed.AsSpan().IndexOfAny('\n', '\t') >= 0)
+        {
+            return null;
+        }
+
+        var viaLayout = method == TextInputMethod.Keys;
+        var events = CharacterInputs(typed, controlChars ?? TextControlChars.Unicode, KeyboardLayout.Invariant, viaLayout)
+            .SelectMany(c => c).ToList();
+        var (shown, enter, lineBreak) = InputPreviews.Render(events);
+        return new InputPreview(shown, $"type these {length} characters" + (viaLayout ? " with the keys of the window's keyboard layout" : string.Empty),
+            enter, lineBreak);
+    }
+
+    public InputPreview? PreviewSendKeys(string keys)
+    {
+        try
+        {
+            var (shown, enter, lineBreak) = InputPreviews.Render(KeySpecParser.Parse(keys, KeyboardLayout.Invariant).Events);
+            return new InputPreview(shown, "press these keys", enter, lineBreak);
+        }
+        catch (ArgumentException)
+        {
+            return null;
+        }
+    }
+
+    public InputPreview? PreviewPressKeys(KeyList keys, int repeat)
+    {
+        try
+        {
+            var (shown, enter, lineBreak) = InputPreviews.Render(PressKeysParser.Parse(keys, repeat, KeyboardLayout.Invariant).Events);
+            return new InputPreview(shown, "press these keys", enter, lineBreak);
+        }
+        catch (ArgumentException)
+        {
+            return null;
+        }
     }
 
     /// <summary>type_text's refusal of text with a line break or a tab and no controlChars (InvalidArguments).</summary>

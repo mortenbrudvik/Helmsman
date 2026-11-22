@@ -91,7 +91,7 @@ public class DialogTools
         }
 
         var confirmed = await ConfirmHostAsync(server, target, allowHostTarget,
-            $"respond_to_dialog: {(button == null ? "read the dialog, pressing nothing" : $"press the button {UserConfirmation.Quote(button)}")}",
+            new HostInput("respond_to_dialog", button == null ? "read the dialog, pressing nothing" : $"press the button {UserConfirmation.Quote(button)}"),
             cancellationToken).ConfigureAwait(false);
         var result = await _dialogs.RespondAsync(new DialogResponseRequest(target, button, allowHostTarget, timeout) { ConfirmedHost = confirmed },
                 cancellationToken)
@@ -133,8 +133,8 @@ public class DialogTools
         [Description(WindowTargeting.WindowDescription)]
         WindowSelector? window = null,
         [Description("Allow completing a file dialog of the agent's own host window (its terminal, editor or chat app). Works " +
-                     "only with handle (or window.handle); the server asks the user first (ConfirmationDeclined, " +
-                     "ConfirmationRequired). Use only when the user asked for it. Default: false")]
+                     "only with handle (or window.handle); the server asks the user first, showing path whole (ConfirmationDeclined, " +
+                     "ConfirmationRequired; over 300 characters: TextTooLong). Use only when the user asked for it. Default: false")]
         bool allowHostTarget = false,
         [Description("How long the whole call may take, the wait for the dialog to close included, in milliseconds (default: " +
                      "10000, clamped to 1000-60000).")]
@@ -151,7 +151,8 @@ public class DialogTools
         var target = Target(handle, window, allowHostTarget);
         var timeout = TimeSpan.FromMilliseconds(Math.Clamp(timeoutMs, MinTimeoutMs, MaxFileDialogTimeoutMs));
         var confirmed = await ConfirmHostAsync(server, target, allowHostTarget,
-            $"file_dialog: {ToolEnum<FileDialogAction>.Name(action)} {UserConfirmation.QuotePath(path)}{(overwrite ? ", replacing the file" : string.Empty)}",
+            new HostInput("file_dialog", $"{ToolEnum<FileDialogAction>.Name(action)}{(overwrite ? ", replacing the file" : string.Empty)}",
+                () => InputPreview.OfText(path, $"put this {path.Length}-character path in its file name box")),
             cancellationToken).ConfigureAwait(false);
         var result = await _fileDialogs.CompleteAsync(
             new FileDialogRequest(target, path, action, overwrite, allowHostTarget, timeout) { ConfirmedHost = confirmed }, cancellationToken)
@@ -165,7 +166,7 @@ public class DialogTools
     /// asked for another window, or without allowHostTarget), before the action takes the input gate; the approval.
     /// </summary>
     /// <exception cref="ToolErrorException">ConfirmationRequired or ConfirmationDeclined: nothing is done.</exception>
-    private async Task<HostTargetApproval?> ConfirmHostAsync(McpServer? server, nint window, bool allowHostTarget, string input,
+    private async Task<HostTargetApproval?> ConfirmHostAsync(McpServer? server, nint window, bool allowHostTarget, HostInput input,
         CancellationToken cancellationToken)
     {
         if (!allowHostTarget || window == nint.Zero)

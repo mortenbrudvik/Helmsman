@@ -33,8 +33,9 @@ public class InputSimulationTools
 
     internal const string AllowHostTargetDescription =
         "Allow input to the agent's own host window (its terminal, editor or chat app), named by windowHandle or window.handle. The " +
-        "server asks the user first; nothing is sent without their yes (ConfirmationDeclined) or when the client cannot ask " +
-        "(ConfirmationRequired). Use only when the user asked for it. Default: false";
+        "server asks the user first, showing the whole input; nothing is sent without their yes (ConfirmationDeclined), when the " +
+        "client cannot ask (ConfirmationRequired) or for input over 300 characters (TextTooLong). Use only when the user asked " +
+        "for it. Default: false";
 
     internal const string ReleaseHeldModifiersDescription =
         "Release modifier keys (Shift, Ctrl, Alt, Windows) that are down before the input is sent, instead of refusing with " +
@@ -163,7 +164,7 @@ public class InputSimulationTools
         }
 
         var confirmed = await ConfirmAsync(server, [point.Target],
-            $"mouse_click: {ClickName(button, clickCount)} at ({point.X}, {point.Y}){With(modifiers)}", cancellationToken).ConfigureAwait(false);
+            new HostInput("mouse_click", $"{ClickName(button, clickCount)} at ({point.X}, {point.Y}) on the window{With(modifiers)}"), cancellationToken).ConfigureAwait(false);
         var target = confirmed.Apply(point.Target);
         return await ObserveAsync(Echo(_inputService.MouseClick(point.X, point.Y, button, clickCount, modifiers ?? [], target,
             releaseHeldModifiers, cancellationToken), point.Requested), target, observe, cancellationToken).ConfigureAwait(false);
@@ -247,7 +248,7 @@ public class InputSimulationTools
         {
             // One question for both points' windows
             var confirmed = await ConfirmAsync(server, [from.Target, to.Target],
-                $"drag: press the {ToolEnum<MouseButton>.Name(button)} button at ({from.X}, {from.Y}) and release it at ({to.X}, {to.Y}){With(modifiers)}",
+                new HostInput("drag", $"press the {ToolEnum<MouseButton>.Name(button)} button at ({from.X}, {from.Y}) and release it at ({to.X}, {to.Y}){With(modifiers)}"),
                 cancellationToken).ConfigureAwait(false);
             (@from, to) = (@from with { Target = confirmed.Apply(@from.Target) }, to with { Target = confirmed.Apply(to.Target) });
             result = await _inputService.DragAsync(request with { FromX = from.X, FromY = from.Y, ToX = to.X, ToY = to.Y }, from.Target,
@@ -289,7 +290,7 @@ public class InputSimulationTools
             return new MouseMoveResult(false, x, y, failure.Error, failure.ErrorCode) { Requested = point.Requested };
         }
 
-        var confirmed = await ConfirmAsync(server, [point.Target], $"mouse_move: move the pointer to ({point.X}, {point.Y})", cancellationToken)
+        var confirmed = await ConfirmAsync(server, [point.Target], new HostInput("mouse_move", $"move the pointer to ({point.X}, {point.Y})"), cancellationToken)
             .ConfigureAwait(false);
         return Echo(_inputService.MoveMouse(point.X, point.Y, confirmed.Apply(point.Target), releaseHeldModifiers, cancellationToken),
             point.Requested);
@@ -356,7 +357,7 @@ public class InputSimulationTools
             }
 
             var confirmedAtPoint = await ConfirmAsync(server, [point.Target],
-                $"scroll: {Notches(deltaY, deltaX)} at ({point.X}, {point.Y}){With(modifiers)}", cancellationToken).ConfigureAwait(false);
+                new HostInput("scroll", $"{Notches(deltaY, deltaX)} at ({point.X}, {point.Y}){With(modifiers)}"), cancellationToken).ConfigureAwait(false);
             return Echo(_inputService.Scroll(point.X, point.Y, deltaY, deltaX, modifiers ?? [], confirmedAtPoint.Apply(point.Target),
                 releaseHeldModifiers, cancellationToken), point.Requested);
         }
@@ -377,7 +378,7 @@ public class InputSimulationTools
                 "x and y. {\"foreground\": true} alone names no window here. Nothing was scrolled.");
         }
 
-        var confirmed = await ConfirmAsync(server, [target], $"scroll: {Notches(deltaY, deltaX)} at the centre of the window{With(modifiers)}",
+        var confirmed = await ConfirmAsync(server, [target], new HostInput("scroll", $"{Notches(deltaY, deltaX)} at the centre of the window{With(modifiers)}"),
             cancellationToken).ConfigureAwait(false);
         return _inputService.Scroll(null, null, deltaY, deltaX, modifiers ?? [], confirmed.Apply(target), releaseHeldModifiers, cancellationToken);
     }
@@ -421,7 +422,8 @@ public class InputSimulationTools
         ActionObservation.Check(_desktopState, observe, NothingSent);
         delayMs = Math.Clamp(delayMs, 0, 100);
         var target = Target(windowHandle, window, allowHostTarget);
-        target = (await ConfirmAsync(server, [target], $"type_text: {HostTargetConfirmation.TextPreview(text)}", cancellationToken)
+        target = (await ConfirmAsync(server, [target], 
+            new HostInput("type_text", Content: () => _inputService.PreviewText(text, delayMs, controlChars, method)), cancellationToken)
             .ConfigureAwait(false)).Apply(target);
         var result = await _inputService.TypeTextAsync(text, delayMs, target, releaseHeldModifiers, controlChars, method, cancellationToken)
             .ConfigureAwait(false);
@@ -467,7 +469,8 @@ public class InputSimulationTools
         ActionObservation.Check(_desktopState, observe, NothingSent);
         delayMs = Math.Clamp(delayMs, 0, InputSimulationService.MaxSendKeysDelayMs);
         var target = Target(windowHandle, window, allowHostTarget);
-        target = (await ConfirmAsync(server, [target], $"send_keys: the keys {HostTargetConfirmation.KeysPreview(keys)}", cancellationToken)
+        target = (await ConfirmAsync(server, [target], 
+            new HostInput("send_keys", Content: () => _inputService.PreviewSendKeys(keys)), cancellationToken)
             .ConfigureAwait(false)).Apply(target);
         var result = await _inputService.SendKeysAsync(keys, target, releaseHeldModifiers, delayMs, cancellationToken).ConfigureAwait(false);
         return await ActionObservation.ResultAsync(result, result.Success, Acted(target, result.ReceivingWindow),
@@ -524,7 +527,7 @@ public class InputSimulationTools
         ActionObservation.Check(_desktopState, observe, NothingSent);
         var target = Target(windowHandle, window, allowHostTarget);
         target = (await ConfirmAsync(server, [target],
-            $"press_keys: the keys {HostTargetConfirmation.KeysPreview(keys.Text)}{(repeat > 1 ? $", {repeat} times" : string.Empty)}",
+            new HostInput("press_keys", Content: () => _inputService.PreviewPressKeys(keys, repeat)),
             cancellationToken).ConfigureAwait(false)).Apply(target);
         SendKeysResult result;
         try
@@ -548,7 +551,7 @@ public class InputSimulationTools
     /// <paramref name="targets"/> (nothing is asked otherwise), before the input service takes the input gate.
     /// </summary>
     /// <exception cref="ToolErrorException">ConfirmationRequired or ConfirmationDeclined: nothing is sent.</exception>
-    private Task<HostConfirmation> ConfirmAsync(McpServer? server, IReadOnlyList<InputTarget> targets, string input,
+    private Task<HostConfirmation> ConfirmAsync(McpServer? server, IReadOnlyList<InputTarget> targets, HostInput input,
         CancellationToken cancellationToken) =>
         _hostConfirmation.ConfirmAsync(server, targets, input, cancellationToken);
 

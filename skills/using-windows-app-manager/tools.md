@@ -122,7 +122,7 @@ CDP only, on a debug browser, no real mouse or keyboard: work on a window behind
 | `send_keys` | Send keys to the named window | keys (e.g., `^c`, `{ENTER}`), windowHandle |
 | `press_keys` | Press key chords by name (ctrl+shift+t) or sequences (tab*3 enter); nothing stays held | keys, repeat, holdMs, delayBetweenMs, windowHandle |
 
-All seven also take `allowHostTarget` (default false): only for input to your own host window, named as `windowHandle`, when the user asked for it; the server then asks the user to confirm, and sends nothing without their yes or when the client cannot ask; and `releaseHeldModifiers` (default false): only for a stuck modifier key (see `ModifiersHeld` in [errors.md](errors.md#input-refusals)).
+All seven also take `allowHostTarget` (default false): only for input to your own host window, named as `windowHandle`, when the user asked for it; the server then shows the user the whole input and asks, and sends nothing without their yes, when the client cannot ask, or for input over 300 characters; and `releaseHeldModifiers` (default false): only for a stuck modifier key (see `ModifiersHeld` in [errors.md](errors.md#input-refusals)).
 
 ### Input Control (3 tools)
 
