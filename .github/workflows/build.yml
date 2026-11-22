@@ -123,9 +123,45 @@ jobs:
         shell: pwsh
         run: Compress-Archive -Path ./release/* -DestinationPath "helmsman-$env:GITHUB_REF_NAME-win-x64.zip"
 
+      # SHA256SUMS.txt holds a "<sha-256>  <name>" line for the zip and for each file in it (helmsman.exe and
+      # its .pdb), as sha256sum -c reads them: lower-case hex, two spaces, LF line endings, UTF-8 without a BOM.
+      # WriteAllText writes exactly that; Out-File, Set-Content and > would not on every PowerShell version.
+      # The lines also go to the log and, through checksums-notes.md, to the top of the release notes.
+      - name: Compute checksums
+        shell: pwsh
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $zip = Get-Item -LiteralPath "helmsman-$tag-win-x64.zip"
+          $release = (Resolve-Path -LiteralPath ./release).Path
+          $entries = @([pscustomobject]@{ Name = $zip.Name; Path = $zip.FullName })
+          $entries += @(Get-ChildItem -LiteralPath $release -File -Recurse | Sort-Object FullName | ForEach-Object {
+              [pscustomobject]@{ Name = [IO.Path]::GetRelativePath($release, $_.FullName).Replace('\', '/'); Path = $_.FullName }
+            })
+          $lines = @($entries | ForEach-Object {
+              $hash = (Get-FileHash -LiteralPath $_.Path -Algorithm SHA256).Hash.ToLowerInvariant()
+              "$hash  $($_.Name)"
+            })
+          if (@($lines -match '  helmsman\.exe$').Count -ne 1) {
+            throw 'The release folder has no helmsman.exe.'
+          }
+          $utf8 = [Text.UTF8Encoding]::new($false)
+          [IO.File]::WriteAllText((Join-Path $PWD.Path 'SHA256SUMS.txt'), ($lines -join "`n") + "`n", $utf8)
+          $lines | ForEach-Object { Write-Host $_ }
+          $verify = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/blob/$tag/README.md#verify-a-download"
+          $notes = @('<!-- checksums:begin -->', '### SHA-256 checksums', '', '```text') + $lines + @(
+            '```', '',
+            ('The same lines are in `SHA256SUMS.txt`: see [Verify a download](' + $verify + '). ' +
+              'The exe is not code-signed.'),
+            '<!-- checksums:end -->', '', '')
+          [IO.File]::WriteAllText((Join-Path $PWD.Path 'checksums-notes.md'), $notes -join "`n", $utf8)
+
       # The GitHub CLI preinstalled on the runner creates the release, so no third-party action runs
-      # with this job's write token. --verify-tag refuses to create a missing tag. A re-run of the
-      # job replaces the asset of the release the first run created.
+      # with this job's write token. --verify-tag refuses to create a missing tag. The zip and
+      # SHA256SUMS.txt go up in the one gh release create call, so the release never exists without its
+      # checksums. --notes-file text is put before the generated notes (gh release create --help; the
+      # REST API puts a body given with generate_release_notes before the generated one).
+      # A re-run of the job replaces the zip and SHA256SUMS.txt of the release the first run created,
+      # and the checksum block at the top of its notes: a zip made again differs (its entries' times).
       - name: Create Release
         shell: pwsh
         env:
@@ -136,9 +172,21 @@ jobs:
           $PSNativeCommandUseErrorActionPreference = $false
           $tag = $env:GITHUB_REF_NAME
           $zip = "helmsman-$tag-win-x64.zip"
+          $sums = 'SHA256SUMS.txt'
+          $notes = 'checksums-notes.md'
           gh release view $tag --json tagName 2>$null | Out-Null
           if ($LASTEXITCODE -eq 0) {
-            gh release upload $tag $zip --clobber
+            gh release upload $tag $zip $sums --clobber
+            if ($LASTEXITCODE -ne 0) { throw "gh release upload exited with code $LASTEXITCODE." }
+            # gh writes UTF-8: decode it as such, so text in the notes outside ASCII survives the edit.
+            [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
+            $body = (gh release view $tag --json body --jq .body) -join "`n"
+            if ($LASTEXITCODE -ne 0) { throw "gh release view exited with code $LASTEXITCODE." }
+            $body = [regex]::Replace($body, '(?s)<!-- checksums:begin -->.*?<!-- checksums:end -->\s*', '')
+            $edited = Join-Path $PWD.Path 'release-notes.md'
+            $text = [IO.File]::ReadAllText((Join-Path $PWD.Path $notes)) + $body
+            [IO.File]::WriteAllText($edited, $text, [Text.UTF8Encoding]::new($false))
+            gh release edit $tag --notes-file $edited
           } else {
-            gh release create $tag $zip --title $tag --generate-notes --verify-tag
+            gh release create $tag $zip $sums --title $tag --generate-notes --notes-file $notes --verify-tag
           }

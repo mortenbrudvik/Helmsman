@@ -5,7 +5,8 @@ namespace Helmsman.Tests.Unit;
 /// <summary>
 /// A v* tag makes build.yml publish a GitHub release, and the plugin's users get that release. The
 /// test suite (test.yml) does not run for a tag on its own, so build.yml calls it for the tag and its
-/// release job needs that job: a tag whose tests fail must not be released.
+/// release job needs that job: a tag whose tests fail must not be released. The release carries
+/// SHA256SUMS.txt, so a user can check a download.
 /// These tests only read files in the repository. The workflows are read as text, by the two-space
 /// indentation GitHub's YAML files use, since the test project has no YAML parser.
 /// </summary>
@@ -48,6 +49,62 @@ public class ReleaseWorkflowTests
         Block(workflow, "permissions", indent: 0).Select(line => line.Trim()).Should().Equal("contents: read");
     }
 
+    [Fact]
+    public void ReleaseJob_WritesTheChecksumFile_InTheFormatSha256sumReads()
+    {
+        // Arrange
+        var step = Step(Job(ReadWorkflow("build.yml"), "release"), "Compute checksums");
+        var script = string.Join("\n", step);
+
+        // Assert
+        step.Should().Contain(line => line.Trim() == "shell: pwsh", "the step is PowerShell on every runner image");
+        script.Should().Contain("Get-FileHash -LiteralPath $_.Path -Algorithm SHA256", "each file is hashed with SHA-256");
+        script.Should().Contain(".Hash.ToLowerInvariant()", "checksum files carry lower-case hex; Get-FileHash returns upper case");
+        script.Should().Contain("\"$hash  $($_.Name)\"", "sha256sum -c reads '<hex>  <name>', with two spaces");
+        script.Should().Contain("Get-ChildItem -LiteralPath $release -File -Recurse",
+            "the files in the zip are listed too, so an extracted helmsman.exe can be checked");
+        script.Should().Contain("[IO.File]::WriteAllText((Join-Path $PWD.Path 'SHA256SUMS.txt'), ($lines -join \"`n\") + \"`n\", $utf8)",
+            "the file has LF line endings, a final line break and no BOM");
+        script.Should().Contain("$utf8 = [Text.UTF8Encoding]::new($false)", "UTF-8 without a BOM");
+        script.Should().NotContainAny(new[] { "Out-File", "Set-Content", "Add-Content", "> SHA256SUMS" },
+            "PowerShell's own file writers add a BOM or CRLF line endings on some versions, which sha256sum -c cannot read");
+    }
+
+    [Fact]
+    public void ReleaseJob_UploadsTheChecksumFile_InTheCallThatCreatesTheRelease()
+    {
+        // Arrange
+        var release = Job(ReadWorkflow("build.yml"), "release");
+        var script = Step(release, "Create Release").Select(line => line.Trim()).ToList();
+
+        // Assert
+        StepIndex(release, "Compute checksums").Should().BeLessThan(StepIndex(release, "Create Release"));
+        script.Should().Contain("$sums = 'SHA256SUMS.txt'");
+        script.Should().ContainSingle(line => line.StartsWith("gh release create ", StringComparison.Ordinal))
+            .Which.Should().StartWith("gh release create $tag $zip $sums ",
+                "the checksums go up with the zip in the call that creates the release, so no release exists without them")
+            .And.Contain("--verify-tag")
+            .And.Contain("--generate-notes --notes-file $notes", "the checksums are put before the generated release notes");
+        script.Should().ContainSingle(line => line.StartsWith("gh release upload ", StringComparison.Ordinal))
+            .Which.Should().Be("gh release upload $tag $zip $sums --clobber",
+                "a re-run replaces the zip and its checksums together, since a zip made again has other bytes");
+    }
+
+    [Fact]
+    public void ReleaseJob_AloneGetsTheWritePermissions_AndOnlyThoseItsStepsNeed()
+    {
+        // Arrange
+        var workflow = ReadWorkflow("build.yml");
+        var release = Job(workflow, "release");
+
+        // Assert
+        Block(workflow, "permissions", indent: 0).Select(line => line.Trim()).Should().Equal("contents: read");
+        Block(release, "permissions", indent: 4).Select(line => line.Trim()).Should().BeEquivalentTo(
+            new[] { "contents: write" }, "creating the release and uploading its assets needs contents");
+        workflow.Count(line => line.Trim().StartsWith("permissions:", StringComparison.Ordinal)).Should().Be(2,
+            "the workflow's read-only default and the release job's block; no other job asks for more");
+    }
+
     [Theory]
     [InlineData("    needs: build", new[] { "build" })]
     [InlineData("    needs: [build, release-tests]", new[] { "build", "release-tests" })]
@@ -73,6 +130,19 @@ public class ReleaseWorkflowTests
         start.Should().BeGreaterThanOrEqualTo(0, "the workflow has '{0}'", prefix.Trim());
         return lines.Skip(start + 1).TakeWhile(line => Indentation(line) > indent).ToList();
     }
+
+    /// <summary>The lines of a job's step: its "- name:" line and the lines below it, up to the next step.</summary>
+    private static List<string> Step(List<string> job, string name)
+    {
+        var steps = Block(job, "steps", indent: 4);
+        var start = StepIndex(job, name);
+        start.Should().BeGreaterThanOrEqualTo(0, "the job has a step named '{0}'", name);
+        return steps.Skip(start).Take(1).Concat(steps.Skip(start + 1).TakeWhile(line => Indentation(line) > 6)).ToList();
+    }
+
+    /// <summary>Where a job's step is among the job's step lines; -1 when the job has no such step.</summary>
+    private static int StepIndex(List<string> job, string name) =>
+        Block(job, "steps", indent: 4).FindIndex(line => line.TrimEnd() == "      - name: " + name);
 
     private static string? Value(List<string> job, string key)
     {
