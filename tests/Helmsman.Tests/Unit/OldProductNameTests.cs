@@ -86,7 +86,8 @@ public partial class OldProductNameTests
             "the comment on the 3.x AppData folder"),
         new(LayoutStorageOptionsFile, @"windows-app-manager 3\.2\.0 plugin whose exe was",
             "the comment on the AppData folder of the build published on main, which was still the 3.x plugin"),
-        new(LayoutStorageOptionsFile, @"\\cache\\windows-app-manager-marketplace\\windows-app-manager\\",
+        new(LayoutStorageOptionsFile,
+            @"renamed it to <see cref=""PluginFolderName""/>\s+///\s+\(<c>\.\.\.\\cache\\windows-app-manager-marketplace\\windows-app-manager\\&lt;version&gt;</c>\)",
             "the comment on the 3.x plugin cache folder"),
 
         // README's "Upgrading from 3.x" must name the old ids a 3.x user has to remove or replace, and the layout
@@ -102,8 +103,12 @@ public partial class OldProductNameTests
         new("README.md", @"not `using-windows-app-manager`", "the upgrade notes: the 3.x skill name"),
         new("README.md", @"as `helmsman` instead of `windows-app-manager`", "the upgrade notes: the 3.x serverInfo.name"),
         new("README.md", @"3\.x shipped `WindowsAppManagerMcp\.exe`", "the upgrade notes: the 3.x exe name"),
-        new("README.md", @"%LOCALAPPDATA%\\WindowsAppManagerMcp\\(layouts|audit)",
-            "the 3.x AppData folders presets are copied from and old audit files stay in"),
+        new("README.md", @"on first run, presets in\s+`%LOCALAPPDATA%\\WindowsAppManagerMcp\\layouts` \(and in the `layouts` folder",
+            "the upgrade notes: the 3.x AppData folder presets are copied from"),
+        new("README.md", @"the files 3\.x wrote stay in `%LOCALAPPDATA%\\WindowsAppManagerMcp\\audit`",
+            "the upgrade notes: the 3.x AppData folder old audit files stay in"),
+        new("README.md", @"`%LOCALAPPDATA%\\WindowsAppManagerMcp\\layouts`\) are copied there and the originals are left in place",
+            "the layout presets: the 3.x AppData folder presets are copied from"),
         // The upgrade notes tell 3.x users where their named debug-browser profiles stay, since they are not copied.
         new("README.md", @"stays in\s+`%LOCALAPPDATA%\\WindowsAppManagerMcp\\browser-profiles\\<name>`",
             "the upgrade notes: where 3.x kept named debug-browser profiles, which are not copied"),
@@ -125,7 +130,7 @@ public partial class OldProductNameTests
         // Migration source: the build published on main kept presets in %LOCALAPPDATA%\win-desktop-mcp\layouts.
         new(LayoutStorageOptionsFile, @"PreviousAppDataFolderName = ""win-desktop-mcp""",
             "the AppData folder of the build published on main, a migration source"),
-        new(LayoutStorageOptionsFile, @"<c>%LOCALAPPDATA%\\win-desktop-mcp\\layouts</c> and",
+        new(LayoutStorageOptionsFile, @"Presets saved under the earlier folder names, <c>%LOCALAPPDATA%\\win-desktop-mcp\\layouts</c> and",
             "the comment on the earlier AppData folders"),
         new(LayoutStorageOptionsFile, @"plugin whose exe was win-desktop-mcp\.exe\.",
             "the comment on the AppData folder of the build published on main"),
