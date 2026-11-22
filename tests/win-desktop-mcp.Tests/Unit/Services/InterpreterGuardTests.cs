@@ -3,16 +3,28 @@ namespace WinDesktopMcp.Tests.Unit.Services;
 /// <summary>
 /// Unit tests for <see cref="InterpreterGuard"/> (roadmap M3.F8): launch_application refuses a command interpreter or
 /// script host started with arguments, and a script file that Windows would run with one. Only names are read; the 8.3
-/// short-name expansion is a fake, so nothing touches the file system.
+/// short-name expansion, the files of System32 and the System32 folder itself are fakes, so nothing touches the file system.
 /// </summary>
 public class InterpreterGuardTests
 {
     private const string Cmd = @"C:\Windows\System32\cmd.exe";
     private const string Notepad = @"C:\Windows\System32\notepad.exe";
+    private const string SystemDir = @"C:\Windows\System32";
+    private const string Services = @"C:\Windows\System32\services.msc";
 
     private readonly Dictionary<string, string> _longPaths = new(StringComparer.OrdinalIgnoreCase);
 
-    private InterpreterGuard CreateSut() => new(path => _longPaths.TryGetValue(path, out var longPath) ? longPath : null);
+    // The files that exist: Windows' consoles, and copies of one where only an administrator could not have put them
+    private readonly HashSet<string> _files = new(StringComparer.OrdinalIgnoreCase)
+    {
+        Services, @"C:\Windows\System32\devmgmt.msc", @"C:\Windows\System32\eventvwr.msc",
+        @"C:\Windows\System32\en-US\services.msc", @"C:\Windows\SysWOW64\services.msc", @"C:\Windows\System32evil\services.msc",
+        @"C:\Windows\services.msc", @"C:\Windows\Temp\services.msc", @"C:\Users\me\Downloads\services.msc",
+        @"C:\Users\me\repo\services.msc", @"C:\Tools\services.msc"
+    };
+
+    private InterpreterGuard CreateSut() => new(
+        path => _longPaths.TryGetValue(path, out var longPath) ? longPath : null, _files.Contains, SystemDir);
 
     #region Interpreters with arguments
 
@@ -567,12 +579,13 @@ public class InterpreterGuardTests
     }
 
     [Theory]
-    [InlineData(@"C:\Windows\System32\services.msc")]
     [InlineData(@"C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Accessories\Paint.lnk")]
     [InlineData(@"C:\Users\me\Desktop\Shared Folder.lnk")]
-    public void Check_AShortcutOrConsoleTheAgentNames_IsRefused_WhereverItIs(string file)
+    [InlineData(@"C:\Windows\System32\Paint.lnk")]
+    public void Check_AShortcutTheAgentNames_IsRefused_WhereverItIs(string file)
     {
-        // Act - the guard cannot see what a shortcut or a console runs, so the file is refused, not followed
+        // Act - the guard cannot see what a shortcut runs, so the file is refused, not followed (a .msc in System32 is
+        // Windows' own console, see the region below)
         var refusal = CreateSut().Check(file, file, null);
 
         // Assert
@@ -611,6 +624,218 @@ public class InterpreterGuardTests
 
         // Assert
         refusal.Should().BeNull();
+    }
+
+    #endregion
+
+    #region Windows' own management consoles (.msc directly in System32)
+
+    [Theory]
+    [InlineData("services.msc", Services)]
+    [InlineData(Services, Services)]
+    [InlineData("DEVMGMT.MSC", @"C:\Windows\System32\DEVMGMT.MSC")]
+    [InlineData(@"c:\windows\system32\eventvwr.msc", @"c:\windows\system32\eventvwr.msc")]
+    [InlineData(@"C:\WINDOWS\system32\Services.Msc", @"C:\WINDOWS\system32\Services.Msc")]
+    [InlineData("myconsole", Services)]
+    public void Check_AWindowsConsoleInSystem32_WithoutArguments_IsAllowed(string executable, string resolved)
+    {
+        // Act - a bare name as the resolver hands it back (its full System32 path), a full path, any letter case, and a name
+        // that App Paths maps to the console: the file that opens is what counts
+        var bare = CreateSut().Check(executable, resolved, null);
+        var empty = CreateSut().Check(executable, resolved, []);
+
+        // Assert
+        bare.Should().BeNull();
+        empty.Should().BeNull();
+    }
+
+    [Fact]
+    public void Check_TheSystemFolder_IsComparedWithoutItsTrailingSeparator_AndInAnyCase()
+    {
+        // Act - Environment.SystemDirectory is C:\WINDOWS\system32 on most machines
+        var refusal = new InterpreterGuard(_ => null, _files.Contains, @"c:\WINDOWS\SYSTEM32\").Check("services.msc", Services, null);
+
+        // Assert
+        refusal.Should().BeNull();
+    }
+
+    /// <summary>
+    /// The .msc targets that are not, in the form ShellExecute would be handed, an existing file directly in System32. The
+    /// guard judges the resolved text itself, so every odd form is refused here, even one that would lead to the same file
+    /// (the launch path normalises some of them first; LaunchPlanningSystemConsoleTests pins what then opens).
+    /// </summary>
+    public static readonly TheoryData<string, string> NotASystemConsole = new()
+    {
+        { "another folder", @"C:\Users\me\Downloads\services.msc" },
+        { "the working directory", @"C:\Users\me\repo\services.msc" },
+        { "a PATH folder", @"C:\Tools\services.msc" },
+        { "the Windows folder", @"C:\Windows\services.msc" },
+        { "a System32 sub-folder", @"C:\Windows\System32\en-US\services.msc" },
+        { "SysWOW64", @"C:\Windows\SysWOW64\services.msc" },
+        { "a look-alike prefix", @"C:\Windows\System32evil\services.msc" },
+        { "'..' that ends outside", @"C:\Windows\System32\..\Temp\services.msc" },
+        { "'..' that ends inside", @"C:\Windows\System32\..\System32\services.msc" },
+        { "a '.' segment", @"C:\Windows\System32\.\services.msc" },
+        { "a doubled separator", @"C:\Windows\System32\\services.msc" },
+        { "a trailing dot", @"C:\Windows\System32\services.msc." },
+        { "trailing dots and spaces", @"C:\Windows\System32\services.msc. ." },
+        { "a trailing space", @"C:\Windows\System32\services.msc " },
+        { "a leading space", @" C:\Windows\System32\services.msc" },
+        { "an alternate data stream", @"C:\Windows\System32\services.msc:payload" },
+        { "the default data stream", @"C:\Windows\System32\services.msc::$DATA" },
+        { "an 8.3 folder", @"C:\WINDOWS\SYSTEM~1\services.msc" },
+        { "an 8.3 file name", @"C:\Windows\System32\SERVIC~1.MSC" },
+        { "a \\\\?\\ path", @"\\?\C:\Windows\System32\services.msc" },
+        { "a \\\\.\\ path", @"\\.\C:\Windows\System32\services.msc" },
+        { "an administrative share", @"\\localhost\C$\Windows\System32\services.msc" },
+        { "a UNC share", @"\\server\share\services.msc" },
+        { "forward slashes", "C:/Windows/System32/services.msc" },
+        { "mixed slashes", @"C:\Windows/System32\services.msc" },
+        { "a file: URI", "file:///C:/Windows/System32/services.msc" },
+        { "quotes", "\"C:\\Windows\\System32\\services.msc\"" },
+        { "a drive-relative path", "C:services.msc" },
+        { "a rooted path without a drive", @"\Windows\System32\services.msc" },
+        { "an unresolved bare name", "services.msc" },
+        { "a name that does not exist", @"C:\Windows\System32\nosuch.msc" }
+    };
+
+    [Theory]
+    [MemberData(nameof(NotASystemConsole))]
+    public void Check_AConsoleThatIsNotWindowsOwnInItsPlainFullForm_IsRefused(string form, string resolved)
+    {
+        // Act - as named by the agent, and as a bare name the resolver turned into this path
+        var asNamed = CreateSut().Check(resolved, resolved, null);
+        var byName = CreateSut().Check("services.msc", resolved, null);
+
+        // Assert
+        asNamed.Should().NotBeNull($"{form} must be refused");
+        asNamed!.ErrorCode.Should().Be(nameof(LaunchErrorCode.ScriptFile));
+        asNamed.Message.Should().Contain(".msc").And.Contain("Windows system folder").And.Contain(SystemDir)
+            .And.Contain("services.msc").And.Contain("Nothing was started");
+        byName.Should().NotBeNull($"{form} must be refused when a bare name resolves to it");
+        byName!.ErrorCode.Should().Be(nameof(LaunchErrorCode.ScriptFile));
+    }
+
+    [Fact]
+    public void Check_AnEightDotThreeNameOfASystemConsole_IsRefused_EvenWhenItExpandsToOne()
+    {
+        // Arrange - the short name exists and expands to Windows' own console
+        const string shortPath = @"C:\Windows\System32\SERVIC~1.MSC";
+        _longPaths[shortPath] = Services;
+        _files.Add(shortPath);
+
+        // Act
+        var refusal = CreateSut().Check(shortPath, shortPath, null);
+
+        // Assert - only the plain long name opens
+        refusal!.ErrorCode.Should().Be(nameof(LaunchErrorCode.ScriptFile));
+    }
+
+    [Theory]
+    [InlineData("/s")]
+    [InlineData("")]
+    [InlineData(@"C:\Users\me\Downloads\evil.msc")]
+    [InlineData("/a")]
+    public void Check_AWindowsConsoleWithArguments_IsRefused(string argument)
+    {
+        // Act
+        var byName = CreateSut().Check("services.msc", Services, [argument]);
+        var byPath = CreateSut().Check(Services, Services, [argument]);
+
+        // Assert
+        byName!.ErrorCode.Should().Be(nameof(LaunchErrorCode.ScriptFile));
+        byName.Message.Should().Contain("without arguments").And.Contain("Nothing was started");
+        byPath!.ErrorCode.Should().Be(nameof(LaunchErrorCode.ScriptFile));
+    }
+
+    [Theory]
+    [InlineData("mmc", @"C:\Windows\System32\mmc.exe", new[] { "services.msc" })]
+    [InlineData("mmc", @"C:\Windows\System32\mmc.exe", new[] { Services })]
+    [InlineData("mmc.exe", @"C:\Windows\System32\mmc.exe", new[] { "/a", "x.msc" })]
+    [InlineData("MMC.EXE", @"C:\Windows\System32\mmc.exe", new[] { @"C:\Users\me\Downloads\console.msc" })]
+    public void Check_MmcWithArguments_StaysRefused_AndPointsToTheConsoleFile(string executable, string resolved, string[] arguments)
+    {
+        // Act
+        var refusal = CreateSut().Check(executable, resolved, arguments);
+
+        // Assert
+        refusal!.ErrorCode.Should().Be(nameof(LaunchErrorCode.InterpreterWithArguments));
+        refusal.Message.Should().Contain("(mmc)").And.Contain("launch its .msc file itself").And.Contain("services.msc")
+            .And.Contain("Nothing was started");
+    }
+
+    [Fact]
+    public void Check_MmcWithoutArguments_IsStillAllowed()
+    {
+        CreateSut().Check("mmc", @"C:\Windows\System32\mmc.exe", null).Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("thing.lnk")]
+    [InlineData("thing.reg")]
+    [InlineData(@"C:\Users\me\Downloads\thing.cpl")]
+    public void Check_AnotherRefusedTypeThatResolvesToASystemConsole_IsRefused_AsThatType(string executable)
+    {
+        // Act - only the console type has the exception: a name of another refused type keeps its refusal
+        var refusal = CreateSut().Check(executable, Services, null);
+
+        // Assert
+        refusal!.ErrorCode.Should().Be(nameof(LaunchErrorCode.ScriptFile));
+        refusal.Message.Should().Contain(Path.GetExtension(executable));
+    }
+
+    [Fact]
+    public void Check_ExplorerGivenASystemConsole_StaysRefused()
+    {
+        // Act - explorer picks the program it opens the file with; only the console as the target itself is opened
+        var refusal = CreateSut().Check("explorer", @"C:\Windows\explorer.exe", [Services]);
+
+        // Assert
+        refusal!.ErrorCode.Should().Be(nameof(LaunchErrorCode.ScriptFile));
+    }
+
+    [Fact]
+    public void CheckApp_AnAppsFolderEntryThatOpensASystemConsole_StaysRefused()
+    {
+        // Act - the shell, not the server, picks the file an entry opens; the console opens by its own name instead
+        var refusal = InterpreterGuard.CheckApp("Microsoft.AutoGenerated.{S}", Services, null, []);
+
+        // Assert
+        refusal!.ErrorCode.Should().Be(nameof(LaunchErrorCode.ScriptFile));
+    }
+
+    [Theory]
+    [InlineData(".lnk")]
+    [InlineData(".url")]
+    [InlineData(".reg")]
+    [InlineData(".cpl")]
+    [InlineData(".chm")]
+    [InlineData(".vbs")]
+    public void Check_TheOtherRefusedTypes_HaveNoSystem32Exception(string extension)
+    {
+        // Arrange - the same file directly in System32
+        var file = $@"{SystemDir}\thing{extension}";
+        _files.Add(file);
+
+        // Act
+        var refusal = CreateSut().Check(file, file, null);
+
+        // Assert
+        refusal!.ErrorCode.Should().Be(nameof(LaunchErrorCode.ScriptFile));
+        refusal.Message.Should().NotContain("Windows system folder");
+    }
+
+    [Theory]
+    [InlineData("control", "ncpa.cpl")]
+    [InlineData("hh", @"C:\Windows\help.chm")]
+    public void Check_TheOtherOpenersWithArguments_StayRefused_WithoutTheConsoleHint(string opener, string argument)
+    {
+        // Act
+        var refusal = CreateSut().Check(opener, $@"{SystemDir}\{opener}.exe", [argument]);
+
+        // Assert
+        refusal!.ErrorCode.Should().Be(nameof(LaunchErrorCode.InterpreterWithArguments));
+        refusal.Message.Should().NotContain(".msc");
     }
 
     #endregion

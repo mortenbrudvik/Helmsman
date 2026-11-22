@@ -11,7 +11,10 @@ namespace WinDesktopMcp.Services;
 /// (<see cref="Interpreters"/>), started with arguments; and a script, installer, shortcut or other file that Windows
 /// hands to a program that runs, installs or opens what it names (<see cref="ScriptExtensions"/>), as the target or as
 /// what explorer.exe is asked to open. The server does not run commands or scripts for the agent; the user runs them. A
-/// program of the list started without arguments (an empty console, Registry Editor, Control Panel) is allowed.
+/// program of the list started without arguments (an empty console, Registry Editor, Control Panel) is allowed. One file
+/// type has an exception: Windows' own management consoles (services.msc, devmgmt.msc, eventvwr.msc), an existing .msc file
+/// directly in System32, which only administrators can write to, open without arguments; any other .msc stays refused,
+/// since a console file can make MMC run commands.
 /// </summary>
 /// <remarks>
 /// Both the name the agent asked for and the file the resolver found are checked, so an App Paths entry that maps
@@ -25,8 +28,10 @@ namespace WinDesktopMcp.Services;
 /// A shortcut (.lnk, .url, .pif) the agent names, or an App Paths entry points to, is refused as a file, since its target
 /// is not read here. An installed app launched by its name or its shell:AppsFolder entry is not affected: the server
 /// starts or checks the program its Start menu shortcut points to (PKEY_Link_TargetParsingPath), never the .lnk, so that
-/// program gets these checks. One whose shortcut opens a refused file type (Windows Tools' consoles open .msc files) is
-/// refused like the file. The file-system search for a bare name never finds a shortcut (ExecutableResolver tries .com,
+/// program gets these checks. One whose shortcut opens a refused file type is refused like the file; Windows Tools'
+/// consoles, launched by their name, open the System32 .msc file their shortcut points to, as that file would by its path
+/// (a shell:AppsFolder entry that opens a .msc stays refused, since the shell, not the server, picks the file it opens).
+/// The file-system search for a bare name never finds a shortcut (ExecutableResolver tries .com,
 /// .exe, .bat and .cmd); only an App Paths entry can resolve a bare name to one.
 /// </para>
 /// <para>
@@ -147,23 +152,38 @@ public sealed partial class InterpreterGuard
     // openers (control, mmc, hh, regedit, rundll32) are in Interpreters, refused with any arguments
     private static readonly string[] ScriptOpeners = ["explorer"];
 
-    private readonly Func<string, string?> _longPath;
+    /// <summary>The management console type: refused, except Windows' own consoles (<see cref="IsSystemConsole"/>).</summary>
+    private const string ConsoleExtension = ".msc";
 
-    /// <summary>Expands 8.3 short names from the real file system.</summary>
+    private readonly Func<string, string?> _longPath;
+    private readonly Func<string, bool> _fileExists;
+    private readonly string _systemDirectory;
+
+    /// <summary>Expands 8.3 short names from, and looks for Windows' consoles in, the real file system and System32.</summary>
     public InterpreterGuard()
-        : this(LongPathOf)
+        : this(LongPathOf, File.Exists, Environment.SystemDirectory)
     {
     }
 
     /// <param name="longPath">The long form of a fully qualified path that holds a '~', or null when it cannot be read.</param>
-    public InterpreterGuard(Func<string, string?> longPath)
+    /// <param name="fileExists">Whether a file exists at a fully qualified path (for Windows' own consoles).</param>
+    /// <param name="systemDirectory">The System32 folder (Environment.SystemDirectory), the only folder whose .msc consoles
+    /// are opened: only administrators can write to it.</param>
+    public InterpreterGuard(Func<string, string?> longPath, Func<string, bool> fileExists, string systemDirectory)
     {
+        ArgumentNullException.ThrowIfNull(longPath);
+        ArgumentNullException.ThrowIfNull(fileExists);
+        ArgumentException.ThrowIfNullOrWhiteSpace(systemDirectory);
         _longPath = longPath;
+        _fileExists = fileExists;
+        _systemDirectory = Path.TrimEndingDirectorySeparator(systemDirectory.Trim());
     }
 
     /// <summary>
     /// Why the launch must not be started, with its LaunchErrorCode name, or null when it may: the target is a script
     /// (ScriptFile), an interpreter given arguments (InterpreterWithArguments), or explorer.exe given a script (ScriptFile).
+    /// A .msc target passes only when <paramref name="resolvedFileName"/>, the text ShellExecute is handed, is one of
+    /// Windows' own consoles in its plain full form (<see cref="IsSystemConsole"/>) and there are no arguments.
     /// </summary>
     /// <param name="executable">The executable as the agent asked for it.</param>
     /// <param name="resolvedFileName">What the resolver will hand to Windows: the program's full path, or the input unchanged.</param>
@@ -175,7 +195,30 @@ public sealed partial class InterpreterGuard
             ? $"'{resolvedFileName}'"
             : $"'{executable}' ({resolvedFileName})";
 
-        if (names.Select(name => Path.GetExtension(name)).FirstOrDefault(ScriptExtensions.Contains) is { } extension)
+        var refusedTypes = names.Select(name => Path.GetExtension(name)).Where(ScriptExtensions.Contains).ToList();
+        if (refusedTypes.Count > 0 && refusedTypes.All(type => type.Equals(ConsoleExtension, StringComparison.OrdinalIgnoreCase)))
+        {
+            if (!IsSystemConsole(resolvedFileName))
+            {
+                return new InterpreterRefusal(nameof(LaunchErrorCode.ScriptFile),
+                    $"{shown} is a management console file (.msc) that is not one of Windows' own consoles, and a console file " +
+                    $"can make MMC run commands: {NoCommands} Only the consoles in the Windows system folder ({_systemDirectory}) " +
+                    "can be opened, by their name (services.msc, devmgmt.msc, eventvwr.msc) or full path. Ask the user to open " +
+                    "any other. Nothing was started.");
+            }
+
+            if (arguments is { Count: > 0 })
+            {
+                return new InterpreterRefusal(nameof(LaunchErrorCode.ScriptFile),
+                    $"{shown} is a Windows console, which launch_application opens only without arguments, since MMC's " +
+                    $"arguments can load another console or snap-in: {NoCommands} Launch it without arguments. Nothing was started.");
+            }
+
+            // Windows' own console, without arguments: ShellExecute opens exactly this file (the resolved path) with MMC
+            return null;
+        }
+
+        if (refusedTypes.FirstOrDefault() is { } extension)
         {
             var batchHint = extension.Equals(".bat", StringComparison.OrdinalIgnoreCase) || extension.Equals(".cmd", StringComparison.OrdinalIgnoreCase)
                 ? " A batch file that only starts a program, such as VS Code's code.cmd, can be replaced by the program's .exe " +
@@ -201,6 +244,10 @@ public sealed partial class InterpreterGuard
                 "user to run the command; do not type it into a console or terminal either. Started without arguments it opens " +
                 "as usual." +
                 (interpreter == "control" ? " For a Settings page, launch its ms-settings: URI instead (ms-settings:printers)." : "") +
+                (interpreter == "mmc"
+                    ? " To open a Windows console, launch its .msc file itself, by its name and without arguments (services.msc, " +
+                      "devmgmt.msc, eventvwr.msc); only the consoles in the Windows system folder open."
+                    : "") +
                 " Nothing was started.");
         }
 
@@ -223,6 +270,40 @@ public sealed partial class InterpreterGuard
     }
 
     private const string NoCommands = "the server does not run commands or scripts for the agent.";
+
+    /// <summary>
+    /// Whether <paramref name="path"/>, as ShellExecute will be handed it, is one of Windows' own consoles: an existing .msc
+    /// file directly in the System32 folder, which only administrators can write to. The path must already be in its plain
+    /// full form, so that the text judged is the file opened: a drive path whose folder is the System32 folder (in any letter
+    /// case), not a sub-folder, SysWOW64 or a look-alike prefix (System32evil). Every other form is refused, even one that
+    /// would lead to the same file: a relative path, '..' or '.' segments, doubled or forward slashes, a \\?\, \\.\ or UNC
+    /// path, a file: URI, quotes, an 8.3 short name ('~'), an alternate data stream (':'), or a trailing dot or space.
+    /// </summary>
+    private bool IsSystemConsole(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || path != path.Trim() || path.StartsWith(@"\\", StringComparison.Ordinal) ||
+            path.IndexOfAny(['/', '~', '"']) >= 0)
+            return false;
+
+        try
+        {
+            if (!Path.IsPathFullyQualified(path) || !string.Equals(Path.GetFullPath(path), path, StringComparison.Ordinal))
+                return false;
+
+            var name = Path.GetFileName(path);
+            if (name.Length == 0 || name.IndexOf(':') >= 0 || name.EndsWith('.') || name.EndsWith(' ') ||
+                !Path.GetExtension(name).Equals(ConsoleExtension, StringComparison.OrdinalIgnoreCase) ||
+                !string.Equals(Path.GetDirectoryName(path), _systemDirectory, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            return _fileExists(path);
+        }
+        catch (Exception)
+        {
+            // A path that cannot be read, or a file system that cannot be asked: not shown to be a system console
+            return false;
+        }
+    }
 
     /// <summary>
     /// The package families whose apps are shells, terminals or language runtimes (roadmap M6.5): PowerShell, Python, the
