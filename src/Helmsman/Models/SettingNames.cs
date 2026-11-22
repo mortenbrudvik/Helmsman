@@ -8,7 +8,7 @@ namespace Helmsman.Models;
 /// exactly as before, so a deny list, read-only mode or any other safety setting given under its old name keeps applying
 /// even beside an empty new name (an MCP client's env block that expands an unset variable passes one). Every setting
 /// treats an empty or white-space value as not set, so nothing is lost by reading the old name then. Every options class
-/// reads its variable through <see cref="Read"/>; get_server_info and the log at start warn about every old name in use
+/// reads its variable through <see cref="Read"/>; get_server_info and the log at start warn about every old name that holds a value
 /// (<see cref="FindOld"/>). SettingNamesArchitectureTests keeps every HELMSMAN_ name in the server's source listed in
 /// <see cref="All"/>, keeps every other server type (but ExecutableResolver, for PATH and PATHEXT) from calling
 /// Environment.GetEnvironmentVariable(s), and keeps this class from handing out a public delegate over the environment.
@@ -85,7 +85,11 @@ public static class SettingNames
     /// <summary>True when a variable's value counts as set: present and not empty or only white space.</summary>
     private static bool IsSet(string? value) => !string.IsNullOrWhiteSpace(value);
 
-    /// <summary>The old names in use in <paramref name="environment"/> (the process environment when null).</summary>
+    /// <summary>
+    /// The old names that hold a value in <paramref name="environment"/> (the process environment when null): read instead
+    /// when the new name does not hold one, ignored when it does. An old name that is not set, empty or white space only
+    /// contributes nothing, whatever the new name holds, and is not listed.
+    /// </summary>
     public static OldSettingNames FindOld(Func<string, string?>? environment = null)
     {
         var read = environment ?? ProcessEnvironment;
@@ -93,22 +97,13 @@ public static class SettingNames
         var ignored = new List<string>();
         foreach (var name in All)
         {
-            var oldValue = read(OldNameOf(name));
-            if (oldValue == null)
+            var oldName = OldNameOf(name);
+            if (!IsSet(read(oldName)))
             {
                 continue;
             }
 
-            // Read instead when the new name is not set (or empty); ignored only when both hold a value. An empty old name
-            // beside a set new one changes nothing and is not mentioned.
-            if (!IsSet(read(name)))
-            {
-                readInstead.Add(OldNameOf(name));
-            }
-            else if (IsSet(oldValue))
-            {
-                ignored.Add(OldNameOf(name));
-            }
+            (IsSet(read(name)) ? ignored : readInstead).Add(oldName);
         }
 
         return new OldSettingNames(readInstead, ignored);
@@ -120,7 +115,7 @@ public static class SettingNames
 /// get_server_info and the log at start give about them. The warnings name variables, never their values, which can hold
 /// paths or process names.
 /// </summary>
-/// <param name="ReadInstead">Old names that are read because their HELMSMAN_ name is not set, or is empty.</param>
+/// <param name="ReadInstead">Old names that hold a value and are read because their HELMSMAN_ name is not set, or is empty.</param>
 /// <param name="Ignored">Old names that hold a value but are ignored because their HELMSMAN_ name holds one too.</param>
 public sealed record OldSettingNames(IReadOnlyList<string> ReadInstead, IReadOnlyList<string> Ignored)
 {

@@ -2,8 +2,9 @@ namespace Helmsman.Tests.Unit.Models;
 
 /// <summary>
 /// The warning about settings still given under their WAM_ names from before release 4.0.0 (SettingNames.FindOld,
-/// OldSettingNames): the old names read in place of a HELMSMAN_ name that is not set or is empty, and separately the old
-/// names ignored because both they and their HELMSMAN_ name hold a value. It names variables, never their values.
+/// OldSettingNames): the old names that hold a value and are read in place of a HELMSMAN_ name that is not set or is empty,
+/// and separately the old names ignored because both they and their HELMSMAN_ name hold a value. An empty old name is not
+/// named. It names variables, never their values.
 /// </summary>
 public sealed class OldSettingNamesTests
 {
@@ -85,12 +86,26 @@ public sealed class OldSettingNamesTests
     }
 
     [Theory]
-    [InlineData("")]
-    [InlineData("  ")]
-    public void AnEmptyOldNameBesideASetNewName_GivesNoWarning(string empty)
+    [InlineData("", null)]
+    [InlineData("", "")]
+    [InlineData("", "  ")]
+    [InlineData("", "1")]
+    [InlineData("  ", null)]
+    [InlineData("  ", "")]
+    [InlineData("  ", "  ")]
+    [InlineData("  ", "1")]
+    public void AnEmptyOldName_GivesNoWarning_WhateverTheNewNameHolds(string oldValue, string? newValue)
     {
-        // It changes nothing: the new name is used either way
-        SettingNames.FindOld(Env(("WAM_READ_ONLY", empty), ("HELMSMAN_READ_ONLY", "1"))).Warnings.Should().BeEmpty();
+        // It contributes nothing: an empty or white-space value is the default, which the new name or its absence gives too
+        var variables = newValue == null
+            ? new[] { ("WAM_READ_ONLY", oldValue) }
+            : new[] { ("WAM_READ_ONLY", oldValue), ("HELMSMAN_READ_ONLY", newValue) };
+
+        var old = SettingNames.FindOld(Env(variables));
+
+        old.ReadInstead.Should().BeEmpty();
+        old.Ignored.Should().BeEmpty();
+        old.Warnings.Should().BeEmpty();
     }
 
     [Fact]
@@ -111,12 +126,5 @@ public sealed class OldSettingNamesTests
         old.Ignored.Should().HaveCount(7);
         old.Warnings.Should().HaveCount(2).And.OnlyContain(w => !w.Contains(SecretPath) && !w.Contains("new-value") && !w.Contains("private"));
         string.Join(" ", old.Warnings).Should().ContainAll(SettingNames.All.Select(SettingNames.OldNameOf));
-    }
-
-    [Fact]
-    public void AnEmptyOldName_IsStillInUse()
-    {
-        // Present, so it is read (as empty: the default) in place of a new name that is not set, and the user should know
-        SettingNames.FindOld(Env(("WAM_TOOLSETS", ""))).ReadInstead.Should().Equal("WAM_TOOLSETS");
     }
 }
