@@ -46,7 +46,8 @@ public class WindowSelectorToolTests
         new(_windows.Object, Mock.Of<IForegroundService>(), session ?? Permissive.Session, gateWaitTimeout: TimeSpan.FromSeconds(10));
 
     private WindowCloseTools CreateCloseTools(IInputSession? session = null) =>
-        new(_windows.Object, session ?? Permissive.Session, gateWaitTimeout: TimeSpan.FromSeconds(10));
+        new(_windows.Object, new WindowCloseService(_windows.Object, new WindowCloseVerifier(_windows.Object)), session ?? Permissive.Session,
+            gateWaitTimeout: TimeSpan.FromSeconds(10));
 
     #region The single-window tools
 

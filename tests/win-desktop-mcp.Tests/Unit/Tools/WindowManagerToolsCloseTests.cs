@@ -36,7 +36,7 @@ public class WindowManagerToolsCloseTests
     private WindowCloseTools CreateSut()
     {
         _flow = InputGate.TagFlow();
-        return new(_windowService.Object, Permissive.Session, closeVerifier: _verifier.Object, gateWaitTimeout: TimeSpan.FromSeconds(5));
+        return new(_windowService.Object, new WindowCloseService(_windowService.Object, _verifier.Object), Permissive.Session, gateWaitTimeout: TimeSpan.FromSeconds(5));
     }
 
     private static WindowCloseRequest[] Requests(params long[] handles) => handles.Select(h => new WindowCloseRequest(h)).ToArray();
@@ -183,7 +183,7 @@ public class WindowManagerToolsCloseTests
         // Arrange
         using var session = new InputSession(new FakeInputWrapper());
         session.Pause(InputControlSources.Hotkey);
-        var sut = new WindowCloseTools(_windowService.Object, session, closeVerifier: _verifier.Object);
+        var sut = new WindowCloseTools(_windowService.Object, new WindowCloseService(_windowService.Object, _verifier.Object), session);
 
         // Act
         var act = () => sut.CloseWindow(12345);

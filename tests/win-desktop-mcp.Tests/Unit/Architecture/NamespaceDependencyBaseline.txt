@@ -273,8 +273,6 @@ Tools.UIElementTools -> Services.AccessibilityWarmup
 Tools.UIElementTools -> Services.ElementCriteria
 Tools.UIElementTools -> Services.ElementRefs
 Tools.UIElementTools -> Services.ElementSearchService
-Tools.WindowCloseTools -> Services.WindowClassification  # moved out of WindowManagerTools when it was split; the same dependency it had
-Tools.WindowCloseTools -> Services.WindowCloseVerifier  # moved out of WindowManagerTools when it was split; the same dependency it had
 Tools.WindowFinderTools -> Services.VirtualDesktops
 Tools.WindowFinderTools -> Services.WindowTitles
 Tools.WindowFinderTools -> Services.WindowWaitService
@@ -293,7 +291,6 @@ src/win-desktop-mcp/Tools/InputSimulationTools.cs -> Services.PressKeysParser
 src/win-desktop-mcp/Tools/MonitorTargeting.cs -> Services.MonitorSelection
 src/win-desktop-mcp/Tools/UIElementTools.cs -> Services.ElementSearchService
 src/win-desktop-mcp/Tools/VisualTools.cs -> Services.VisualChangeService
-src/win-desktop-mcp/Tools/WindowCloseTools.cs -> Services.WindowService  # moved out of WindowManagerTools when it was split; the same dependency it had
 src/win-desktop-mcp/Tools/WindowFinderTools.Wait.cs -> Services.WindowWaitService
 src/win-desktop-mcp/Tools/WindowFinderTools.cs -> Services.WindowService
 src/win-desktop-mcp/Tools/WindowManagerTools.cs -> Services.WindowService

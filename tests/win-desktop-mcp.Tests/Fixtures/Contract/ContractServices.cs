@@ -196,6 +196,8 @@ public sealed class ContractServices : IDisposable
         // The SDK creates the tool classes for every call from these registrations
         services.AddSingleton(Windows.Object);
         services.AddSingleton(CloseVerifier.Object);
+        // The real close service over the window service and verifier registered here (or a test's replacement of them)
+        services.AddSingleton<IWindowCloseService, WindowCloseService>();
         services.AddSingleton(WindowWait.Object);
         services.AddSingleton(WindowEvents.Object);
         services.AddSingleton(ElementWait.Object);

@@ -317,8 +317,8 @@ public sealed class UserConfirmationFailClosedContractTests : IDisposable
             installedApps: _services.InstalledApps.Object);
 
     private WindowCloseTools WindowTools() =>
-        new(_services.Windows.Object, _services.Session, AnswerTimeout,
-            closeVerifier: _services.CloseVerifier.Object);
+        new(_services.Windows.Object, new WindowCloseService(_services.Windows.Object, _services.CloseVerifier.Object), _services.Session,
+            AnswerTimeout);
 
     /// <summary>
     /// Starts a server with the tools <paramref name="tools"/> registers, behind the error reporting and the input gate filter,

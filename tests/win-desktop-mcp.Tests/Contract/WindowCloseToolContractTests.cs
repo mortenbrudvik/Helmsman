@@ -295,9 +295,9 @@ public class WindowCloseToolContractTests
             [],
             builder => builder
                 .AddToolErrorReporting()
-                .WithServerTools(new WindowCloseTools(windowService, Permissive.Session,
-                    closeVerifier: new WindowCloseVerifier(windowService, pollInterval: TimeSpan.FromMilliseconds(5),
-                        promptCheckInterval: TimeSpan.FromMilliseconds(10)))));
+                .WithServerTools(new WindowCloseTools(windowService, new WindowCloseService(windowService,
+                    new WindowCloseVerifier(windowService, pollInterval: TimeSpan.FromMilliseconds(5),
+                        promptCheckInterval: TimeSpan.FromMilliseconds(10))), Permissive.Session)));
     }
 
     private static JsonElement ParsePayload(CallToolResult result)

@@ -19,7 +19,8 @@ public class WindowManagerToolsTests
 
     private WindowManagerTools CreateSut() => new WindowManagerTools(_mockWindowService.Object, _mockForegroundService.Object, Permissive.Session);
 
-    private WindowCloseTools CreateCloseSut() => new WindowCloseTools(_mockWindowService.Object, Permissive.Session);
+    private WindowCloseTools CreateCloseSut() =>
+        new WindowCloseTools(_mockWindowService.Object, new WindowCloseService(_mockWindowService.Object, new WindowCloseVerifier(_mockWindowService.Object)), Permissive.Session);
 
     #region SetWindowBounds Tests
 

@@ -68,6 +68,8 @@ public static class ServiceRegistration
         services.AddSingleton<IWindowService, WindowService>();
         // Verified close (roadmap M2.5): waits for closed windows and reads their prompts through UI Automation
         services.AddSingleton<IWindowCloseVerifier, WindowCloseVerifier>();
+        // The close tools' checks, closes, waits and results below the tool layer, through the window service's close guards
+        services.AddSingleton<IWindowCloseService, WindowCloseService>();
         // The URI schemes launch_application hands to their app (the built-in ones plus WAM_ALLOWED_PROTOCOLS), read once: the
         // validation enforces them, and get_server_info and the log at start report them
         services.AddSingleton(_ => ProtocolAllowlist.FromEnvironment());

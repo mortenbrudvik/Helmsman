@@ -29,8 +29,8 @@ public class WindowManagerToolsCloseDiagnosticsTests
     {
         InputGate.TagFlow();
         var factory = LoggerFactory.Create(builder => builder.AddProvider(_logs));
-        return new(_windowService.Object, Permissive.Session, closeVerifier: _verifier.Object,
-            gateWaitTimeout: TimeSpan.FromSeconds(5), logger: factory.CreateLogger<WindowCloseTools>());
+        return new(_windowService.Object, new WindowCloseService(_windowService.Object, _verifier.Object, factory.CreateLogger<WindowCloseService>()),
+            Permissive.Session, gateWaitTimeout: TimeSpan.FromSeconds(5));
     }
 
     private void Report(Func<nint, CloseObservation> observe) =>
