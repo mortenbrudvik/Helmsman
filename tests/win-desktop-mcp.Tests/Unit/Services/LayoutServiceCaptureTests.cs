@@ -33,7 +33,7 @@ public class LayoutServiceCaptureTests : IDisposable
     private LayoutService CreateSut()
     {
         var foreground = TestDataFactory.CreateMockForegroundService().Object;
-        return new LayoutService(_windows.Object, _monitors.Object, _processes.Object, foreground, LayoutStorageOptions.ForPath(_layoutsPath),
+        return WiredLayoutService.Create(_windows.Object, _monitors.Object, _processes.Object, foreground, LayoutStorageOptions.ForPath(_layoutsPath),
             new LaunchPlacementService(_windows.Object, foreground, Permissive.Session), apps: _apps.Object, installedApps: _installedApps.Object);
     }
 

@@ -34,7 +34,7 @@ public class LayoutLaunchPlanningTests : IDisposable
             new ChromiumSwitchGuard(),
             _processes.Object,
             new Mock<IWindowWaitService>(MockBehavior.Strict).Object);
-        return new LayoutService(_windows.Object, TestDataFactory.CreateMockMonitorService().Object, processService,
+        return WiredLayoutService.Create(_windows.Object, TestDataFactory.CreateMockMonitorService().Object, processService,
             TestDataFactory.CreateMockForegroundService().Object,
             new Mock<ILaunchPlacementService>(MockBehavior.Strict).Object, Path.Combine(_root, "layouts"));
     }

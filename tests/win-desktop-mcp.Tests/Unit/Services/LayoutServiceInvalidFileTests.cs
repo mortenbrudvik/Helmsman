@@ -28,7 +28,7 @@ public class LayoutServiceInvalidFileTests : IDisposable
             Directory.Delete(_layoutsPath, recursive: true);
     }
 
-    private LayoutService CreateSut(ILayoutFolderAccess? folderAccess = null) => new(
+    private LayoutService CreateSut(ILayoutFolderAccess? folderAccess = null) => WiredLayoutService.Create(
         _windows.Object, _monitors.Object, TestDataFactory.CreateMockProcessService().Object, _foreground.Object,
         LayoutStorageOptions.ForPath(_layoutsPath), new LaunchPlacementService(_windows.Object, _foreground.Object, Permissive.Session), folderAccess,
         logger: LoggerFactory.Create(b => b.AddProvider(_logs)).CreateLogger<LayoutService>());

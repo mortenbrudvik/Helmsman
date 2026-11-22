@@ -219,19 +219,12 @@ public static class ServiceRegistration
         services.AddSingleton<IWorkspaceService, WorkspaceService>();
         // The layout folder's files, which the layout service reads and writes
         services.AddSingleton<ILayoutFolderAccess, LayoutFolderAccess>();
-        services.AddSingleton<ILayoutService>(sp =>
-        {
-            var windowService = sp.GetRequiredService<IWindowService>();
-            var monitorService = sp.GetRequiredService<IMonitorService>();
-            var processService = sp.GetRequiredService<IProcessService>();
-            var foregroundService = sp.GetRequiredService<IForegroundService>();
-
-            // launchMissing's windows are placed as the launch tools place theirs (roadmap M3.F27); save_layout records a
-            // packaged app's window by its appId (roadmap M6.8)
-            return new LayoutService(windowService, monitorService, processService, foregroundService, createLayoutStorage(),
-                folderAccess: sp.GetRequiredService<ILayoutFolderAccess>(), launchPlacement: sp.GetRequiredService<ILaunchPlacementService>(), apps: sp.GetRequiredService<INativeAppsWrapper>(),
-                installedApps: sp.GetRequiredService<IInstalledAppsService>(), logger: sp.GetService<ILogger<LayoutService>>());
-        });
+        // The presets' folder (one gate and one cache for every read and write), created when it is first resolved
+        services.AddSingleton<ILayoutPresetStore>(sp => new LayoutPresetStore(createLayoutStorage(),
+            folderAccess: sp.GetRequiredService<ILayoutFolderAccess>(), logger: sp.GetService<ILogger<LayoutService>>()));
+        // launchMissing's windows are placed as the launch tools place theirs (roadmap M3.F27); save_layout records a
+        // packaged app's window by its appId (roadmap M6.8)
+        services.AddSingleton<ILayoutService, LayoutService>();
 
         // Verified window activation (focus_window, apply_layout, and the input guard): all attach and
         // activation calls run on one dedicated thread, started on first use

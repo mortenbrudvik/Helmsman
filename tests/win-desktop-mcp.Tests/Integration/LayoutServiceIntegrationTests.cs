@@ -29,7 +29,7 @@ public class LayoutServiceIntegrationTests : IDisposable
     {
         // The launched windows' placement watches them on a manual clock, so a launch test does not wait (roadmap M3.F27)
         var foreground = TestDataFactory.CreateMockForegroundService().Object;
-        return new LayoutService(
+        return WiredLayoutService.Create(
             _mockWindowService.Object,
             _mockMonitorService.Object,
             _mockProcessService.Object,

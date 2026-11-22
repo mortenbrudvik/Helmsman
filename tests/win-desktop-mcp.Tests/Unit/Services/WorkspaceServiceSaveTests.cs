@@ -59,7 +59,7 @@ public class WorkspaceServiceSaveTests : IDisposable
     private LayoutService Storage()
     {
         var foreground = TestDataFactory.CreateMockForegroundService().Object;
-        return new LayoutService(_windows.Object, _monitors.Object, _processes.Object, foreground, LayoutStorageOptions.ForPath(_layoutsPath),
+        return WiredLayoutService.Create(_windows.Object, _monitors.Object, _processes.Object, foreground, LayoutStorageOptions.ForPath(_layoutsPath),
             new LaunchPlacementService(_windows.Object, foreground, Permissive.Session));
     }
 

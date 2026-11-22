@@ -34,7 +34,7 @@ public class FilePersistenceTests : IDisposable
     private LayoutService CreateSut(string? customPath = null)
     {
         var foreground = TestDataFactory.CreateMockForegroundService().Object;
-        return new LayoutService(
+        return WiredLayoutService.Create(
             _mockWindowService.Object,
             _mockMonitorService.Object,
             _mockProcessService.Object,

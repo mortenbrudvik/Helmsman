@@ -25,7 +25,7 @@ public class LayoutServiceTests : IDisposable
     }
 
     // The launched windows' placement watches them on a manual clock, so a launch test does not wait (roadmap M3.F27)
-    private LayoutService CreateSut() => new LayoutService(
+    private LayoutService CreateSut() => WiredLayoutService.Create(
         _mockWindowService.Object,
         _mockMonitorService.Object,
         _mockProcessService.Object,

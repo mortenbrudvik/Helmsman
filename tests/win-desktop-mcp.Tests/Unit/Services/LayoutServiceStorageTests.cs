@@ -40,7 +40,7 @@ public class LayoutServiceStorageTests : IDisposable
         }
     }
 
-    private LayoutService CreateSut(LayoutStorageOptions options, ILayoutFolderAccess? folderAccess = null) => new(
+    private LayoutService CreateSut(LayoutStorageOptions options, ILayoutFolderAccess? folderAccess = null) => WiredLayoutService.Create(
         _mockWindowService.Object,
         _mockMonitorService.Object,
         _mockProcessService.Object,
@@ -49,7 +49,7 @@ public class LayoutServiceStorageTests : IDisposable
         new LaunchPlacementService(_mockWindowService.Object, TestDataFactory.CreateMockForegroundService().Object, Permissive.Session),
         folderAccess);
 
-    private LayoutService CreateSutWithPath(string path) => new(
+    private LayoutService CreateSutWithPath(string path) => WiredLayoutService.Create(
         _mockWindowService.Object,
         _mockMonitorService.Object,
         _mockProcessService.Object,
