@@ -58,9 +58,19 @@ public sealed record LayoutStorageOptions(
     /// </summary>
     public const string PreviousPluginFolderName = "windows-app-manager";
 
+    /// <summary>
+    /// Folder name of this plugin's marketplace in the cache: the marketplace's name. VersionConsistencyTests keeps it
+    /// equal to the name in .claude-plugin/marketplace.json.
+    /// </summary>
+    public const string MarketplaceFolderName = "win-desktop-mcp-marketplace";
+
+    /// <summary>The marketplace's folder name in the cache before release 4.0.0 renamed it to <see cref="MarketplaceFolderName"/>.</summary>
+    public const string PreviousMarketplaceFolderName = "windows-app-manager-marketplace";
+
     private const string LayoutsFolderName = "layouts";
     private const string PluginCacheFolderName = "cache";
     private static readonly string[] PluginFolderNames = [PluginFolderName, PreviousPluginFolderName];
+    private static readonly string[] KnownMarketplaceFolderNames = [MarketplaceFolderName, PreviousMarketplaceFolderName];
     private const string SampleResourcePrefix = "WinDesktopMcp.SampleLayouts.";
 
     /// <summary>
@@ -111,10 +121,13 @@ public sealed record LayoutStorageOptions(
     /// Folders older versions stored presets in: <c>&lt;baseDirectory&gt;\layouts</c> and, when running from the
     /// Claude Code plugin cache (<c>...\cache\&lt;marketplace&gt;\&lt;plugin&gt;\&lt;version&gt;\...</c>, where the
     /// plugin folder is <see cref="PluginFolderName"/> or <see cref="PreviousPluginFolderName"/>), the matching
-    /// folders of every other installed version under either plugin name, in any marketplace of that cache: the
-    /// rename moved the plugin to a new marketplace and plugin folder, so a 4.x install is not a sibling of the 3.x
-    /// ones. Other folders are only scanned inside that plugin cache structure, never next to an arbitrary install
-    /// location.
+    /// folders of every other installed version under either plugin name in the marketplace this exe is installed
+    /// from and in this project's own marketplaces (<see cref="MarketplaceFolderName"/>,
+    /// <see cref="PreviousMarketplaceFolderName"/>): the rename moved the plugin to a new marketplace and plugin
+    /// folder, so a 4.x install is not a sibling of the 3.x ones. Other marketplaces are never scanned, even for a
+    /// plugin of the same name: a preset without authoredBy counts as the user's own and starts its programs without
+    /// asking, so only folders this project's installs wrote are trusted. Nothing is scanned next to an arbitrary
+    /// install location.
     /// </summary>
     public static IReadOnlyList<string> FindLegacyLayoutFolders(string baseDirectory)
     {
@@ -135,8 +148,9 @@ public sealed record LayoutStorageOptions(
         folders.Add(Path.Combine(baseDir, LayoutsFolderName));
 
         var versionDir = FindPluginVersionFolder(baseDir);
-        var cacheDir = versionDir?.Parent?.Parent?.Parent;
-        if (versionDir == null || cacheDir == null)
+        var ownMarketplaceDir = versionDir?.Parent?.Parent;
+        var cacheDir = ownMarketplaceDir?.Parent;
+        if (versionDir == null || ownMarketplaceDir == null || cacheDir == null)
             return folders;
 
         // The exe may sit in <version>\bin or <version>\.claude-plugin\bin depending on how the
@@ -150,7 +164,7 @@ public sealed record LayoutStorageOptions(
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        foreach (var otherVersion in FindInstalledPluginVersions(cacheDir))
+        foreach (var otherVersion in FindInstalledPluginVersions(cacheDir, ownMarketplaceDir.Name))
         {
             if (string.Equals(otherVersion.FullName, versionDir.FullName, StringComparison.OrdinalIgnoreCase))
                 continue;
@@ -165,21 +179,23 @@ public sealed record LayoutStorageOptions(
     }
 
     /// <summary>
-    /// The version folders of this plugin, under its current or previous name, in every marketplace of the plugin
-    /// cache: <c>&lt;cacheDir&gt;\&lt;marketplace&gt;\&lt;plugin&gt;\&lt;version&gt;</c>, ordered by path. A folder
-    /// that cannot be listed is skipped.
+    /// The version folders of this plugin, under its current or previous name, in the marketplace this exe is
+    /// installed from and in this project's current and previous marketplace:
+    /// <c>&lt;cacheDir&gt;\&lt;marketplace&gt;\&lt;plugin&gt;\&lt;version&gt;</c>. A folder that is missing or cannot
+    /// be listed is skipped.
     /// </summary>
-    private static List<DirectoryInfo> FindInstalledPluginVersions(DirectoryInfo cacheDir)
+    private static List<DirectoryInfo> FindInstalledPluginVersions(DirectoryInfo cacheDir, string ownMarketplaceName)
     {
         var versions = new List<DirectoryInfo>();
-        foreach (var marketplace in EnumerateDirectoriesOrEmpty(cacheDir))
+        var marketplaces = new[] { ownMarketplaceName }.Concat(KnownMarketplaceFolderNames)
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+        foreach (var marketplace in marketplaces)
         {
-            foreach (var plugin in EnumerateDirectoriesOrEmpty(marketplace))
+            foreach (var plugin in PluginFolderNames)
             {
-                if (!IsPluginFolderName(plugin.Name))
-                    continue;
-
-                versions.AddRange(EnumerateDirectoriesOrEmpty(plugin));
+                var pluginDir = new DirectoryInfo(Path.Combine(cacheDir.FullName, marketplace, plugin));
+                if (pluginDir.Exists)
+                    versions.AddRange(EnumerateDirectoriesOrEmpty(pluginDir));
             }
         }
 

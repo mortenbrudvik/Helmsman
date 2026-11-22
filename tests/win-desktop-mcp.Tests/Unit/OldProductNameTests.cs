@@ -45,6 +45,8 @@ public partial class OldProductNameTests
             "the previous AppData folder, a migration source"),
         new("src/win-desktop-mcp/Services/LayoutStorageOptions.cs", @"PreviousPluginFolderName = ""windows-app-manager""",
             "the previous plugin cache folder, a migration source"),
+        new("src/win-desktop-mcp/Services/LayoutStorageOptions.cs", @"PreviousMarketplaceFolderName = ""windows-app-manager-marketplace""",
+            "the previous marketplace cache folder, a migration source"),
         new("src/win-desktop-mcp/Services/LayoutStorageOptions.cs", @"%LOCALAPPDATA%\\WindowsAppManagerMcp\\layouts",
             "the comment on the previous AppData folder"),
         new("src/win-desktop-mcp/Services/LayoutStorageOptions.cs", @"\\cache\\windows-app-manager-marketplace\\windows-app-manager\\",

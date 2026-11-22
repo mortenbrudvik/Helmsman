@@ -86,8 +86,6 @@ public class LayoutStorageOptionsTests : IDisposable
     [Theory]
     [InlineData("win-desktop-mcp-marketplace", "win-desktop-mcp")]
     [InlineData("windows-app-manager-marketplace", "windows-app-manager")]
-    [InlineData("some-marketplace", "win-desktop-mcp")]
-    [InlineData("some-marketplace", "windows-app-manager")]
     public void FindLegacyLayoutFolders_InPluginCache_UnderEitherPluginName_IncludesOtherInstalledVersions(
         string marketplace, string plugin)
     {
@@ -105,6 +103,46 @@ public class LayoutStorageOptionsTests : IDisposable
             Path.Combine(currentBin, "layouts"),
             Path.Combine(pluginDir, "3.9.0", "bin", "layouts"),
             Path.Combine(pluginDir, "3.9.0", ".claude-plugin", "bin", "layouts"));
+    }
+
+    [Theory]
+    [InlineData("win-desktop-mcp")]
+    [InlineData("windows-app-manager")]
+    public void FindLegacyLayoutFolders_UnderAnArbitraryMarketplace_RecognisesItselfAndItsOwnSiblings(string plugin)
+    {
+        // Arrange - installed from a marketplace of another name (a fork, a local marketplace): its own folder counts
+        var pluginDir = Path.Combine(_root, "plugins", "cache", "some-marketplace", plugin);
+        var currentBin = Path.Combine(pluginDir, "4.0.0", "bin");
+        Directory.CreateDirectory(currentBin);
+        Directory.CreateDirectory(Path.Combine(pluginDir, "3.9.0", "bin", "layouts"));
+
+        // Act
+        var folders = LayoutStorageOptions.FindLegacyLayoutFolders(currentBin);
+
+        // Assert
+        folders.Should().Equal(
+            Path.Combine(currentBin, "layouts"),
+            Path.Combine(pluginDir, "3.9.0", "bin", "layouts"),
+            Path.Combine(pluginDir, "3.9.0", ".claude-plugin", "bin", "layouts"));
+    }
+
+    [Theory]
+    [InlineData("win-desktop-mcp")]
+    [InlineData("windows-app-manager")]
+    public void FindLegacyLayoutFolders_PluginOfOurNameUnderAnUnrelatedMarketplace_IsNotScanned(string plugin)
+    {
+        // Arrange - a preset without authoredBy counts as the user's own and launches without asking, so another
+        // marketplace that ships a plugin under one of our names must not be able to plant presets.
+        var cache = Path.Combine(_root, "plugins", "cache");
+        var currentBin = Path.Combine(cache, "win-desktop-mcp-marketplace", "win-desktop-mcp", "4.0.0", "bin");
+        Directory.CreateDirectory(currentBin);
+        Directory.CreateDirectory(Path.Combine(cache, "unrelated-marketplace", plugin, "9.9.9", "bin", "layouts"));
+
+        // Act
+        var folders = LayoutStorageOptions.FindLegacyLayoutFolders(currentBin);
+
+        // Assert
+        folders.Should().Equal(Path.Combine(currentBin, "layouts"));
     }
 
     [Fact]
@@ -130,7 +168,8 @@ public class LayoutStorageOptionsTests : IDisposable
     [Fact]
     public void FindLegacyLayoutFolders_UnderTheOldPluginName_IncludesTheVersionsInstalledUnderTheNewOne()
     {
-        // Arrange - a 3.x exe that still runs (from windows-app-manager) finds 4.x versions too; it copies, never moves.
+        // Arrange - this code running from the old plugin folder name (a 4.x exe placed under the 3.x install, as
+        // /update-plugin did before the rename) also finds the versions under the new name.
         var cache = Path.Combine(_root, "plugins", "cache");
         var currentBin = Path.Combine(cache, "windows-app-manager-marketplace", "windows-app-manager", "3.2.0", "bin");
         var newPlugin = Path.Combine(cache, "win-desktop-mcp-marketplace", "win-desktop-mcp");
@@ -157,16 +196,18 @@ public class LayoutStorageOptionsTests : IDisposable
     }
 
     [Fact]
-    public void PluginFolderNames_AreTheNewAndThePreviousPluginName()
+    public void PluginAndMarketplaceFolderNames_AreTheNewAndThePreviousNames()
     {
         LayoutStorageOptions.PluginFolderName.Should().Be("win-desktop-mcp");
         LayoutStorageOptions.PreviousPluginFolderName.Should().Be("windows-app-manager");
+        LayoutStorageOptions.MarketplaceFolderName.Should().Be("win-desktop-mcp-marketplace");
+        LayoutStorageOptions.PreviousMarketplaceFolderName.Should().Be("windows-app-manager-marketplace");
     }
 
     [Fact]
     public void FindLegacyLayoutFolders_InPluginCache_IncludesOtherInstalledVersions()
     {
-        // Arrange - ...\plugins\cache\<marketplace>\windows-app-manager\<version>\bin (a 3.x install, unchanged)
+        // Arrange - ...\plugins\cache\<marketplace>\windows-app-manager\<version>\bin (the layout of a 3.x install)
         var pluginDir = Path.Combine(_root, "plugins", "cache", "some-marketplace", "windows-app-manager");
         var currentBin = Path.Combine(pluginDir, "1.12.0", "bin");
         Directory.CreateDirectory(currentBin);

@@ -65,7 +65,8 @@ public class VersionConsistencyTests
         {
             plugin.RootElement.GetProperty("name").GetString().Should().Be(PluginName);
             plugin.RootElement.GetProperty("mcpServers").EnumerateObject().Select(p => p.Name).Should().Equal(PluginName);
-            marketplace.RootElement.GetProperty("name").GetString().Should().Be(PluginName + "-marketplace");
+            marketplace.RootElement.GetProperty("name").GetString().Should().Be(PluginName + "-marketplace")
+                .And.Be(LayoutStorageOptions.MarketplaceFolderName);
             marketplace.RootElement.GetProperty("plugins").EnumerateArray().Select(p => p.GetProperty("name").GetString())
                 .Should().Equal(PluginName);
             ServerIdentity.Name.Should().Be(PluginName);
