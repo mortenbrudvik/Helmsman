@@ -3015,7 +3015,7 @@ does.
 6. **scroll with modifiers (issue #8).** scroll with `modifiers` `["ctrl"]` over that page zooms it, and with
    `["shift"]` scrolls it sideways; afterwards get_control_status shows no key held.
 7. **The skill's files (issue #11).** Install the plugin locally (`/update-plugin`): the installed
-   skills/using-windows-app-manager/ has SKILL.md and the 13 reference files. In a fresh Claude Code session, invoke the
+   skills/using-win-desktop-mcp/ has SKILL.md and the 13 reference files. In a fresh Claude Code session, invoke the
    skill: only SKILL.md (about 5,500 tokens) loads. A task that needs a reference file ("save the document as
    C:\temp\x.txt" needs dialogs.md, "read the URL of the page in Edge" browser.md) makes the agent open that file from the
    "Where the Details Are" table.
@@ -3100,8 +3100,8 @@ The tool tables of the docs are generated into marked regions, between `<!-- too
 | docs/TOOLS.md | `read-only` | The tools served in read-only mode (generated from the readOnlyHint annotations) |
 | docs/TOOLS.md | `params:TOOL` | The parameter table of each tool, and a field table for each array-of-objects parameter |
 | docs/TOOLS.md | `resources` | The resources and prompts (roadmap M6.9): each resource's URI, mirrored tool and description, and each prompt's arguments, needed tools and description (generated from `ResourcesAndPrompts` and the attributes, not from the lists) |
-| skills/using-windows-app-manager/SKILL.md | `count` | The sentence with the tool count |
-| skills/using-windows-app-manager/tools.md | `tool-tables` | The whole "Available Tools" section: a table per category with summaries and key parameters, in the reference file rather than the core the skill loads (issue #11) |
+| skills/using-win-desktop-mcp/SKILL.md | `count` | The sentence with the tool count |
+| skills/using-win-desktop-mcp/tools.md | `tool-tables` | The whole "Available Tools" section: a table per category with summaries and key parameters, in the reference file rather than the core the skill loads (issue #11) |
 
 Tool names, counts, categories, the parameter tables' names, order, types, required flags and defaults, and
 the tools each annotation hint marks are generated
@@ -3126,7 +3126,7 @@ A new tool also needs a toolset: add it to one of `Toolsets.Server` (src/win-des
 
 ### The plugin skill's files
 
-The plugin skill (skills/using-windows-app-manager, issue #11) is a core and reference files. A client loads SKILL.md
+The plugin skill (skills/using-win-desktop-mcp, issue #11) is a core and reference files. A client loads SKILL.md
 whole whenever the skill triggers, so it holds only the safety rules, the loop, the codes that mean stop with a one-line
 index of the others, and a "Where the Details Are" table that names the reference files beside it (browser.md,
 clipboard.md, dialogs.md, elements.md, errors.md, input.md, layouts-and-monitors.md, lists.md, screens-and-ocr.md,

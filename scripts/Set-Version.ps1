@@ -6,7 +6,7 @@
     Updates, in one step:
       - <Version> in Directory.Build.props (the single source of truth; stamped into the exe)
       - "version" in .claude-plugin/plugin.json
-      - the windows-app-manager plugin entry's "version" in .claude-plugin/marketplace.json
+      - the win-desktop-mcp plugin entry's "version" in .claude-plugin/marketplace.json
 
     Only the version strings are rewritten; the rest of each file is left byte-for-byte intact.
     The marketplace's own metadata.version is not a plugin version and is left alone.
@@ -45,9 +45,9 @@ $targets = @(
         Pattern = '("version"\s*:\s*")[^"]*(")'
     },
     @{
-        # The "version" that follows "name": "windows-app-manager" inside the same plugin entry.
+        # The "version" that follows "name": "<plugin name>" ($script:PluginName, ReleaseCommon.ps1) inside the same plugin entry.
         Path    = '.claude-plugin/marketplace.json'
-        Pattern = '("name"\s*:\s*"windows-app-manager"\s*,[^{}]*?"version"\s*:\s*")[^"]*(")'
+        Pattern = '("name"\s*:\s*"' + [regex]::Escape($script:PluginName) + '"\s*,[^{}]*?"version"\s*:\s*")[^"]*(")'
     }
 )
 

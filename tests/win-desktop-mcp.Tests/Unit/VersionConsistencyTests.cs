@@ -7,7 +7,7 @@ namespace WinDesktopMcp.Tests.Unit;
 /// </summary>
 public class VersionConsistencyTests
 {
-    private const string PluginName = "windows-app-manager";
+    private const string PluginName = "win-desktop-mcp";
 
     [Fact]
     public void PluginJson_Version_MatchesDirectoryBuildProps()

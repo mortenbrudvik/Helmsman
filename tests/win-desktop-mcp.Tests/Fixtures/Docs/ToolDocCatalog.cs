@@ -2,7 +2,7 @@ namespace WinDesktopMcp.Tests.Fixtures;
 
 /// <summary>A tool in the generated docs: its one-line summary and the parameters the skill's tool tables name.</summary>
 /// <param name="Name">The tool name, as tools/list sends it.</param>
-/// <param name="Summary">The short description in the skill's tool tables (skills/using-windows-app-manager/tools.md).</param>
+/// <param name="Summary">The short description in the skill's tool tables (skills/using-win-desktop-mcp/tools.md).</param>
 /// <param name="KeyParameters">
 /// The parameters the skill's tool tables list, each a real parameter name, optionally followed by a note in parentheses
 /// (for example "confirm (more than 3 windows)"). Empty for "(none)".

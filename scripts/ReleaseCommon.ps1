@@ -2,7 +2,7 @@
 #   . (Join-Path $PSScriptRoot 'ReleaseCommon.ps1')
 # Works on Windows PowerShell 5.1 and PowerShell 7+.
 
-$script:PluginName = 'windows-app-manager'
+$script:PluginName = 'win-desktop-mcp'
 $script:ExeName = 'win-desktop-mcp.exe'
 $script:Utf8NoBom = New-Object System.Text.UTF8Encoding $false
 

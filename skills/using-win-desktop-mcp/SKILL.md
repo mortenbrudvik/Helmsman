@@ -1,5 +1,5 @@
 ---
-name: using-windows-app-manager
+name: using-win-desktop-mcp
 description: |
   Manage Windows applications, windows, and desktop layouts, and operate the controls inside them.
   Use when user asks to:
@@ -29,10 +29,10 @@ description: |
   - Check which server build runs, its DPI awareness, or why a tool is missing
 ---
 
-# Using Windows App Manager
+# Using win-desktop-mcp
 
 <!-- tools:begin count -->
-Windows App Manager provides 78 MCP tools for managing Windows applications, windows, and desktop layouts.
+win-desktop-mcp provides 78 MCP tools for managing Windows applications, windows, and desktop layouts.
 <!-- tools:end count -->
 
 These tools act on the user's real desktop. Every task follows one loop: **observe** the desktop (`get_desktop_state`), **find** the control by what it is called (`find_ui_elements`), **act** on it by its ref (`element_action`, through UI Automation, with its state before and after), **wait** on the server for the effect (`wait_for_element`, `wait_for_window`; never a guessed delay), and **verify** it (the result, then `read_element_text`, `read_table` or `get_desktop_state`) before the next step. Use coordinates, clicks and keys only where no element action does the job. Never act on a window or element you have not found in this task, and never assume an action worked because the call returned.
@@ -41,7 +41,7 @@ This file is the core. The details of each kind of task are in the files beside 
 
 ## Safety Rules (Read First)
 
-- **`PausedByUser` means stop.** The user pressed the pause hotkey (Ctrl+Alt+Shift+Pause by default) because they want the agent to stop sending input (or, as the error then says, the server paused itself because it could not read the pause the servers share: the same rule holds). The pause covers every Windows App Manager server on the desktop, so it may come from another session's agent. Every input tool, `element_action` and the dialog tools that press through it, and every tool that changes windows or starts or stops processes (`focus_window`, `close_window`, `launch_application`, `kill_process`, ...) return `PausedByUser` until the user resumes; tools that only read still work. Stop at once, tell the user what you were doing and what is left, and wait for them. Do not retry, do not look for another way to send input or change windows, and never try to resume input yourself. Call `resume_input` only after the user has told you to continue, and only once; it asks the user to confirm, and only their answer resumes input (`ResumeNeedsUser`: this client cannot ask, so the user resumes as the error says; `ResumeDeclined`: they said no, or another question is still open). Never send the hotkey's keys: `send_keys`, `press_keys` and `type_text` refuse them (`PauseChordNotAllowed`). `get_control_status` shows whether input is paused.
+- **`PausedByUser` means stop.** The user pressed the pause hotkey (Ctrl+Alt+Shift+Pause by default) because they want the agent to stop sending input (or, as the error then says, the server paused itself because it could not read the pause the servers share: the same rule holds). The pause covers every win-desktop-mcp server on the desktop, so it may come from another session's agent. Every input tool, `element_action` and the dialog tools that press through it, and every tool that changes windows or starts or stops processes (`focus_window`, `close_window`, `launch_application`, `kill_process`, ...) return `PausedByUser` until the user resumes; tools that only read still work. Stop at once, tell the user what you were doing and what is left, and wait for them. Do not retry, do not look for another way to send input or change windows, and never try to resume input yourself. Call `resume_input` only after the user has told you to continue, and only once; it asks the user to confirm, and only their answer resumes input (`ResumeNeedsUser`: this client cannot ask, so the user resumes as the error says; `ResumeDeclined`: they said no, or another question is still open). Never send the hotkey's keys: `send_keys`, `press_keys` and `type_text` refuse them (`PauseChordNotAllowed`). `get_control_status` shows whether input is paused.
 - **Always pass `windowHandle` to input tools.** `mouse_click`, `drag`, `mouse_move`, `scroll`, `type_text`, `send_keys` and `press_keys` take the handle of the window you mean (from `find_windows`). For keys the server brings that window to the front first and sends them only while it, or a dialog it owns, is in front. For clicks it sends them only if the point is on that window or a popup of it. Without `windowHandle`, keys go to whatever window is in the foreground and clicks to whatever window is at the point. A child control's handle stands for its top-level window, so click the field first to put the caret in it (`get_focused_element` shows where it is).
 - **Input never reaches your own terminal, editor or chat window** unless you pass its handle as `windowHandle` with `allowHostTarget: true` and the user confirms the server's question. Do that only when the user asked for input there. `get_server_info` lists those host windows; listings mark them `isAgentHost: true`.
 - **Read every result.** `success: false` means nothing (more) was sent or changed; read `errorCode` before anything else (see [Codes That Mean Stop](#codes-that-mean-stop) and [Other Error Codes](#other-error-codes)). `receivingWindow` says where input went, or would have gone; `foregroundAfter` what is in front afterwards; mouse tools also report `actualX`/`actualY`.

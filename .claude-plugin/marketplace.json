@@ -1,6 +1,6 @@
 {
-  "name": "windows-app-manager-marketplace",
-  "description": "Windows App Manager MCP - Control Windows applications and desktop layouts from Claude",
+  "name": "win-desktop-mcp-marketplace",
+  "description": "win-desktop-mcp: control Windows applications and desktop layouts from Claude",
   "owner": {
     "name": "Morten Brudvik"
   },
@@ -10,7 +10,7 @@
   },
   "plugins": [
     {
-      "name": "windows-app-manager",
+      "name": "win-desktop-mcp",
       "description": "Comprehensive Windows application and window management. Launch apps, control windows, snap layouts, and automate desktop workflows.",
       "version": "3.2.0",
       "source": "./",

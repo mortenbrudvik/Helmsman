@@ -367,7 +367,7 @@ win-desktop-mcp/
 │   ├── plugin.json              # Plugin metadata + MCP server config
 │   └── marketplace.json         # For marketplace distribution
 ├── skills/
-│   └── using-windows-app-manager/
+│   └── using-win-desktop-mcp/
 │       └── SKILL.md             # How to use the 21 tools effectively
 ├── bin/
 │   └── win-desktop-mcp.exe # Pre-built framework-dependent exe (needs .NET 8 Desktop Runtime)

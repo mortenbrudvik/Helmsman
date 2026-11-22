@@ -1,5 +1,5 @@
 {
-  "name": "windows-app-manager",
+  "name": "win-desktop-mcp",
   "version": "3.2.0",
   "description": "Comprehensive Windows application and window management from Claude. Launch apps, control windows, snap layouts, and automate desktop workflows.",
   "author": {
@@ -20,7 +20,7 @@
   ],
   "skills": "./skills/",
   "mcpServers": {
-    "windows-app-manager": {
+    "win-desktop-mcp": {
       "command": "${CLAUDE_PLUGIN_ROOT}/bin/win-desktop-mcp.exe"
     }
   }
