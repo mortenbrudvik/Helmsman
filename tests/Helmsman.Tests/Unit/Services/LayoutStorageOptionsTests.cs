@@ -63,7 +63,7 @@ public class LayoutStorageOptionsTests : IDisposable
     }
 
     [Fact]
-    public void LayoutsPathEnvironmentVariable_IsWamLayoutsPath()
+    public void LayoutsPathEnvironmentVariable_IsHelmsmanLayoutsPath()
     {
         LayoutStorageOptions.LayoutsPathEnvironmentVariable.Should().Be("HELMSMAN_LAYOUTS_PATH");
     }
