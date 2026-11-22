@@ -172,6 +172,10 @@ public class StepRunnerTests
     [InlineData(StepTool.PressKeys, """{ "keys": "win+l" }""", "#l")]
     [InlineData(StepTool.SendKeys, """{ "keys": "%{F4}" }""", "%{F4}")]
     [InlineData(StepTool.SendKeys, """{ "keys": "abc^w" }""", "^w")]
+    [InlineData(StepTool.SendKeys, """{ "keys": "#r" }""", "Run dialog")] // refused outright, also in a step
+    [InlineData(StepTool.SendKeys, """{ "keys": "{RWIN down}X{RWIN up}" }""", "power-user menu")]
+    [InlineData(StepTool.PressKeys, """{ "keys": "win+shift+r" }""", "#r")]
+    [InlineData(StepTool.PressKeys, """{ "keys": ["win", "x"] }""", "#x")]
     public void Check_RefusesWhatAStepMayNotDo_ThePasteMethodsFileOutputClosingTheHostTargetAndTheDesktopScope(StepTool tool, string args, string reason)
     {
         Refusal(() => Check(Step(StepTool.FocusWindow), Step(tool, args))).Should().Contain("Step 2").And.Contain(reason);

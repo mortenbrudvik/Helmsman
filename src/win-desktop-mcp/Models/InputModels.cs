@@ -431,7 +431,10 @@ public enum InputErrorCode
     /// </summary>
     TargetLostFocus = 24,
 
-    /// <summary>send_keys, press_keys: the keys contain a chord that closes, quits or locks, and no windowHandle was given.</summary>
+    /// <summary>
+    /// send_keys, press_keys: the keys contain a chord that closes, quits or locks, and no windowHandle was given; or Win+R or
+    /// Win+X (the Run dialog, the power-user menu), which are refused with or without windowHandle.
+    /// </summary>
     DestructiveChordNeedsTarget = 25,
 
     /// <summary>

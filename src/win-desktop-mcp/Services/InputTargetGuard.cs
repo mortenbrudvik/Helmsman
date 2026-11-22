@@ -58,6 +58,19 @@ public sealed class InputTargetGuard : IInputTargetGuard
 
     public InputGuardResult CheckKeyboard(InputTarget target, KeyboardInputKind kind, IReadOnlyList<InputEvent>? keys)
     {
+        // 0. Win+R and Win+X, with or without a target: they open a place where typed text runs as a command. The other ways to
+        // a command line (Start search, Task Manager's Run new task, File Explorer's address bar, a terminal already open) are
+        // not refused here; only the window rules below apply to them (InputGuardOptions.RefusedChords)
+        if (kind == KeyboardInputKind.Keys && keys != null && InputGuardOptions.FindRefusedChord(keys) is { } refusedChord)
+        {
+            return InputGuardResult.Refuse(InputErrorCode.DestructiveChordNeedsTarget,
+                $"The keys contain {refusedChord}, which opens {InputGuardOptions.RefusedChordOpens(refusedChord)}: what is typed " +
+                "there next runs as a command, and this server does not run commands for the agent. Nothing was sent, and no " +
+                "windowHandle changes that. To start a program, use launch_application; to open a Settings page, launch an " +
+                "ms-settings: URI (such as ms-settings:display).",
+                target, DescribeForeground());
+        }
+
         // 1. The request itself: a chord that closes, quits or locks needs to know which window it is for
         if (!target.HasWindow && kind == KeyboardInputKind.Keys && keys != null &&
             _options.FindDestructiveChord(keys) is { } chord)

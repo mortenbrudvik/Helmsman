@@ -2096,6 +2096,56 @@ public class InputTargetGuardTests
 
     #endregion
 
+    #region Win+R and Win+X are refused with or without a target
+
+    [Theory]
+    [InlineData("#r", "#r", "Run dialog")]
+    [InlineData("+#R", "#r", "Run dialog")]
+    [InlineData("{RWIN down}x{RWIN up}", "#x", "power-user menu")]
+    [InlineData("#x", "#x", "power-user menu")]
+    public void Keyboard_WinROrWinX_IsRefusedWithAndWithoutATarget_AndNothingIsActivated(string keys, string chord, string opens)
+    {
+        _inFront = Notepad;
+        var sut = CreateSut();
+
+        foreach (var target in new[] { InputTarget.None, To(Notepad), ConfirmedTerminal })
+        {
+            var result = sut.CheckKeyboard(target, KeyboardInputKind.Keys, SendKeysParser.Parse(keys));
+
+            result.ErrorCode.Should().Be(InputErrorCode.DestructiveChordNeedsTarget);
+            result.Error.Should().Contain(chord).And.Contain(opens).And.Contain("runs").And.Contain("launch_application")
+                .And.Contain("ms-settings:").And.Contain("Nothing was sent");
+        }
+
+        VerifyNoActivation();
+    }
+
+    [Fact]
+    public void Keyboard_WinR_IsRefusedEvenWhenTheDestructiveChordRuleIsOff()
+    {
+        // WAM_DESTRUCTIVE_CHORDS=none turns off the chords that need a target; Win+R and Win+X are not among them
+        var options = InputGuardOptions.FromEnvironment(name => name == InputGuardOptions.DestructiveChordsVariable ? "none" : null);
+        _inFront = Notepad;
+
+        CreateSut(options).CheckKeyboard(To(Notepad), KeyboardInputKind.Keys, SendKeysParser.Parse("#r")).ErrorCode
+            .Should().Be(InputErrorCode.DestructiveChordNeedsTarget);
+    }
+
+    [Theory]
+    [InlineData("#d")]
+    [InlineData("#e")]
+    [InlineData("#{UP}")]
+    public void Keyboard_OtherWindowsKeyChordsAsTheLastKey_WithATarget_AreAllowedAsBefore(string keys)
+    {
+        _inFront = Notepad;
+
+        var result = CreateSut().CheckKeyboard(To(Notepad), KeyboardInputKind.Keys, SendKeysParser.Parse(keys));
+
+        result.Allowed.Should().BeTrue(result.Error);
+    }
+
+    #endregion
+
     #region allowHostTarget lifts the host rule only with the user's confirmation
 
     private static readonly nint SecondTerminal = 0x120; // another window of the agent's host, not owned by Terminal

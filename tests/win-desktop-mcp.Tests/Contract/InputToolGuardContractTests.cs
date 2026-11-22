@@ -246,6 +246,113 @@ public class InputToolGuardContractTests
         _input.Verify(i => i.SendInput(It.IsAny<IReadOnlyList<InputEvent>>()), Times.Once);
     }
 
+    /// <summary>
+    /// Win+R (Run) and Win+X (the power-user menu) in every key tool and spelling, with and without windowHandle, and held
+    /// across batches (delayMs and holdMs send each key in a batch of its own).
+    /// </summary>
+    public static TheoryData<string, object, string> RunAndPowerUserChords()
+    {
+        var data = new TheoryData<string, object, string>();
+        foreach (var (keys, chord) in new[] { ("#r", "#r"), ("#R", "#r"), ("+#r", "#r"), ("{RWIN down}r{RWIN up}", "#r"), ("#x", "#x"),
+                     ("^#X", "#x"), ("{LWIN down}{DOWN}x{LWIN up}", "#x") })
+        {
+            data.Add("send_keys", keys, chord);
+        }
+
+        foreach (var (keys, chord) in new[] { ("win+r", "#r"), ("rwin+r", "#r"), ("win+shift+r", "#r"), ("win+x", "#x"), ("tab win+x", "#x") })
+        {
+            data.Add("press_keys", keys, chord);
+        }
+
+        data.Add("press_keys", new[] { "win", "r" }, "#r");
+        data.Add("press_keys", new[] { "win", "x" }, "#x");
+        return data;
+    }
+
+    [Theory]
+    [MemberData(nameof(RunAndPowerUserChords))]
+    public async Task KeyTools_WinROrWinX_AreRefusedWithAndWithoutWindowHandle_InOneBatchOrMany(string tool, object keys, string chord)
+    {
+        // Arrange
+        _inFront = Notepad;
+        await using var server = await StartServerAsync();
+        var calls = new List<Dictionary<string, object?>>
+        {
+            new() { ["keys"] = keys },
+            new() { ["keys"] = keys, ["windowHandle"] = (long)Notepad },
+            new() { ["keys"] = keys, ["windowHandle"] = (long)Notepad, [tool == "send_keys" ? "delayMs" : "delayBetweenMs"] = 5 }
+        };
+        if (tool == "press_keys")
+        {
+            calls.Add(new() { ["keys"] = keys, ["windowHandle"] = (long)Notepad, ["holdMs"] = 20 });
+        }
+
+        foreach (var arguments in calls)
+        {
+            // Act
+            var payload = ParsePayload(await server.CallToolAsync(tool, arguments));
+
+            // Assert
+            payload.GetProperty("errorCode").GetString().Should().Be(nameof(InputErrorCode.DestructiveChordNeedsTarget), payload.ToString());
+            payload.GetProperty("error").GetString().Should().Contain(chord).And.Contain("launch_application");
+        }
+
+        VerifyNothingSent();
+    }
+
+    [Theory]
+    [InlineData("send_keys", "#d")]
+    [InlineData("send_keys", "#e")]
+    [InlineData("send_keys", "#{UP}")]
+    [InlineData("press_keys", "win+d")]
+    [InlineData("press_keys", "win+up")]
+    public async Task KeyTools_OtherWindowsKeyChordsAsTheLastKey_AreSentAsBefore(string tool, string keys)
+    {
+        _inFront = Notepad;
+        await using var server = await StartServerAsync();
+
+        var payload = ParsePayload(await server.CallToolAsync(tool, new Dictionary<string, object?> { ["keys"] = keys, ["windowHandle"] = (long)Notepad }));
+
+        payload.GetProperty("success").GetBoolean().Should().BeTrue(payload.ToString());
+    }
+
+    [Fact]
+    public async Task SendKeys_TheWindowsKeyLeftDownByOneCall_IsReleasedBeforeTheNext_SoItsRIsNoWinR()
+    {
+        // Arrange - one call presses Win and leaves it down; the next sends r
+        _inFront = Notepad;
+        var batches = new List<IReadOnlyList<InputEvent>>();
+        _input.Setup(i => i.SendInput(It.IsAny<IReadOnlyList<InputEvent>>()))
+            .Callback((IReadOnlyList<InputEvent> events) => batches.Add(events.ToList()))
+            .Returns((IReadOnlyList<InputEvent> events) => (uint)events.Count);
+        await using var server = await StartServerAsync();
+
+        // Act
+        await server.CallToolAsync("send_keys", new Dictionary<string, object?> { ["keys"] = "{LWIN down}", ["windowHandle"] = (long)Notepad });
+        var afterFirst = batches.Count;
+        await server.CallToolAsync("send_keys", new Dictionary<string, object?> { ["keys"] = "r", ["windowHandle"] = (long)Notepad });
+
+        // Assert - the first call's end let go of Win before the second call's r went out
+        var first = batches.Take(afterFirst).SelectMany(b => b).ToList();
+        first.Should().Contain(e => e.Kind == InputEventKind.VirtualKey && e.Code == 0x5B && (e.Flags & 0x0002) != 0,
+            "every input call releases what it pressed");
+        SendKeysParser.Chords(batches.SelectMany(b => b).ToList()).Should().NotContain(c => c.Modifiers.HasFlag(KeyModifiers.Windows) && c.Code == 0x52);
+    }
+
+    [Fact]
+    public async Task SendKeys_R_WhileTheUserHoldsTheWindowsKey_IsModifiersHeld_AndNothingIsSent()
+    {
+        // The Windows key is down (the user holds it, or it is stuck): an r now would be Win+R
+        _inFront = Notepad;
+        _input.Setup(i => i.IsKeyDown(0x5B)).Returns(true);
+        await using var server = await StartServerAsync();
+
+        var payload = ParsePayload(await server.CallToolAsync("send_keys", new Dictionary<string, object?> { ["keys"] = "r", ["windowHandle"] = (long)Notepad }));
+
+        payload.GetProperty("errorCode").GetString().Should().Be(nameof(InputErrorCode.ModifiersHeld));
+        VerifyNothingSent();
+    }
+
     [Fact]
     public async Task PressKeys_KeysThatAreNeitherAStringNorAnArrayOfStrings_AreAToolError()
     {

@@ -53,6 +53,47 @@ public sealed record InputGuardOptions(
         .Select(spec => (spec, SendKeysParser.KeyPresses(SendKeysParser.Parse(spec)).Single()))
         .ToList();
 
+    /// <summary>
+    /// Chords no key tool sends, with or without a target, and no run_steps step: Win+R opens the Run dialog and Win+X the
+    /// power-user menu (the terminal as administrator, Shut down), where whatever is typed next runs as a command, and the
+    /// server does not run commands for the agent (InterpreterGuard is the launch side). As for the destructive chords, the
+    /// same key with more modifiers counts (Win+Shift+R), and either Windows key. Fixed, not configurable:
+    /// <see cref="DestructiveChordsVariable"/> only decides which chords need a target, and nothing else lists chords to refuse.
+    /// </summary>
+    /// <remarks>
+    /// The other ways to the same place stay open, and are left to the target window rules: the Windows key alone or Win+S
+    /// and then a program name and Enter (Start search runs it), a click on Start, Task Manager's Run new task, File
+    /// Explorer's address bar, and a command typed into a terminal that is open already (not the agent's own).
+    /// </remarks>
+    public static IReadOnlyList<string> RefusedChords { get; } = ["#r", "#x"];
+
+    private static readonly IReadOnlyList<(string Spec, KeyChord Chord)> Refused = RefusedChords
+        .Select(spec => (spec, SendKeysParser.Chords(SendKeysParser.Parse(spec)).Single()))
+        .ToList();
+
+    /// <summary>
+    /// The first chord of <see cref="RefusedChords"/> pressed in <paramref name="events"/> (parsed send_keys or press_keys
+    /// input), as its spec, or null. Reads the whole call, so a Windows key an earlier event holds down ({LWIN down}) counts
+    /// for a key pressed in a later batch. Matched by virtual key: the server sends no scan-code-only key events, and a
+    /// letter of another layout on the R or X key ('к' on a Russian keyboard) is parsed to that key.
+    /// </summary>
+    public static string? FindRefusedChord(IReadOnlyList<Models.InputEvent> events)
+    {
+        ArgumentNullException.ThrowIfNull(events);
+        foreach (var chord in SendKeysParser.Chords(events))
+        {
+            if (Refused.FirstOrDefault(r => r.Chord.IsPartOf(chord)) is { Spec: { } spec })
+            {
+                return spec;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>What a refused chord opens, for its refusal: "the Run dialog".</summary>
+    public static string RefusedChordOpens(string spec) => spec == "#x" ? "the power-user menu (Win+X)" : "the Run dialog (Win+R)";
+
     /// <summary>The options when nothing is configured.</summary>
     public static InputGuardOptions Default { get; } = FromEnvironment(_ => null);
 

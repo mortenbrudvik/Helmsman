@@ -223,6 +223,11 @@ public sealed partial class StepRunner
                 throw Invalid($"{label}: {notAHandle}");
             }
 
+            if (KeyEvents(tool, arguments, KeyboardLayout.Invariant) is { } keyEvents && InputGuardOptions.FindRefusedChord(keyEvents) is { } refused)
+            {
+                throw Invalid($"{label}: {RefusedChordReason(refused)}");
+            }
+
             if (ClosingChord(tool, arguments) is { } chord)
             {
                 throw Invalid($"{label}: its keys contain {chord}, a chord that can close, quit or lock the window, and a step " +
@@ -501,6 +506,11 @@ public sealed partial class StepRunner
     private string? ClosingChord(string tool, JsonObject arguments) =>
         KeyEvents(tool, arguments, KeyboardLayout.Invariant) is { } events ? ClosingChord(events) : null;
 
+    /// <summary>Why a step's keys may not contain a refused chord (<see cref="InputGuardOptions.RefusedChords"/>).</summary>
+    private static string RefusedChordReason(string chord) =>
+        $"{chord} opens {InputGuardOptions.RefusedChordOpens(chord)}, where what is typed next runs as a command; no key tool sends " +
+        "it. Start a program with launch_application after the run.";
+
     private string? ClosingChord(IReadOnlyList<InputEvent> events) =>
         (InputGuardOptions.Default.FindDestructiveChord(events) ?? _keyGuard.FindDestructiveChord(events))?.Spec;
 
@@ -548,6 +558,12 @@ public sealed partial class StepRunner
             if (KeyEvents(tool, arguments, layout) is not { } events)
             {
                 continue;
+            }
+
+            if (InputGuardOptions.FindRefusedChord(events) is { } refused)
+            {
+                return $"its keys contain {refused} on the keyboard layout of window {window}, where a character in a chord with " +
+                       $"Win is the key that types it (win+к is Win+R on a Russian layout): {RefusedChordReason(refused)}";
             }
 
             if (ClosingChord(events) is { } chord)

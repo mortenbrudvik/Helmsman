@@ -17,7 +17,8 @@ public enum KeyboardInputKind
 /// would land (roadmap M1.1, M1.5, M1.12). Every input tool goes through it, with or without a target. The
 /// checks run in this order, and the first one that fails is reported (nothing is sent):
 /// <list type="number">
-/// <item>The request: send_keys with a destructive chord and no target (DestructiveChordNeedsTarget).</item>
+/// <item>The request: send_keys with Win+R or Win+X, with or without a target, or with a destructive chord and no target
+/// (DestructiveChordNeedsTarget).</item>
 /// <item>Desktop probes: SessionLocked, DesktopUnavailable.</item>
 /// <item>An explicit target: InvalidHandle; then its probes, policy and host checks (TargetElevated,
 /// TargetDeniedByPolicy, TargetIsAgentHost unless allowHostTarget with the user's yes for the call (InputTarget.ConfirmedHost),

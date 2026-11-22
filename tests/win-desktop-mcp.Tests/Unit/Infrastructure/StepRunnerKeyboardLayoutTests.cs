@@ -73,6 +73,8 @@ public class StepRunnerKeyboardLayoutTests
     [InlineData(StepTool.PressKeys, """{ "keys": "tab ctrl+shift+й" }""", "Russian", "^q")]
     [InlineData(StepTool.SendKeys, """{ "keys": "abc^й" }""", "Russian", "^q")]
     [InlineData(StepTool.PressKeys, """{ "keys": "win+д" }""", "Russian", "#l")]
+    [InlineData(StepTool.PressKeys, """{ "keys": "win+к" }""", "Russian", "#r")] // к is on the R key: the Run dialog
+    [InlineData(StepTool.SendKeys, """{ "keys": "#ч" }""", "Russian", "#x")] // ч is on the X key: the power-user menu
     [InlineData(StepTool.PressKeys, """{ "keys": "ctrl+ς" }""", "Greek", "^w")]
     // ASCII punctuation as well: refusing only the chords on a non-ASCII character would let this one through
     [InlineData(StepTool.PressKeys, """{ "keys": "ctrl+;" }""", "Greek", "^q")]

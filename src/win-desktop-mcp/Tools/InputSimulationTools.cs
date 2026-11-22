@@ -434,6 +434,7 @@ public class InputSimulationTools
     [Description("Send keys and key combinations (syntax under keys). Examples: '^c' (Ctrl+C), '{TAB}', '{DOWN 3}{ENTER}'." + KeyboardTargetNote +
                  " At most 5000 keys (TextTooLong); the window is checked again every 64 key-downs." +
                  " Chords that close, quit or lock (closing a window or tab, quitting an app, Task Manager) are refused without windowHandle (DestructiveChordNeedsTarget)." +
+                 " Win+R and Win+X (Run, the power-user menu) are refused always (DestructiveChordNeedsTarget): start programs with launch_application." +
                  " A chord that hands the keyboard to another window (Alt+Tab, Alt+Esc, Ctrl+Esc, the Windows key, Alt+Space, or a closing chord) must be the last key: keys after it are refused (KeysAfterFocusChange), so send them in a new call." +
                  " Never send keys that close, quit, submit or delete to a window you have not targeted. To close a window, use close_window, not keys." +
                  " The user's pause hotkey chord is refused (PauseChordNotAllowed)." +
@@ -478,7 +479,7 @@ public class InputSimulationTools
     [Description("Press keys by name: a chord such as 'ctrl+shift+t' (or ['ctrl','shift','t']), or a sequence such as 'tab*3 enter' " +
                  "or 'ctrl+a delete'. Every key is released before the call returns; holdMs keeps a chord down within the call." +
                  KeyboardTargetNote +
-                 " As for send_keys: chords that close, quit or lock need windowHandle (DestructiveChordNeedsTarget), a chord that " +
+                 " As for send_keys: chords that close, quit or lock need windowHandle and win+r and win+x are refused (DestructiveChordNeedsTarget), a chord that " +
                  "hands the keyboard to another window (alt+tab, win, alt+space) must be the last (KeysAfterFocusChange), the " +
                  "user's pause hotkey is refused (PauseChordNotAllowed) and a paste follows the paste rule (PasteNotAllowed). To " +
                  "close a window, use close_window. Windows never lets injected keys press Ctrl+Alt+Del or lock the session.")]
