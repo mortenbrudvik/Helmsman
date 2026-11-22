@@ -56,8 +56,9 @@ public sealed unsafe class NativeGraphicsCaptureWrapper : IGraphicsCaptureWrappe
     private readonly object _supportLock = new();
     private readonly TimeSpan _deadline;
     private readonly Func<bool> _querySupported;
+    /// <summary>Runs each capture and support check on a new MTA thread and waits at most the deadline.</summary>
+    private readonly DeadlineWorker _mta;
     private nint _device, _context, _graphicsDevice;
-    private int _abandoned;
     private bool? _supported;
     private volatile bool _disposed;
 
@@ -70,6 +71,7 @@ public sealed unsafe class NativeGraphicsCaptureWrapper : IGraphicsCaptureWrappe
     {
         _deadline = deadline ?? DefaultDeadline;
         _querySupported = querySupported ?? QuerySupported;
+        _mta = new DeadlineWorker("Windows.Graphics.Capture", ApartmentState.MTA, _deadline);
     }
 
     /// <inheritdoc />
@@ -78,7 +80,7 @@ public sealed unsafe class NativeGraphicsCaptureWrapper : IGraphicsCaptureWrappe
         get
         {
             // A call that missed its deadline is still blocked: nothing new starts, and this Windows may well support it
-            if (Volatile.Read(ref _abandoned) > 0)
+            if (_mta.AbandonedCalls > 0)
             {
                 return GraphicsCaptureAvailability.Busy;
             }
@@ -86,7 +88,7 @@ public sealed unsafe class NativeGraphicsCaptureWrapper : IGraphicsCaptureWrappe
             lock (_supportLock)
             {
                 // Only an answer is kept: a check that missed its deadline or failed (a busy machine) asks again next time
-                _supported ??= OnMtaThread<bool?>(() => _querySupported(), fallback: null);
+                _supported ??= _mta.Run<bool?>(() => _querySupported(), fallback: null);
                 return _supported switch
                 {
                     true => GraphicsCaptureAvailability.Available,
@@ -124,7 +126,7 @@ public sealed unsafe class NativeGraphicsCaptureWrapper : IGraphicsCaptureWrappe
 
         Frame? captured = null;
         Exception? failure = null;
-        var completed = OnMtaThread(() =>
+        var completed = _mta.Run(() =>
         {
             // A capture stuck in the driver holds the device: wait for it no longer than the caller does, so a waiting
             // worker never runs a capture after its caller gave up
@@ -400,63 +402,6 @@ public sealed unsafe class NativeGraphicsCaptureWrapper : IGraphicsCaptureWrappe
     }
 
     // ---- Helpers ----
-
-    /// <summary>Runs <paramref name="work"/> on a new MTA thread and waits at most the deadline; <paramref name="fallback"/> when it does not finish.</summary>
-    private T OnMtaThread<T>(Func<T> work, T fallback)
-    {
-        if (Volatile.Read(ref _abandoned) > 0)
-        {
-            return fallback;
-        }
-
-        T result = fallback;
-        const int Running = 0, Finished = 1, Abandoned = 2;
-        var state = Running;
-        var finished = new ManualResetEventSlim();
-        var worker = new Thread(() =>
-        {
-            try
-            {
-                result = work();
-            }
-            catch (Exception)
-            {
-                // The result stays the fallback
-            }
-            finally
-            {
-                if (Interlocked.Exchange(ref state, Finished) == Abandoned)
-                {
-                    Interlocked.Decrement(ref _abandoned);
-                }
-
-                finished.Set();
-            }
-        })
-        {
-            IsBackground = true,
-            Name = "Windows.Graphics.Capture"
-        };
-
-        try
-        {
-            worker.SetApartmentState(ApartmentState.MTA);
-            worker.UnsafeStart();
-        }
-        catch (Exception)
-        {
-            return fallback;
-        }
-
-        // The event is not disposed: an abandoned worker still sets it when it returns
-        if (!finished.Wait(_deadline) && Interlocked.CompareExchange(ref state, Abandoned, Running) == Running)
-        {
-            Interlocked.Increment(ref _abandoned);
-            return fallback;
-        }
-
-        return result;
-    }
 
     private static nint Factory(string className, Guid iid)
     {
