@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
@@ -63,25 +62,17 @@ public class ScreenshotService : IScreenshotService
 
     private const int BlankTolerance = 2;
 
-    /// <summary>How long the frame comparison waits between two frames of a restored window.</summary>
-    private static readonly TimeSpan SettleFrameInterval = TimeSpan.FromMilliseconds(50);
-
     private readonly IScreenCaptureWrapper _captureWrapper;
     private readonly IMonitorService _monitorService;
     private readonly INativeWindowWrapper _windows;
     private readonly IWindowCallRunner _windowCalls;
-    private readonly TimeSpan _restoreSettleTimeout;
-    private readonly TimeSpan _restoreStateTimeout;
+    private readonly MinimizedCaptureRestorer _restorer;
     private readonly ICaptureRegistry? _captureRegistry;
     private readonly ICaptureTargetPolicy _capturePolicy;
     private readonly ITargetPolicy _targetPolicy;
     private readonly INativeVirtualDesktopWrapper? _virtualDesktops;
     private readonly IGraphicsCaptureWrapper? _graphicsCapture;
     private readonly IProcessSecurityProbe _security;
-
-    // The windows restoreIfMinimized has restored for a capture, by how many restores: they are minimized again afterwards,
-    // so their captures keep no visual signature (roadmap M6.4)
-    private readonly ConcurrentDictionary<nint, int> _restoredForCapture = new();
 
     /// <summary>The monitor index of the whole virtual screen (take_screenshot's monitor 'all' or -1): every monitor in one image (roadmap M3.11).</summary>
     public const int VirtualScreenIndex = -1;
@@ -149,8 +140,8 @@ public class ScreenshotService : IScreenshotService
         _monitorService = monitorService;
         _windows = windows ?? throw new ArgumentNullException(nameof(windows));
         _windowCalls = windowCalls ?? new WindowCallRunner(windows);
-        _restoreSettleTimeout = restoreSettleTimeout ?? DefaultRestoreSettleTimeout;
-        _restoreStateTimeout = restoreStateTimeout ?? DefaultRestoreStateTimeout;
+        _restorer = new MinimizedCaptureRestorer(_captureWrapper, _windows, _windowCalls,
+            restoreSettleTimeout ?? DefaultRestoreSettleTimeout, restoreStateTimeout ?? DefaultRestoreStateTimeout);
     }
 
     public ScreenListResult ListScreens()
@@ -672,73 +663,8 @@ public class ScreenshotService : IScreenshotService
     }
 
     /// <inheritdoc />
-    public MinimizedWindowRestore RestoreForCapture(nint minimizedWindow, nint captureWindow, bool includeFrame)
-    {
-        var restore = new MinimizedWindowRestore(minimizedWindow, _windows, _windowCalls, _restoreStateTimeout);
-        _restoredForCapture.AddOrUpdate(captureWindow, 1, (_, restores) => restores + 1);
-        var released = 0;
-        restore.Released = () =>
-        {
-            if (Interlocked.Exchange(ref released, 1) == 0 &&
-                _restoredForCapture.AddOrUpdate(captureWindow, 0, (_, restores) => restores - 1) <= 0)
-            {
-                _restoredForCapture.TryRemove(KeyValuePair.Create(captureWindow, 0));
-            }
-        };
-
-        try
-        {
-            restore.Restore();
-        }
-        catch
-        {
-            restore.Released();
-            throw;
-        }
-
-        if (restore.Failure == null && !WaitForTwoEqualFrames(captureWindow, includeFrame))
-        {
-            restore.StillPainting(_restoreSettleTimeout);
-        }
-
-        return restore;
-    }
-
-    /// <summary>
-    /// Captures frames of a window that was just restored until two in a row are equal: the restore animation and
-    /// the application's repaint are over. False when that did not happen within the settle time. A frame that
-    /// cannot be captured ends the wait; the capture itself then reports why.
-    /// </summary>
-    private bool WaitForTwoEqualFrames(nint window, bool includeFrame)
-    {
-        var waited = Stopwatch.StartNew();
-        byte[]? previous = null;
-        while (true)
-        {
-            byte[] frame;
-            try
-            {
-                frame = _windowCalls.Run(window, () => _captureWrapper.CaptureWindow(window, includeFrame)).Bgra;
-            }
-            catch (Exception)
-            {
-                return true;
-            }
-
-            if (previous != null && previous.AsSpan().SequenceEqual(frame))
-            {
-                return true;
-            }
-
-            if (waited.Elapsed >= _restoreSettleTimeout)
-            {
-                return false;
-            }
-
-            previous = frame;
-            Thread.Sleep(SettleFrameInterval);
-        }
-    }
+    public MinimizedWindowRestore RestoreForCapture(nint minimizedWindow, nint captureWindow, bool includeFrame) =>
+        _restorer.RestoreForCapture(minimizedWindow, captureWindow, includeFrame);
 
     private nint Root(nint windowHandle)
     {
@@ -1159,7 +1085,7 @@ public class ScreenshotService : IScreenshotService
     private VisualSignature? SignatureOf(CaptureResult capture, bool windowCapture, CapturedWindow? window)
     {
         if (_captureRegistry is not { KeepsSignatures: true } ||
-            (windowCapture && (window == null || _restoredForCapture.ContainsKey((nint)window.Handle))))
+            (windowCapture && (window == null || _restorer.IsRestoredForCapture((nint)window.Handle))))
         {
             return null;
         }
