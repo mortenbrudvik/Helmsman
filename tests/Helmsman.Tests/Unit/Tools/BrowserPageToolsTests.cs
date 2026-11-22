@@ -264,7 +264,8 @@ public class BrowserPageToolsTests
     [Theory]
     [InlineData(-1)]
     [InlineData(63)]
-    [InlineData(BrowserPageTools.MaxDimensionLimit + 1)]
+    [InlineData(8001)] // over the longest edge an image in a result may have
+    [InlineData(8192)] // the largest 4.0.0 took
     public async Task BrowserScreenshot_AMaxDimensionOutsideItsRange_IsInvalidArguments(int maxDimension)
     {
         await RefusedAsync(() => CreateSut().BrowserScreenshot(maxDimension, handle: Handle));

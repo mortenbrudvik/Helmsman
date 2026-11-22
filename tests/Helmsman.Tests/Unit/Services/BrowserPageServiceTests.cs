@@ -533,6 +533,54 @@ public class BrowserPageServiceTests
         capture.Image.Should().BeNull();
     }
 
+    [Fact]
+    public async Task Capture_AtFullSize_OverTheLongestInlineEdge_IsInvalidImageSize_WithoutAnImage()
+    {
+        // Arrange - a viewport 8001 device pixels wide, asked for at full size
+        _pages.Setup(p => p.CaptureAsync(Shown, It.IsAny<CdpGate>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CdpPageResult<CdpScreenshot>.Ok(new CdpScreenshot(Png(8001, 2), Shown.Url, "Form", false)));
+
+        // Act
+        var capture = await CreateSut().CaptureAsync(ByWindow(), 0);
+
+        // Assert
+        capture.Metadata.Success.Should().BeFalse();
+        capture.Metadata.ErrorCode.Should().Be(nameof(ScreenshotErrorCode.InvalidImageSize));
+        capture.Metadata.Error.Should().Contain("8001x2").And.Contain("maxDimension");
+        capture.Image.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Capture_AtFullSize_AtTheLongestInlineEdge_IsReturned()
+    {
+        // Arrange
+        _pages.Setup(p => p.CaptureAsync(Shown, It.IsAny<CdpGate>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CdpPageResult<CdpScreenshot>.Ok(new CdpScreenshot(Png(8000, 2), Shown.Url, "Form", false)));
+
+        // Act
+        var capture = await CreateSut().CaptureAsync(ByWindow(), 0);
+
+        // Assert
+        capture.Metadata.Success.Should().BeTrue(capture.Metadata.Error);
+        (capture.Metadata.Width, capture.Metadata.Height).Should().Be((8000, 2));
+    }
+
+    [Fact]
+    public async Task Capture_AnImageOverThePixelBudget_IsCaptureFailed_BeforeItIsDecoded()
+    {
+        // Arrange - the PNG's header says 16385 pixels wide: more than one capture may hold, whatever maxDimension scales it to
+        _pages.Setup(p => p.CaptureAsync(Shown, It.IsAny<CdpGate>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CdpPageResult<CdpScreenshot>.Ok(new CdpScreenshot(Png(16385, 1), Shown.Url, "Form", false)));
+
+        // Act
+        var capture = await CreateSut().CaptureAsync(ByWindow(), 1568);
+
+        // Assert
+        capture.Metadata.ErrorCode.Should().Be(nameof(ScreenshotErrorCode.CaptureFailed));
+        capture.Metadata.Error.Should().Contain("16385x1").And.Contain("16384");
+        capture.Image.Should().BeNull();
+    }
+
     private static byte[] Png(int width, int height)
     {
         using var bitmap = new Bitmap(width, height);

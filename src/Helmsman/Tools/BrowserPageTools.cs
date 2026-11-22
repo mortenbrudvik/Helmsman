@@ -35,8 +35,8 @@ public class BrowserPageTools
     /// <summary>browser_screenshot's default long edge, as the capture tools'.</summary>
     public const int DefaultMaxDimension = CaptureOptions.DefaultMaxDimension;
 
-    /// <summary>The longest edge browser_screenshot scales to.</summary>
-    public const int MaxDimensionLimit = 8_192;
+    /// <summary>The longest edge browser_screenshot scales to: the longest an image returned in a result may have.</summary>
+    public const int MaxDimensionLimit = CaptureLimits.MaxInlineEdge;
 
     private const string NothingDone = "Nothing was done.";
 

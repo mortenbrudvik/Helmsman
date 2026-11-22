@@ -228,14 +228,41 @@ public sealed class BrowserPageService : IBrowserPageService
             return new BrowserScreenshot(BrowserScreenshotResult.Failed(captured.ErrorCode!, captured.Error!, tab.Port, tab.Target!.Id), null);
 
         var shot = captured.Value!;
+
+        // The image's size from its PNG header, before it is decoded into a bitmap of that size: held to the pixel budget of a
+        // capture (CaptureLimits). A header that cannot be read is left to the decoder, which refuses it below
+        if (PngSize(shot.Png) is { } png && !CaptureLimits.WithinCaptureBudget(png.Width, png.Height))
+        {
+            return new BrowserScreenshot(BrowserScreenshotResult.Failed(nameof(ScreenshotErrorCode.CaptureFailed),
+                $"Tab {tab.Target!.Id} answered Page.captureScreenshot with a {png.Width}x{png.Height} image, more than one capture may " +
+                $"hold ({CaptureLimits.CaptureBudgetText}). Nothing was returned. Make the browser window smaller, or capture part of " +
+                "it with capture_region.", tab.Port, tab.Target.Id), null);
+        }
+
         try
         {
             using var stream = new MemoryStream(shot.Png, writable: false);
             using var original = new Bitmap(stream);
             var (width, height) = ScaledSize(original.Width, original.Height, maxDimension);
+            if (!CaptureLimits.FitsInline(width, height))
+            {
+                return new BrowserScreenshot(BrowserScreenshotResult.Failed(nameof(ScreenshotErrorCode.InvalidImageSize),
+                    $"The page's {original.Width}x{original.Height} image would be {width}x{height} pixels, more than an image returned " +
+                    $"in the result may be ({CaptureLimits.InlineBoundText}). Nothing was returned. Pass a maxDimension of at most " +
+                    $"{CaptureLimits.MaxInlineEdge}, or leave it at the default ({CaptureOptions.DefaultMaxDimension}).", tab.Port,
+                    tab.Target!.Id), null);
+            }
+
             using var scaled = width == original.Width && height == original.Height ? null : CaptureImaging.ResizeImage(original, width, height);
             var encoding = Math.Max(width, height) <= PngMaxEdge ? ImageEncoding.Png : ImageEncoding.Jpeg;
             var data = CaptureImaging.Encode(scaled ?? original, encoding, CaptureOptions.DefaultQuality);
+            if (data.LongLength > CaptureLimits.MaxInlineBytes)
+            {
+                return new BrowserScreenshot(BrowserScreenshotResult.Failed(nameof(ScreenshotErrorCode.InvalidImageSize),
+                    $"The page's {width}x{height} image is {data.LongLength} bytes, more than an image returned in the result may be " +
+                    $"({CaptureLimits.InlineBytesText}). Nothing was returned. Pass a smaller maxDimension.", tab.Port, tab.Target!.Id), null);
+            }
+
             return new BrowserScreenshot(
                 new BrowserScreenshotResult(true, tab.Target!.Id, width, height, original.Width, original.Height,
                     encoding == ImageEncoding.Png ? "png" : "jpeg", shot.Activated ? true : null, Cut(shot.Url, BrowserTabService.MaxUrlLength),
@@ -248,6 +275,20 @@ public sealed class BrowserPageService : IBrowserPageService
                 $"Tab {tab.Target!.Id} answered Page.captureScreenshot with an image that could not be read ({ex.Message}).", tab.Port,
                 tab.Target.Id), null);
         }
+    }
+
+    /// <summary>
+    /// The width and height a PNG's header (its IHDR chunk, right after the signature) gives, or null when
+    /// <paramref name="png"/> does not start like a PNG.
+    /// </summary>
+    public static (long Width, long Height)? PngSize(byte[] png)
+    {
+        ReadOnlySpan<byte> start = [0x89, (byte)'P', (byte)'N', (byte)'G', 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 13, (byte)'I', (byte)'H', (byte)'D', (byte)'R'];
+        if (png is null || png.Length < 24 || !png.AsSpan(0, 16).SequenceEqual(start))
+            return null;
+
+        return (System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(png.AsSpan(16, 4)),
+            System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(png.AsSpan(20, 4)));
     }
 
     /// <summary>The size of a capture scaled to <paramref name="maxDimension"/> on its long edge; 0 keeps it.</summary>
