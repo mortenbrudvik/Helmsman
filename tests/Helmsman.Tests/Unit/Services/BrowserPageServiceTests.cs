@@ -566,6 +566,26 @@ public class BrowserPageServiceTests
     }
 
     [Fact]
+    public async Task Capture_AtTheDefaultSize_ScalesA4KViewportTo1568_AsJpeg()
+    {
+        // Arrange
+        _pages.Setup(p => p.CaptureAsync(Shown, It.IsAny<CdpGate>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CdpPageResult<CdpScreenshot>.Ok(new CdpScreenshot(Png(3840, 2160), Shown.Url, "Form", false)));
+
+        // Act
+        var capture = await CreateSut().CaptureAsync(ByWindow(), Helmsman.Tools.BrowserPageTools.DefaultMaxDimension);
+
+        // Assert
+        capture.Metadata.Success.Should().BeTrue(capture.Metadata.Error);
+        (capture.Metadata.Width, capture.Metadata.Height).Should().Be((1568, 882));
+        (capture.Metadata.OriginalWidth, capture.Metadata.OriginalHeight).Should().Be((3840, 2160));
+        capture.Metadata.Format.Should().Be("jpeg");
+        capture.Image!.MimeType.Should().Be("image/jpeg");
+        using var image = new Bitmap(new MemoryStream(capture.Image.Data));
+        (image.Width, image.Height).Should().Be((1568, 882));
+    }
+
+    [Fact]
     public async Task Capture_AtFullSize_OverTheLongestInlineEdge_IsInvalidImageSize_WithoutAnImage()
     {
         // Arrange - a viewport 8001 device pixels wide, asked for at full size

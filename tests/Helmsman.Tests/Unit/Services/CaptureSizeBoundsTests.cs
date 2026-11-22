@@ -190,6 +190,48 @@ public sealed class CaptureSizeBoundsTests : IDisposable
         }
     }
 
+    [Fact]
+    public void EveryRoute_AtTheDefaultSize_ReportsTheMonitorScale_AndACaptureIdThatMapsItsPointsBack()
+    {
+        // Arrange - a 4K monitor at 150%, and a 3840 x 2160 window filling it
+        var monitor = TestDataFactory.CreateMonitorInfo(boundsWidth: 3840, boundsHeight: 2160, scaleFactor: 1.5);
+        UseMonitors(monitor);
+        _monitors.Setup(m => m.GetMonitorForWindow(Window)).Returns(monitor);
+        UseWindow(3840, 2160, 0, 0);
+        var windows = new Mock<INativeWindowWrapper>();
+        windows.Setup(w => w.IsWindowVisible(It.IsAny<nint>())).Returns(true);
+        windows.Setup(w => w.GetWindowRect(Window)).Returns((0, 0, 3840, 2160));
+        var registry = new CaptureRegistry();
+        var sut = new ScreenshotService(_capture.Object, _monitors.Object, windows.Object, Permissive.CapturePolicy, Permissive.TargetPolicy,
+            Permissive.SecurityProbe, captureRegistry: registry);
+        var options = new CaptureOptions();
+
+        // Act
+        var monitorShot = sut.CaptureMonitor(0, options).Metadata;
+        var region = sut.CaptureRegion(0, 0, 3840, 2160, options).Metadata;
+        var window = sut.CaptureWindow(Window, includeFrame: true, options).Metadata;
+        var area = sut.CaptureWindowArea(Window, includeFrame: true, new BoundsDto(0, 0, 3840, 2160), options).Metadata;
+        var marked = sut.CaptureWindowWithElements(Window, null, [], includeFrame: true, ElementOverlayOptions.Default, options).Metadata;
+
+        // Assert
+        foreach (var (route, success, width, height, scaleFactor, captureId) in new[]
+                 {
+                     ("take_screenshot", monitorShot.Success, monitorShot.Width, monitorShot.Height, monitorShot.ScaleFactor, monitorShot.CaptureId),
+                     ("capture_region", region.Success, region.Width, region.Height, region.ScaleFactor, region.CaptureId),
+                     ("capture_window", window.Success, window.Width, window.Height, window.ScaleFactor, window.CaptureId),
+                     ("capture_window ref", area.Success, area.Width, area.Height, area.ScaleFactor, area.CaptureId),
+                     ("capture_with_elements", marked.Success, marked.Width, marked.Height, marked.MonitorScaleFactor, marked.CaptureId)
+                 })
+        {
+            success.Should().BeTrue(route);
+            (width, height).Should().Be((1568, 882), route);
+            scaleFactor.Should().Be(1.5, route);
+            var record = registry.Find(captureId.Should().NotBeNull(route).And.Subject)!;
+            record.Geometry.ImageToScreen.ToScreen(784, 441).Should().Be((1920, 1080), route);
+            (record.Geometry.ImageWidth, record.Geometry.ImageHeight).Should().Be((1568, 882), route);
+        }
+    }
+
     #endregion
 
     #region Regions that are negative, enormous or off the screen
