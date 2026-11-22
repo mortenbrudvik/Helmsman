@@ -12,8 +12,9 @@ namespace Helmsman.Services;
 /// Logs once, when the server starts, what decides whether its answers mean what an agent expects: the server's and
 /// the MCP SDK's versions, the DPI awareness in force, and which tools it serves. The awareness comes from the app
 /// manifest (per-monitor v2); anything else means window, element and click coordinates can be scaled on monitors above
-/// 100%, so it is a warning. So is every toolset entry that was ignored (a typo in WAM_TOOLSETS would otherwise only
-/// show as missing tools). get_server_info reports the same, on request.
+/// 100%, so it is a warning. So is every toolset entry that was ignored (a typo in HELMSMAN_TOOLSETS would otherwise only
+/// show as missing tools), and every setting still given under its name from before release 4.0.0 (OldSettingNames).
+/// get_server_info reports the same, on request.
 /// </summary>
 public sealed class ServerStartupLog(
     INativeSystemInfoWrapper system,
@@ -21,7 +22,8 @@ public sealed class ServerStartupLog(
     IOptions<McpServerOptions>? serverOptions = null,
     ILogger<ServerStartupLog>? logger = null,
     ClipboardOptions? clipboard = null,
-    ProtocolAllowlist? protocols = null) : IHostedService
+    ProtocolAllowlist? protocols = null,
+    OldSettingNames? oldSettingNames = null) : IHostedService
 {
     public Task StartAsync(CancellationToken cancellationToken)
     {
@@ -47,6 +49,11 @@ public sealed class ServerStartupLog(
         if (clipboard != null || protocols != null)
         {
             LogClipboardAndProtocols(clipboard ?? ClipboardOptions.Default, protocols ?? ProtocolAllowlist.BuiltIn);
+        }
+
+        foreach (var warning in (oldSettingNames ?? OldSettingNames.None).Warnings)
+        {
+            logger?.LogWarning("{OldSettingNames}", warning);
         }
 
         return Task.CompletedTask;

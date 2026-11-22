@@ -254,7 +254,7 @@ public sealed class ContractServices : IDisposable
         // get_server_info: the real report over mocked sources, with the toolsets the server was registered with
         services.AddSingleton<IServerInfoService>(sp => new ServerInfoService(
             SystemInfo.Object, SecurityProbe.Object, Monitors.Object, Safety.Object, Session, Hotkey.Object, Layouts.Object,
-            NativeWindows.Object, sp.GetService<ToolsetSelection>(), Audit));
+            NativeWindows.Object, sp.GetService<ToolsetSelection>(), Audit, oldSettingNames: sp.GetService<OldSettingNames>()));
         // get_desktop_state and the action tools' observe (roadmap M3.12, M3.F32): the real observation over the mocks above
         services.AddSingleton<IDesktopStateService>(sp => new DesktopStateService(
             Windows.Object, Session, InputWrapper, Inspection.Object, UiElements.Object, Popups.Object, Screenshots,

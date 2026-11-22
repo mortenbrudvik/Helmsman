@@ -10,7 +10,8 @@ namespace Helmsman.Services;
 /// desktop state), the system info wrapper (DPI awareness, foreground lock timeout, session), the monitors, the safety
 /// settings and the host the server recorded at start, the input session and the pause hotkey, the layout storage, and
 /// the toolset selection, the clipboard and URI scheme settings, and the audit log. Warnings name what will make tools
-/// fail or coordinates wrong, a setting that was not understood, or (the audit log) what goes unrecorded.
+/// fail or coordinates wrong, a setting that was not understood or is still given under its name from before release
+/// 4.0.0 (<see cref="OldSettingNames"/>), or (the audit log) what goes unrecorded.
 /// </summary>
 public sealed class ServerInfoService(
     INativeSystemInfoWrapper system,
@@ -26,7 +27,8 @@ public sealed class ServerInfoService(
     ClipboardOptions? clipboard = null,
     ProtocolAllowlist? protocols = null,
     UiaEngineOptions? uiaEngine = null,
-    TopmostPins? topmostPins = null) : IServerInfoService
+    TopmostPins? topmostPins = null,
+    OldSettingNames? oldSettingNames = null) : IServerInfoService
 {
     public ServerInfoResult Read(ServerConnectionInfo connection, int servedTools, IReadOnlyList<string>? resources = null,
         IReadOnlyList<string>? prompts = null)
@@ -49,6 +51,7 @@ public sealed class ServerInfoService(
             warnings.Add(engineWarning);
         if (protocolSetting.IgnoredWarning is { } protocolWarning)
             warnings.Add(protocolWarning);
+        warnings.AddRange((oldSettingNames ?? OldSettingNames.None).Warnings);
 
         if (auditLog?.LastError is { } auditError)
         {

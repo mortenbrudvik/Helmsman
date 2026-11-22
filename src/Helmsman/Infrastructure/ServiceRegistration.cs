@@ -263,6 +263,9 @@ public static class ServiceRegistration
         // The effective DPI awareness (from app.manifest), the foreground lock timeout and the session, for
         // get_server_info and the log at start
         services.AddSingleton<INativeSystemInfoWrapper, NativeSystemInfoWrapper>();
+        // The settings still given under their names from before release 4.0.0, which get_server_info and the log at start
+        // warn about (SettingNames)
+        services.AddSingleton(_ => SettingNames.FindOld());
         // Logs the versions, the DPI awareness, the toolsets, and the clipboard and URI scheme settings in force
         services.AddHostedService(sp => new ServerStartupLog(
             sp.GetRequiredService<INativeSystemInfoWrapper>(),
@@ -270,7 +273,8 @@ public static class ServiceRegistration
             sp.GetService<IOptions<McpServerOptions>>(),
             sp.GetService<ILogger<ServerStartupLog>>(),
             sp.GetService<ClipboardOptions>(),
-            sp.GetRequiredService<ProtocolAllowlist>()));
+            sp.GetRequiredService<ProtocolAllowlist>(),
+            sp.GetService<OldSettingNames>()));
         services.AddSingleton<IServerInfoService>(sp => new ServerInfoService(
             sp.GetRequiredService<INativeSystemInfoWrapper>(),
             sp.GetRequiredService<IProcessSecurityProbe>(),
@@ -285,7 +289,8 @@ public static class ServiceRegistration
             sp.GetService<ClipboardOptions>(),
             sp.GetRequiredService<ProtocolAllowlist>(),
             sp.GetService<UiaEngineOptions>(),
-            sp.GetService<TopmostPins>()));
+            sp.GetService<TopmostPins>(),
+            sp.GetService<OldSettingNames>()));
 
         // The audit log of input and destructive actions (roadmap M2.17), written by AuditLogToolFilter
         services.AddSingleton<IAuditLog>(sp => new AuditLog(

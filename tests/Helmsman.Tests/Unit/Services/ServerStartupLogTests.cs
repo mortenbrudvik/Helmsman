@@ -53,6 +53,40 @@ public class ServerStartupLogTests
     }
 
     [Fact]
+    public async Task StartAsync_WarnsAboutSettingsStillGivenUnderTheirOldNames_WithoutTheirValues()
+    {
+        // Arrange
+        _system.Setup(s => s.GetDpiAwareness()).Returns(DpiAwareness.PerMonitorV2);
+        var old = SettingNames.FindOld(name => name switch
+        {
+            "WAM_READ_ONLY" => "1",
+            "WAM_LAYOUTS_PATH" => @"C:\secret\layouts",
+            "HELMSMAN_LAYOUTS_PATH" => @"D:\layouts",
+            _ => null
+        });
+
+        // Act
+        await new ServerStartupLog(_system.Object, logger: _logger, oldSettingNames: old).StartAsync(CancellationToken.None);
+
+        // Assert - on stderr at start, as get_server_info's warnings
+        var warnings = _logger.Entries.Where(e => e.Level == LogLevel.Warning).Select(e => e.Message).ToList();
+        warnings.Should().Equal(old.Warnings);
+        warnings.Should().Contain(w => w.StartsWith("WAM_READ_ONLY is the name")).And.Contain(w => w.StartsWith("WAM_LAYOUTS_PATH is ignored"));
+        warnings.Should().OnlyContain(w => !w.Contains("secret") && !w.Contains(@"D:\"));
+    }
+
+    [Fact]
+    public async Task StartAsync_WithoutOldNames_LogsNoOldNameWarning()
+    {
+        _system.Setup(s => s.GetDpiAwareness()).Returns(DpiAwareness.PerMonitorV2);
+
+        await new ServerStartupLog(_system.Object, logger: _logger, oldSettingNames: SettingNames.FindOld(_ => null))
+            .StartAsync(CancellationToken.None);
+
+        _logger.Entries.Should().ContainSingle().Which.Level.Should().Be(LogLevel.Information);
+    }
+
+    [Fact]
     public async Task StartAsync_PerMonitorV1_IsNoWarning()
     {
         // The manifest's fallback before Windows 10 1703: physical pixels on every monitor for a windowless server

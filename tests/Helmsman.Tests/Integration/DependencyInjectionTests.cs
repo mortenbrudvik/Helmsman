@@ -693,6 +693,14 @@ public class DependencyInjectionTests : IDisposable
     }
 
     [Fact]
+    public void TheOldSettingNames_AreReadFromTheEnvironment_ForGetServerInfoAndTheStartupLog()
+    {
+        // Whatever WAM_ names the machine that runs the tests has: the container holds what SettingNames finds in the environment
+        _serviceProvider.GetRequiredService<OldSettingNames>().Should().BeEquivalentTo(SettingNames.FindOld());
+        _serviceProvider.GetServices<Microsoft.Extensions.Hosting.IHostedService>().Should().ContainSingle(s => s is ServerStartupLog);
+    }
+
+    [Fact]
     public void AddHelmsmanTools_RegistersTheInputGateFilter()
     {
         // Window-changing tools must not run between an input call's guard check and its input

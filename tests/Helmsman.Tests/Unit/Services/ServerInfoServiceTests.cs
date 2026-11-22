@@ -243,6 +243,40 @@ public sealed class ServerInfoServiceTests : IDisposable
     }
 
     [Fact]
+    public void Read_WarnsAboutSettingsStillGivenUnderTheirOldNames_WithoutTheirValues()
+    {
+        // Arrange - one old name read in place of its new one, and one ignored beside its new one
+        var old = SettingNames.FindOld(name => name switch
+        {
+            "WAM_DENY_PROCESSES" => "keepass",
+            "WAM_AUDIT_PATH" => @"C:\secret\audit",
+            "HELMSMAN_AUDIT_PATH" => @"D:\audit",
+            _ => null
+        });
+
+        // Act
+        var info = new ServerInfoService(_system.Object, _probe.Object, _monitors.Object, _safety.Object, _session, _hotkey.Object,
+            _layouts.Object, _windows.Object, oldSettingNames: old).Read(Connection, 48);
+
+        // Assert
+        info.Warnings.Should().HaveCount(2);
+        info.Warnings.Should().ContainSingle(w => w.StartsWith("WAM_DENY_PROCESSES is the name") && w.Contains("HELMSMAN_DENY_PROCESSES"));
+        info.Warnings.Should().ContainSingle(w => w.StartsWith("WAM_AUDIT_PATH is ignored") && w.Contains("HELMSMAN_AUDIT_PATH is set too"));
+        info.Warnings.Should().OnlyContain(w => !w.Contains("keepass") && !w.Contains("secret") && !w.Contains(@"D:\"));
+    }
+
+    [Fact]
+    public void Read_WithOnlyTheNewNames_GivesNoOldNameWarning()
+    {
+        var old = SettingNames.FindOld(name => name == "HELMSMAN_DENY_PROCESSES" ? "keepass" : null);
+
+        var info = new ServerInfoService(_system.Object, _probe.Object, _monitors.Object, _safety.Object, _session, _hotkey.Object,
+            _layouts.Object, _windows.Object, oldSettingNames: old).Read(Connection, 48);
+
+        info.Warnings.Should().BeNull();
+    }
+
+    [Fact]
     public void Read_ReportsTheUiAutomationEngine_WithItsTimeouts()
     {
         // Act - the default engine (roadmap M3.2)

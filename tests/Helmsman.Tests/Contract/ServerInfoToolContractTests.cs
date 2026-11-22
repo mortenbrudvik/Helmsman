@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using Helmsman.Infrastructure;
@@ -36,6 +37,37 @@ public class ServerInfoToolContractTests
         connection.GetProperty("clientName").GetString().Should().Be("contract-test");
         connection.GetProperty("clientVersion").GetString().Should().Be("3.1.4");
         info.GetProperty("toolsets").GetProperty("servedTools").GetInt32().Should().Be(ServerToolCatalog.ServedToolNames.Count);
+    }
+
+    [Fact]
+    public async Task GetServerInfo_WarnsAboutSettingsStillGivenUnderTheirOldNames()
+    {
+        // Arrange - what SettingNames.FindOld found in the server's environment at start
+        using var services = new ContractServices(ContractMode.Typical);
+        var old = SettingNames.FindOld(name => name switch
+        {
+            "WAM_TOOLSETS" => "all",
+            "WAM_DENY_PROCESSES" => "keepass",
+            "HELMSMAN_DENY_PROCESSES" => "notepad",
+            _ => null
+        });
+        await using var server = await InProcessMcpServer.StartAsync(
+            [], builder => builder.AddHelmsmanTools(),
+            configureServices: host =>
+            {
+                services.Register(host);
+                host.AddSingleton(old);
+            });
+
+        // Act
+        var warnings = Json(await server.CallToolAsync("get_server_info")).GetProperty("warnings").EnumerateArray()
+            .Select(w => w.GetString()!).ToList();
+
+        // Assert
+        warnings.Should().Equal(old.Warnings);
+        warnings.Should().Contain(w => w.StartsWith("WAM_TOOLSETS is the name") && w.Contains("HELMSMAN_TOOLSETS"));
+        warnings.Should().Contain(w => w.StartsWith("WAM_DENY_PROCESSES is ignored"));
+        warnings.Should().OnlyContain(w => !w.Contains("keepass") && !w.Contains("notepad"));
     }
 
     [Fact]
