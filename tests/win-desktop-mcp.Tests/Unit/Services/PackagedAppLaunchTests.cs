@@ -542,6 +542,54 @@ public class PackagedAppLaunchTests
         (await sut.LaunchApplicationAsync(new LaunchRequest(Calculator), false, 5000)).ProcessId.Should().Be(ActivatedProcessId);
     }
 
+    [Fact]
+    public async Task Launch_HungActivationsWhoseCallerCancelled_AreCountedToo_SoCancellingCannotGetPastTheCap()
+    {
+        // A caller that cancels each launch against a hung shell leaves an activation behind each time, with its two
+        // threads: those count against the cap like the activations whose wait ran out
+        var release = new ManualResetEventSlim();
+        using var activating = new SemaphoreSlim(0);
+        _apps.Setup(a => a.ActivateApplication(It.IsAny<string>(), It.IsAny<string?>()))
+            .Callback<string, string?>((id, arguments) => _activations.Add((id, arguments)))
+            .Returns(() =>
+            {
+                activating.Release();
+                release.Wait();
+                return new AppActivationResult(0, ActivatedProcessId);
+            });
+        var sut = CreateSut(activationTimeout: TimeSpan.FromMinutes(5));
+        try
+        {
+            for (var i = 0; i < ApplicationLauncher.MaxHungActivations; i++)
+            {
+                using var cancel = new CancellationTokenSource();
+                var launch = sut.LaunchApplicationAsync(new LaunchRequest(Calculator), false, 5000, cancel.Token);
+                (await activating.WaitAsync(TimeSpan.FromSeconds(10))).Should().BeTrue("the activation has started");
+                await cancel.CancelAsync();
+
+                var cancelled = async () => await launch;
+                await cancelled.Should().ThrowAsync<OperationCanceledException>();
+                sut.HungActivations.Should().Be(i + 1, "the activation the caller gave up on has not returned");
+            }
+
+            // At the cap, the next activation is refused at once, as it is after activations that timed out
+            var refused = await sut.LaunchApplicationAsync(new LaunchRequest(Calculator), false, 5000);
+            refused.ErrorCode.Should().Be(nameof(LaunchErrorCode.ActivationFailed));
+            refused.ErrorMessage.Should().Contain("still");
+            _apps.Verify(a => a.ActivateApplication(It.IsAny<string>(), It.IsAny<string?>()), Times.Exactly(ApplicationLauncher.MaxHungActivations));
+
+            // Once they return, each is uncounted once, and activations run again
+            release.Set();
+            await WaitUntilAsync(() => sut.HungActivations == 0);
+            (await sut.LaunchApplicationAsync(new LaunchRequest(Calculator), false, 5000)).ProcessId.Should().Be(ActivatedProcessId);
+            sut.HungActivations.Should().Be(0);
+        }
+        finally
+        {
+            release.Set();
+        }
+    }
+
     private static async Task WaitUntilAsync(Func<bool> condition)
     {
         var deadline = DateTime.UtcNow.AddSeconds(10);

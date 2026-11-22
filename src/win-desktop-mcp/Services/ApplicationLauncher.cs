@@ -324,6 +324,16 @@ public sealed class ApplicationLauncher : IApplicationLauncher
 
         if (finished != start)
         {
+            if (activate)
+            {
+                // Counted until Windows answers: a stuck activation keeps two threads. Counted before a cancellation throws,
+                // so a caller that cancels each launch against a hung shell still meets MaxHungActivations
+                Interlocked.Increment(ref _hungActivations);
+                _ = start.ContinueWith(
+                    _ => Interlocked.Decrement(ref _hungActivations),
+                    CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+            }
+
             if (cancellationToken.IsCancellationRequested && onAbandonedStart != null)
             {
                 onAbandonedStart(start);
@@ -334,11 +344,6 @@ public sealed class ApplicationLauncher : IApplicationLauncher
             cancellationToken.ThrowIfCancellationRequested();
             if (activate)
             {
-                // Counted until Windows answers: a stuck activation keeps two threads
-                Interlocked.Increment(ref _hungActivations);
-                _ = start.ContinueWith(
-                    _ => Interlocked.Decrement(ref _hungActivations),
-                    CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
                 return new StartedLaunch(plan, null, null, launchedAt, new LaunchResult(
                     Success: true,
                     Warning: CombineWarnings(plan.Warning,
