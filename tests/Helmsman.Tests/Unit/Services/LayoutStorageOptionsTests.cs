@@ -313,15 +313,15 @@ public class LayoutStorageOptionsTests : IDisposable
     }
 
     [Fact]
-    public void Create_WithOverride_HasNoPreviousGeneration()
+    public void Create_WithOverride_HasNoEarlierGeneration()
     {
         var options = LayoutStorageOptions.Create(@"D:\Sync\layouts", @"C:\Local", Path.Combine(_root, "app"), []);
 
-        options.PreviousGeneration.Should().BeNull();
+        options.EarlierGenerations.Should().BeEmpty();
     }
 
     [Fact]
-    public void Create_PreviousGeneration_IsTheWinDesktopMcpFolder_WhichAbsorbedTheOriginalFolderAndThe3xCacheVersions()
+    public void Create_EarlierGenerations_AreTheWinDesktopMcpFolderThenThe3xOne_WithWhatEachAbsorbed()
     {
         // Arrange - Helmsman 4.1.0 next to an earlier Helmsman and two 3.x versions
         var cache = Path.Combine(_root, "plugins", "cache");
@@ -332,33 +332,39 @@ public class LayoutStorageOptionsTests : IDisposable
         Directory.CreateDirectory(Path.Combine(oldPlugin, "1.10.0", "bin"));
         Directory.CreateDirectory(Path.Combine(oldPlugin, "3.2.0", "bin"));
         Directory.CreateDirectory(Path.Combine(earlierHelmsman, "bin"));
+        string[] threeXCache =
+        [
+            Path.Combine(oldPlugin, "1.10.0", "bin", "layouts"),
+            Path.Combine(oldPlugin, "1.10.0", ".claude-plugin", "bin", "layouts"),
+            Path.Combine(oldPlugin, "3.2.0", "bin", "layouts"),
+            Path.Combine(oldPlugin, "3.2.0", ".claude-plugin", "bin", "layouts"),
+        ];
 
         // Act
         var options = LayoutStorageOptions.Create(null, @"C:\Local", currentBin, []);
 
-        // Assert
-        options.PreviousGeneration!.LayoutsPath.Should().Be(@"C:\Local\win-desktop-mcp\layouts");
-        options.MigrationSources.Should().Contain(@"C:\Local\win-desktop-mcp\layouts");
-        options.PreviousGeneration.AbsorbedSources.Should().BeEquivalentTo(
-            @"C:\Local\WindowsAppManagerMcp\layouts",
-            Path.Combine(oldPlugin, "1.10.0", "bin", "layouts"),
-            Path.Combine(oldPlugin, "1.10.0", ".claude-plugin", "bin", "layouts"),
-            Path.Combine(oldPlugin, "3.2.0", "bin", "layouts"),
-            Path.Combine(oldPlugin, "3.2.0", ".claude-plugin", "bin", "layouts"));
-        options.PreviousGeneration.AbsorbedSources.Should().NotContain(Path.Combine(currentBin, "layouts"))
+        // Assert - newest first; each folder is a migration source too
+        var generations = options.EarlierGenerations!;
+        generations.Select(g => g.LayoutsPath).Should().Equal(
+            @"C:\Local\win-desktop-mcp\layouts", @"C:\Local\WindowsAppManagerMcp\layouts");
+        options.MigrationSources.Should().Contain(generations.Select(g => g.LayoutsPath));
+        generations[0].AbsorbedSources.Should().BeEquivalentTo([@"C:\Local\WindowsAppManagerMcp\layouts", .. threeXCache]);
+        generations[1].AbsorbedSources.Should().BeEquivalentTo(threeXCache);
+        generations.SelectMany(g => g.AbsorbedSources)
+            .Should().NotContain(Path.Combine(currentBin, "layouts"))
             .And.NotContain(Path.Combine(earlierHelmsman, "bin", "layouts"));
     }
 
     [Fact]
     public void Create_RunningFromA3xVersionFolder_CountsItsOwnExeFolderAsAbsorbed()
     {
-        // Arrange - a Helmsman exe placed under the 3.x install: win-desktop-mcp scanned that version folder too
+        // Arrange - a Helmsman exe placed under the 3.x install: both earlier generations scanned that version folder
         var currentBin = Path.Combine(_root, "plugins", "cache", "windows-app-manager-marketplace", "windows-app-manager", "3.2.0", "bin");
         Directory.CreateDirectory(currentBin);
 
         var options = LayoutStorageOptions.Create(null, @"C:\Local", currentBin, []);
 
-        options.PreviousGeneration!.AbsorbedSources.Should().Contain(Path.Combine(currentBin, "layouts"));
+        options.EarlierGenerations.Should().OnlyContain(g => g.AbsorbedSources.Contains(Path.Combine(currentBin, "layouts")));
     }
 
     [Fact]
@@ -368,7 +374,8 @@ public class LayoutStorageOptionsTests : IDisposable
 
         var options = LayoutStorageOptions.Create(null, @"C:\Local", baseDirectory, []);
 
-        options.PreviousGeneration!.AbsorbedSources.Should().Equal(@"C:\Local\WindowsAppManagerMcp\layouts");
+        options.EarlierGenerations![0].AbsorbedSources.Should().Equal(@"C:\Local\WindowsAppManagerMcp\layouts");
+        options.EarlierGenerations[1].AbsorbedSources.Should().BeEmpty();
     }
 
     [Fact]
@@ -387,7 +394,7 @@ public class LayoutStorageOptionsTests : IDisposable
         options.LayoutsPath.Should().Be(_root);
         options.MigrationSources.Should().BeEmpty();
         options.Samples.Should().BeEmpty();
-        options.PreviousGeneration.Should().BeNull();
+        options.EarlierGenerations.Should().BeNullOrEmpty();
     }
 
     #endregion

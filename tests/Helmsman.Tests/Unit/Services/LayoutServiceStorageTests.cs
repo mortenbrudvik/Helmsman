@@ -668,6 +668,192 @@ public class LayoutServiceStorageTests : IDisposable
 
     #endregion
 
+    #region First-run migration from an initialised 3.x folder
+
+    // 3.x (1.12.0 to 3.2.0) kept presets in %LOCALAPPDATA%\WindowsAppManagerMcp\layouts. On its first start it copied the
+    // presets kept next to the exe of older versions (its own exe folder and the other windows-app-manager versions in the
+    // plugin cache) and the samples into that folder, and wrote .initialized. For a 3.x user going straight to Helmsman
+    // that folder is the complete set, as an initialised win-desktop-mcp folder is for a user of the build on main.
+
+    private string ThreeXCacheLayouts(string version) =>
+        Path.Combine(_root, "plugins", "cache", "windows-app-manager-marketplace", "windows-app-manager", version, "bin", "layouts");
+
+    private string HelmsmanBin(string version)
+    {
+        var bin = Path.Combine(_root, "plugins", "cache", "helmsman-marketplace", "helmsman", version, "bin");
+        Directory.CreateDirectory(bin);
+        return bin;
+    }
+
+    [Fact]
+    public void FirstUse_WhenOnlyThe3xFolderIsInitialised_DoesNotCopyBackAPresetDeletedThere()
+    {
+        // Arrange - "morning" was copied from an old version's exe folder into the 3.x folder and then deleted there
+        WritePreset(ThreeXCacheLayouts("1.10.0"), "morning.json", TestDataFactory.CreateLayoutPreset("morning"));
+        WritePreset(WindowsAppManagerMcpLayouts, "evening.json", TestDataFactory.CreateLayoutPreset("evening"));
+        MarkInitialised(WindowsAppManagerMcpLayouts);
+
+        // Act
+        var sut = CreateSut(CreateOptions(baseDirectory: HelmsmanBin("4.1.0")));
+
+        // Assert
+        sut.GetAllPresets().Select(p => p.Name).Should().BeEquivalentTo("evening");
+        File.Exists(Path.Combine(ThreeXCacheLayouts("1.10.0"), "morning.json")).Should().BeTrue("an older folder is never changed");
+    }
+
+    [Fact]
+    public void FirstUse_WhenOnlyThe3xFolderIsInitialised_DoesNotSeedASampleDeletedThere()
+    {
+        // Arrange - the user kept focus-mode and deleted work-setup under 3.x
+        WritePreset(WindowsAppManagerMcpLayouts, "focus-mode.json", TestDataFactory.CreateLayoutPreset("focus-mode"));
+        MarkInitialised(WindowsAppManagerMcpLayouts);
+
+        // Act
+        var sut = CreateSut(CreateOptions([Sample("work-setup"), Sample("focus-mode")]));
+
+        // Assert
+        sut.GetPreset("work-setup").Should().BeNull();
+        sut.GetPreset("focus-mode").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void FirstUse_WhenOnlyThe3xFolderIsInitialised_DoesNotCopyFromThe3xPluginCacheFolders()
+    {
+        // Arrange - 3.x scanned the other windows-app-manager versions, under either exe folder, on its first start
+        WritePreset(ThreeXCacheLayouts("1.10.0"), "old.json", TestDataFactory.CreateLayoutPreset("old"));
+        WritePreset(Path.Combine(_root, "plugins", "cache", "windows-app-manager-marketplace", "windows-app-manager", "1.11.0",
+            ".claude-plugin", "bin", "layouts"), "older.json", TestDataFactory.CreateLayoutPreset("older"));
+        MarkInitialised(WindowsAppManagerMcpLayouts);
+
+        // Act
+        var sut = CreateSut(CreateOptions(baseDirectory: HelmsmanBin("4.1.0")));
+
+        // Assert
+        sut.GetAllPresets().Should().BeEmpty();
+    }
+
+    [Fact]
+    public void FirstUse_WhenOnlyThe3xFolderIsInitialisedButEmpty_CopiesAndSeedsNothing()
+    {
+        // Arrange - the user deleted every preset under 3.x, samples included
+        WritePreset(ThreeXCacheLayouts("1.10.0"), "morning.json", TestDataFactory.CreateLayoutPreset("morning"));
+        MarkInitialised(WindowsAppManagerMcpLayouts);
+
+        // Act
+        var sut = CreateSut(CreateOptions([Sample("work-setup")], HelmsmanBin("4.1.0")));
+
+        // Assert
+        sut.GetAllPresets().Should().BeEmpty();
+        File.Exists(Path.Combine(_layoutsPath, ".initialized")).Should().BeTrue("the decision is made once");
+    }
+
+    [Fact]
+    public void FirstUse_WhenOnlyThe3xFolderIsInitialised_CopiesThePresetsKeptThere_IncludingFormerSamples()
+    {
+        // Arrange - a preset of the user's own and a sample the user edited
+        WritePreset(WindowsAppManagerMcpLayouts, "morning.json", TestDataFactory.CreateLayoutPreset("morning", "Mine"));
+        WritePreset(WindowsAppManagerMcpLayouts, "work-setup.json", TestDataFactory.CreateLayoutPreset("work-setup", "Edited sample"));
+        MarkInitialised(WindowsAppManagerMcpLayouts);
+
+        // Act
+        var sut = CreateSut(CreateOptions([Sample("work-setup", "Sample")]));
+
+        // Assert
+        sut.GetAllPresets().Select(p => p.Name).Should().BeEquivalentTo("morning", "work-setup");
+        sut.GetPreset("work-setup")!.Description.Should().Be("Edited sample");
+        File.Exists(Path.Combine(WindowsAppManagerMcpLayouts, "morning.json")).Should().BeTrue("presets are copied, never moved");
+    }
+
+    [Fact]
+    public void FirstUse_WhenOnlyThe3xFolderIsInitialised_DoesNotAddASampleItNeverHad()
+    {
+        MarkInitialised(WindowsAppManagerMcpLayouts);
+
+        var sut = CreateSut(CreateOptions([Sample("new-sample")]));
+
+        sut.GetPreset("new-sample").Should().BeNull();
+    }
+
+    [Fact]
+    public void FirstUse_WhenOnlyThe3xFolderIsInitialised_StillCopiesFromAnEarlierHelmsmanInstall()
+    {
+        // Arrange
+        var currentBin = HelmsmanBin("4.1.0");
+        WritePreset(Path.Combine(_root, "plugins", "cache", "helmsman-marketplace", "helmsman", "4.0.0", "bin", "layouts"),
+            "evening.json", TestDataFactory.CreateLayoutPreset("evening"));
+        MarkInitialised(WindowsAppManagerMcpLayouts);
+
+        // Act
+        var sut = CreateSut(CreateOptions(baseDirectory: currentBin));
+
+        // Assert
+        sut.GetPreset("evening").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void FirstUse_WhenThe3xFolderIsInitialised_AndTheWinDesktopMcpFolderIsNot_CopiesFromBoth_ButNotFromThe3xCache()
+    {
+        // Arrange - the win-desktop-mcp folder never finished its first run, so it does not stand for 3.x; the 3.x one does
+        WritePreset(WinDesktopMcpLayouts, "morning.json", TestDataFactory.CreateLayoutPreset("morning"));
+        WritePreset(WindowsAppManagerMcpLayouts, "evening.json", TestDataFactory.CreateLayoutPreset("evening"));
+        MarkInitialised(WindowsAppManagerMcpLayouts);
+        WritePreset(ThreeXCacheLayouts("1.10.0"), "old.json", TestDataFactory.CreateLayoutPreset("old"));
+
+        // Act
+        var sut = CreateSut(CreateOptions([Sample("work-setup")], HelmsmanBin("4.1.0")));
+
+        // Assert
+        sut.GetAllPresets().Select(p => p.Name).Should().BeEquivalentTo("morning", "evening");
+    }
+
+    [Fact]
+    public void FirstUse_WhenBothEarlierFoldersAreInitialised_TheWinDesktopMcpOneStandsForBoth()
+    {
+        // Arrange - "evening" is still in the 3.x folder but was deleted in the newer one
+        WritePreset(WinDesktopMcpLayouts, "morning.json", TestDataFactory.CreateLayoutPreset("morning"));
+        MarkInitialised(WinDesktopMcpLayouts);
+        WritePreset(WindowsAppManagerMcpLayouts, "morning.json", TestDataFactory.CreateLayoutPreset("morning"));
+        WritePreset(WindowsAppManagerMcpLayouts, "evening.json", TestDataFactory.CreateLayoutPreset("evening"));
+        MarkInitialised(WindowsAppManagerMcpLayouts);
+
+        // Act
+        var sut = CreateSut(CreateOptions([Sample("work-setup")]));
+
+        // Assert
+        sut.GetAllPresets().Select(p => p.Name).Should().BeEquivalentTo("morning");
+    }
+
+    [Fact]
+    public void FirstUse_WhenThe3xFolderHasNoMarker_CopiesFromItAndThe3xCache_AndSeedsTheSamples()
+    {
+        // Arrange - 3.x never finished its first run: nothing earlier stands for the older folders
+        WritePreset(WindowsAppManagerMcpLayouts, "evening.json", TestDataFactory.CreateLayoutPreset("evening"));
+        WritePreset(ThreeXCacheLayouts("1.10.0"), "old.json", TestDataFactory.CreateLayoutPreset("old"));
+
+        // Act
+        var sut = CreateSut(CreateOptions([Sample("work-setup")], HelmsmanBin("4.1.0")));
+
+        // Assert
+        sut.GetAllPresets().Select(p => p.Name).Should().BeEquivalentTo("evening", "old", "work-setup");
+    }
+
+    [Fact]
+    public void FirstUse_WithTheLayoutsPathOverride_IgnoresTheInitialised3xFolder_AndSeedsTheSamples()
+    {
+        // Arrange
+        var overridePath = Path.Combine(_root, "Sync", "layouts");
+        WritePreset(WindowsAppManagerMcpLayouts, "morning.json", TestDataFactory.CreateLayoutPreset("morning"));
+        MarkInitialised(WindowsAppManagerMcpLayouts);
+
+        // Act
+        var sut = CreateSut(LayoutStorageOptions.Create(overridePath, LocalAppData, Path.Combine(_root, "app"), [Sample("work-setup")]));
+
+        // Assert
+        sut.GetAllPresets().Select(p => p.Name).Should().BeEquivalentTo("work-setup");
+    }
+
+    #endregion
+
     #region Changes made on disk after startup
 
     [Fact]

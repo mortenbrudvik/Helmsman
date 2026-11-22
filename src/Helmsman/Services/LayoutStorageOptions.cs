@@ -13,8 +13,9 @@ public sealed record SampleLayout(string FileName, string Json);
 /// An earlier generation's layouts folder that, once its own first-time setup has run (it holds the
 /// <c>.initialized</c> marker), is the user's complete and current set of presets: it already copied the presets of
 /// <paramref name="AbsorbedSources"/> and the samples, and a preset or sample missing from it was deleted by the user.
-/// When the marker is there, LayoutPresetStore copies from the migration sources except
-/// <paramref name="AbsorbedSources"/> and seeds no samples; without it nothing changes.
+/// LayoutPresetStore takes the newest such generation (<see cref="LayoutStorageOptions.EarlierGenerations"/>) and copies
+/// from the migration sources except its <paramref name="AbsorbedSources"/>, and seeds no samples; when none is
+/// initialised, it copies from every source and seeds the samples.
 /// </summary>
 /// <param name="LayoutsPath">The earlier generation's layouts folder; also one of the migration sources.</param>
 /// <param name="AbsorbedSources">Migration sources whose presets that generation already copied on its first start.</param>
@@ -28,8 +29,8 @@ public sealed record EarlierLayoutsGeneration(string LayoutsPath, IReadOnlyList<
 /// per-version cache folder, so every plugin update started with an empty folder. Presets now live in
 /// <c>%LOCALAPPDATA%\Helmsman\layouts</c> (or <see cref="LayoutsPathEnvironmentVariable"/>).
 /// Presets saved under the earlier folder names, <c>%LOCALAPPDATA%\win-desktop-mcp\layouts</c> and
-/// <c>%LOCALAPPDATA%\WindowsAppManagerMcp\layouts</c>, are copied once into the new folder; when the first of them
-/// finished its own first-time setup, it alone stands for both (see <see cref="EarlierLayoutsGeneration"/>).
+/// <c>%LOCALAPPDATA%\WindowsAppManagerMcp\layouts</c>, are copied once into the new folder; the newest of them that
+/// finished its own first-time setup stands for everything before it (see <see cref="EarlierLayoutsGeneration"/>).
 /// </remarks>
 /// <param name="LayoutsPath">Folder that holds the preset JSON files.</param>
 /// <param name="MigrationSources">
@@ -37,15 +38,15 @@ public sealed record EarlierLayoutsGeneration(string LayoutsPath, IReadOnlyList<
 /// overwriting) into <paramref name="LayoutsPath"/>.
 /// </param>
 /// <param name="Samples">Sample presets seeded on first use, without overwriting existing presets.</param>
-/// <param name="PreviousGeneration">
-/// The earlier generation whose initialised folder replaces the sources it already absorbed and the sample seeding, or
-/// null (a layouts-path override, or a plain folder).
+/// <param name="EarlierGenerations">
+/// The earlier generations' layouts folders, newest first; the newest initialised one replaces the sources it already
+/// absorbed and the sample seeding. None (null or empty) with a layouts-path override, or for a plain folder.
 /// </param>
 public sealed record LayoutStorageOptions(
     string LayoutsPath,
     IReadOnlyList<string> MigrationSources,
     IReadOnlyList<SampleLayout> Samples,
-    EarlierLayoutsGeneration? PreviousGeneration = null)
+    IReadOnlyList<EarlierLayoutsGeneration>? EarlierGenerations = null)
 {
     /// <summary>
     /// Environment variable that overrides the layouts folder. It should be an absolute path;
@@ -71,12 +72,6 @@ public sealed record LayoutStorageOptions(
     /// </summary>
     public const string OriginalAppDataFolderName = "WindowsAppManagerMcp";
 
-    /// <summary>
-    /// The earlier %LOCALAPPDATA% folders whose layouts are copied on first use, newest generation first. When both
-    /// hold a preset of the same name, LayoutPresetStore's rule for several sources applies: the most recently
-    /// written file wins. On equal write times the folder listed first wins, so the newer generation's copy is kept.
-    /// </summary>
-    private static readonly string[] PreviousAppDataFolderNames = [PreviousAppDataFolderName, OriginalAppDataFolderName];
 
     /// <summary>
     /// Folder name of this plugin in the Claude Code plugin cache (<c>...\cache\&lt;marketplace&gt;\helmsman\&lt;version&gt;</c>):
@@ -129,26 +124,28 @@ public sealed record LayoutStorageOptions(
     {
         var legacyFolders = FindLegacyLayoutFolderEntries(baseDirectory);
         var sources = legacyFolders.Select(f => f.Path).ToList();
-        EarlierLayoutsGeneration? previousGeneration = null;
+        List<EarlierLayoutsGeneration> earlierGenerations = [];
         if (string.IsNullOrWhiteSpace(overridePath))
         {
-            var appDataFolders = PreviousAppDataFolderNames.Select(name => Path.Combine(localAppDataPath, name, LayoutsFolderName)).ToList();
-            sources.AddRange(appDataFolders);
+            var previous = Path.Combine(localAppDataPath, PreviousAppDataFolderName, LayoutsFolderName);
+            var original = Path.Combine(localAppDataPath, OriginalAppDataFolderName, LayoutsFolderName);
+            // Newest generation first: of presets of the same name the most recently written is copied, and on equal write
+            // times the source listed first, so the newer generation's copy is kept.
+            sources.AddRange([previous, original]);
 
-            // What the build published on main copied on its first start (the migration code was unchanged from 1.12.0 up to
-            // the rename to Helmsman): its own exe folder, the other versions of its plugin in the plugin cache, and the
-            // OriginalAppDataFolderName folder. Every version folder under PreviousPluginFolderName counts, in whichever of
-            // the scanned marketplaces it is: that plugin was only published from PreviousMarketplaceFolderName, where the
-            // build published on main ran from, and a version there either is that build (it kept nothing next to its
-            // exe) or is older and was scanned by it. Helmsman's own versions and exe folder are newer and stay sources.
-            var absorbed = legacyFolders.Where(f => f.UnderPreviousPluginName).Select(f => f.Path)
-                .Append(Path.Combine(localAppDataPath, OriginalAppDataFolderName, LayoutsFolderName))
-                .ToList();
-            previousGeneration = new EarlierLayoutsGeneration(
-                Path.Combine(localAppDataPath, PreviousAppDataFolderName, LayoutsFolderName), absorbed);
+            // Both earlier generations ran the same first-run migration (unchanged from 1.12.0 up to the rename to Helmsman):
+            // each copied its own exe folder and the other versions of its plugin in the plugin cache, and the build published
+            // on main also the original folder. Every version folder under PreviousPluginFolderName counts as absorbed, in
+            // whichever of the scanned marketplaces it is: that plugin was only published from PreviousMarketplaceFolderName,
+            // and a version there either kept its presets in an AppData folder (1.12.0 and later, nothing next to its exe)
+            // or is older and was scanned by the first of them to run. Helmsman's own versions and exe folder are newer than
+            // both and stay sources.
+            var threeXCacheFolders = legacyFolders.Where(f => f.UnderPreviousPluginName).Select(f => f.Path).ToList();
+            earlierGenerations.Add(new EarlierLayoutsGeneration(previous, [original, .. threeXCacheFolders]));
+            earlierGenerations.Add(new EarlierLayoutsGeneration(original, threeXCacheFolders));
         }
 
-        return new(ResolveLayoutsPath(overridePath, localAppDataPath), sources, samples, previousGeneration);
+        return new(ResolveLayoutsPath(overridePath, localAppDataPath), sources, samples, earlierGenerations);
     }
 
     /// <summary>

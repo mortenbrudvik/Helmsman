@@ -26,7 +26,7 @@ public class LayoutPresetStore : ILayoutPresetStore
     /// <summary>
     /// Written once the folder has been migrated and seeded, so that presets the user deletes
     /// are not migrated or seeded again on the next start. Earlier generations wrote the same name, which is how an
-    /// initialised <see cref="LayoutStorageOptions.PreviousGeneration"/> folder is recognised.
+    /// initialised folder of <see cref="LayoutStorageOptions.EarlierGenerations"/> is recognised.
     /// </summary>
     private const string InitializedMarkerFileName = ".initialized";
 
@@ -392,18 +392,16 @@ public class LayoutPresetStore : ILayoutPresetStore
             return;
 
         var knownNames = ReadPresetNames(LayoutsPath);
-        if (_options.PreviousGeneration is { } previous && File.Exists(Path.Combine(previous.LayoutsPath, InitializedMarkerFileName)))
+        // The newest earlier generation whose folder finished its own first run already holds what it copied from the older
+        // sources, and the samples; whatever is missing there the user deleted. Copy from it and from the sources it did not
+        // absorb, and seed nothing, as the marker means inside one folder. With none, copy from every source and seed.
+        var standing = (_options.EarlierGenerations ?? [])
+            .FirstOrDefault(g => File.Exists(Path.Combine(g.LayoutsPath, InitializedMarkerFileName)));
+        MigrateLegacyPresets(
+            _options.MigrationSources.Where(s => standing == null || !standing.AbsorbedSources.Any(a => IsSameFolder(a, s))),
+            knownNames);
+        if (standing == null)
         {
-            // That generation's folder already holds what it copied from the older sources, and the samples; whatever is
-            // missing there the user deleted. Copy from it (and from sources newer than it), and seed nothing, as the
-            // marker means inside one folder.
-            MigrateLegacyPresets(
-                _options.MigrationSources.Where(s => !previous.AbsorbedSources.Any(a => IsSameFolder(a, s))),
-                knownNames);
-        }
-        else
-        {
-            MigrateLegacyPresets(_options.MigrationSources, knownNames);
             SeedSamplePresets(knownNames);
         }
 
