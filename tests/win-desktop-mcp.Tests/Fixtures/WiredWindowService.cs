@@ -9,15 +9,12 @@ namespace WinDesktopMcp.Tests.Fixtures;
 public sealed class WiredWindowService : WindowService
 {
     private WiredWindowService(
-        IMonitorService monitorService,
-        INativeWindowWrapper nativeWrapper,
-        IHostGuard hostGuard,
-        ITargetPolicy targetPolicy,
+        WindowQueryService query,
         WindowGeometryService geometry,
         WindowZOrderService zOrder,
         WindowClosingService closing,
         WindowBatchService batch)
-        : base(monitorService, nativeWrapper, hostGuard, targetPolicy, geometry, zOrder, closing, batch)
+        : base(query, geometry, zOrder, closing, batch)
     {
     }
 
@@ -37,10 +34,11 @@ public sealed class WiredWindowService : WindowService
         TopmostPins? topmostPins = null)
     {
         var calls = windowCalls ?? new WindowCallRunner(nativeWrapper);
+        var query = new WindowQueryService(monitorService, nativeWrapper, hostGuard, targetPolicy);
         var geometry = new WindowGeometryService(monitorService, nativeWrapper, targetPolicy, calls, stateChangeTimeout);
         var zOrder = new WindowZOrderService(nativeWrapper, targetPolicy, calls, topmostPins ?? new TopmostPins());
         var closing = new WindowClosingService(monitorService, nativeWrapper, hostGuard, targetPolicy, virtualDesktops);
         var batch = new WindowBatchService(geometry, closing);
-        return new WiredWindowService(monitorService, nativeWrapper, hostGuard, targetPolicy, geometry, zOrder, closing, batch);
+        return new WiredWindowService(query, geometry, zOrder, closing, batch);
     }
 }
