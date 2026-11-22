@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Drawing;
-using System.Globalization;
 using WinDesktopMcp.Models;
 using WinDesktopMcp.Native;
 using WinDesktopMcp.Services.Interfaces;
@@ -53,14 +52,6 @@ public class ScreenshotService : IScreenshotService
 
     /// <summary>How long restoring a window, or minimizing it again, may take before it counts as failed.</summary>
     public static readonly TimeSpan DefaultRestoreStateTimeout = TimeSpan.FromMilliseconds(1000);
-
-    /// <summary>
-    /// How many pixels the blank check samples along each axis (32 x 32 = 1024 pixels). A sampled pixel counts as the
-    /// same color when no channel differs by more than <see cref="BlankTolerance"/>.
-    /// </summary>
-    private const int BlankSamplesPerAxis = 32;
-
-    private const int BlankTolerance = 2;
 
     private readonly IScreenCaptureWrapper _captureWrapper;
     private readonly IMonitorService _monitorService;
@@ -209,7 +200,7 @@ public class ScreenshotService : IScreenshotService
         }
 
         ThrowIfIncomplete(acquired.Capture);
-        AddBlankWarning(acquired.Capture, acquired.Warnings);
+        CaptureHealthWarnings.AddBlankWarning(acquired.Capture, acquired.Warnings);
         return new RawCapture(target, acquired.Capture, acquired.MonitorIndex, acquired.ScaleFactor, acquired.Warnings.ToArray(),
             acquired.Window, acquired.Screen, ExcludedOver(acquired.Capture, acquired.Excluded));
     }
@@ -280,7 +271,7 @@ public class ScreenshotService : IScreenshotService
             _ => throw new ArgumentException($"Unknown capture target {target.GetType().Name}", nameof(target))
         };
 
-        AddSessionWarning(acquired.Warnings);
+        CaptureHealthWarnings.AddSessionWarning(_security, acquired.Warnings);
         if (!acquired.WindowCapture || !CaptureMethods.ShowsOnlyTheWindow(acquired.Capture.Method))
         {
             acquired = acquired with { Excluded = [.. before, .. scan.Read(leaveOut)] };
@@ -427,8 +418,8 @@ public class ScreenshotService : IScreenshotService
         var warnings = new List<string>();
         var capture = CaptureWindowPixels(windowHandle, includeFrame, warnings, method);
         var monitor = _monitorService.GetMonitorForWindow(windowHandle);
-        AddDpiWarning(windowHandle, monitor, warnings);
-        AddDisplayAffinityWarning(windowHandle, warnings);
+        CaptureHealthWarnings.AddDpiWarning(_windows, windowHandle, monitor, warnings);
+        CaptureHealthWarnings.AddDisplayAffinityWarning(_windows, Root(windowHandle), warnings);
         return new Acquired(capture, monitor?.Index, monitor?.ScaleFactor ?? 1.0, warnings, WindowCapture: true,
             WithClientArea(window, capture))
         {
@@ -492,7 +483,7 @@ public class ScreenshotService : IScreenshotService
             var capture = CaptureWindowPixels(windowHandle, includeFrame, warnings, options.CaptureMethod);
             var captureMs = captureStopwatch.Elapsed.TotalMilliseconds;
             window = WithClientArea(window, capture);
-            AddSessionWarning(warnings);
+            CaptureHealthWarnings.AddSessionWarning(_security, warnings);
 
             // As for capture_window: only pixels that can show other windows list those that keep themselves out of them
             var excluded = CaptureMethods.ShowsOnlyTheWindow(capture.Method) ? null : ExcludedOver(capture, [.. before, .. scan.Read(root)]);
@@ -516,9 +507,9 @@ public class ScreenshotService : IScreenshotService
                 }
             }
             var monitor = _monitorService.GetMonitorForWindow(windowHandle);
-            AddDpiWarning(windowHandle, monitor, warnings);
-            AddDisplayAffinityWarning(windowHandle, warnings);
-            AddBlankWarning(capture, warnings);
+            CaptureHealthWarnings.AddDpiWarning(_windows, windowHandle, monitor, warnings);
+            CaptureHealthWarnings.AddDisplayAffinityWarning(_windows, Root(windowHandle), warnings);
+            CaptureHealthWarnings.AddBlankWarning(capture, warnings);
 
             // Element bounds are screen pixels; the image starts at the capture's screen origin, which is the client
             // area's corner when the frame is left out. The marks are placed in the returned image's pixels and drawn on
@@ -748,9 +739,9 @@ public class ScreenshotService : IScreenshotService
 
         // A window drawn by the GPU, DirectComposition, WinUI or UWP often prints as one solid color (black): the compositor
         // has its real pixels (roadmap M7.1). A window that really is one color stays as PrintWindow read it
-        if (method == WindowCaptureMethod.Auto && BlankColor(capture) != null &&
+        if (method == WindowCaptureMethod.Auto && CaptureHealthWarnings.BlankColor(capture) != null &&
             GraphicsCapture(windowHandle, includeFrame, out _) is { } recaptured &&
-            recaptured.Bgra.LongLength >= (long)recaptured.Width * recaptured.Height * 4 && BlankColor(recaptured) == null)
+            recaptured.Bgra.LongLength >= (long)recaptured.Width * recaptured.Height * 4 && CaptureHealthWarnings.BlankColor(recaptured) == null)
         {
             return recaptured;
         }
@@ -809,113 +800,6 @@ public class ScreenshotService : IScreenshotService
         return CaptureImaging.Crop(capture, visible);
     }
 
-    /// <summary>
-    /// Warns when the window is not per-monitor DPI aware on its monitor: Windows lays it out at another DPI and
-    /// stretches it, and PrintWindow can then draw it at its unscaled size, leaving part of the image empty or the
-    /// content offset from the screen.
-    /// </summary>
-    private void AddDpiWarning(nint windowHandle, MonitorInfo? monitor, List<string> warnings)
-    {
-        // A monitor whose DPI Windows could not report has no DPI to compare with: its 96 only stands in for the arithmetic
-        if (monitor is not { DpiUnknown: false })
-        {
-            return;
-        }
-
-        var windowDpi = (int)_windows.GetDpiForWindow(windowHandle);
-        var monitorDpi = monitor.Dpi;
-        if (windowDpi == 0 || Math.Abs(windowDpi - monitorDpi) <= 1)
-        {
-            return;
-        }
-
-        warnings.Add(CaptureWarnings.Format(CaptureWarnings.DpiScaledWindow,
-            $"the window works at {windowDpi} DPI on a {monitorDpi} DPI monitor, so Windows scales it. The image can show " +
-            "it at its unscaled size, partly empty or offset from the screen; if it looks wrong, capture_region over " +
-            "capturedRegion copies the screen as shown."));
-    }
-
-    /// <summary>
-    /// Warns when the captured window, or the top-level window it is in, declares a display affinity (issue #17): a copy of
-    /// the screen shows what is behind it or black, and what PrintWindow and Windows.Graphics.Capture return for it is not
-    /// known, so every way of reading it warns.
-    /// </summary>
-    private void AddDisplayAffinityWarning(nint windowHandle, List<string> warnings)
-    {
-        if (DisplayAffinities.Of(_windows.GetWindowDisplayAffinity(Root(windowHandle))) is { } affinity)
-        {
-            warnings.Add(CaptureWarnings.Format(CaptureWarnings.DisplayAffinity,
-                $"this window declares a display affinity ({DisplayAffinities.Name(affinity)}) to keep itself out of captures, so " +
-                "the image may be black, empty, or show what is behind it. Read it with the UI Automation tools instead."));
-        }
-    }
-
-    /// <summary>
-    /// Warns, first, when the session was locked as the pixels were read, or the input desktop could not be reached (issues
-    /// #17 and #18): the image may then show the lock screen. Captures are not refused for it, as input is.
-    /// </summary>
-    private void AddSessionWarning(List<string> warnings)
-    {
-        switch (CaptureSession.WarningCode(_security))
-        {
-            case CaptureWarnings.SessionLocked:
-                warnings.Insert(0, CaptureWarnings.Format(CaptureWarnings.SessionLocked,
-                    "the session is locked, so the image may show the lock screen instead of the windows. Captures are not refused " +
-                    "while it is locked; capture again once the user has unlocked it."));
-                break;
-            case CaptureWarnings.DesktopUnavailable:
-                warnings.Insert(0, CaptureWarnings.Format(CaptureWarnings.DesktopUnavailable,
-                    "the input desktop cannot be reached (a UAC prompt, Ctrl+Alt+Del or a disconnected session), so the image may " +
-                    "be black or show the lock screen instead of the windows. Capture again once the user is back."));
-                break;
-        }
-    }
-
-    /// <summary>
-    /// Warns when the image is one solid color: about 1024 pixels on a grid all have the same color. That is right for
-    /// an empty area, but a black image usually means GPU or protected content this capture cannot read, or a window
-    /// that has not painted yet.
-    /// </summary>
-    private static void AddBlankWarning(CaptureResult capture, List<string> warnings)
-    {
-        if (BlankColor(capture) is { } color)
-        {
-            warnings.Add(CaptureWarnings.Format(CaptureWarnings.ImageBlank,
-                $"every sampled pixel is #{color}: GPU or protected content, or not painted yet?"));
-        }
-    }
-
-    /// <summary>The color as RRGGBB when every sampled pixel has it (within a small tolerance), otherwise null.</summary>
-    private static string? BlankColor(CaptureResult capture)
-    {
-        if (capture.Width <= 0 || capture.Height <= 0 || capture.Bgra.LongLength < (long)capture.Width * capture.Height * 4)
-        {
-            return null;
-        }
-
-        var pixels = capture.Bgra;
-        int b0 = pixels[0], g0 = pixels[1], r0 = pixels[2];
-        var columns = Math.Min(BlankSamplesPerAxis, capture.Width);
-        var rows = Math.Min(BlankSamplesPerAxis, capture.Height);
-        for (var row = 0; row < rows; row++)
-        {
-            var y = rows == 1 ? 0 : (int)((long)row * (capture.Height - 1) / (rows - 1));
-            for (var column = 0; column < columns; column++)
-            {
-                var x = columns == 1 ? 0 : (int)((long)column * (capture.Width - 1) / (columns - 1));
-                var i = ((long)y * capture.Width + x) * 4;
-                if (Math.Abs(pixels[i] - b0) > BlankTolerance ||
-                    Math.Abs(pixels[i + 1] - g0) > BlankTolerance ||
-                    Math.Abs(pixels[i + 2] - r0) > BlankTolerance)
-                {
-                    return null;
-                }
-            }
-        }
-
-        return string.Create(CultureInfo.InvariantCulture, $"{r0:X2}{g0:X2}{b0:X2}");
-    }
-
     /// <summary>How much of <paramref name="region"/> the monitors cover, in pixels (monitors do not overlap).</summary>
     private static long CoveredArea(Rectangle region, IReadOnlyList<MonitorInfo> monitors) =>
         monitors
@@ -971,7 +855,7 @@ public class ScreenshotService : IScreenshotService
     {
         var (capture, monitorIndex, scaleFactor, warnings, windowCapture, window, screen) = acquired;
         ThrowIfIncomplete(capture);
-        AddBlankWarning(capture, warnings);
+        CaptureHealthWarnings.AddBlankWarning(capture, warnings);
         var signature = signed && (windowCapture ? window != null : screen != null) ? SignatureOf(capture, windowCapture, window) : null;
 
         // The pointer (roadmap M7.1): always where it is, and drawn into the pixels before they are scaled when asked
