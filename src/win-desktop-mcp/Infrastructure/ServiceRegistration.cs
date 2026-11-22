@@ -225,8 +225,10 @@ public static class ServiceRegistration
         // The launches of agent-written presets the user confirmed (owner decision D15), in a file in the same folder
         services.AddSingleton<ILaunchConfirmationStore>(sp =>
             new LaunchConfirmationStore(sp.GetRequiredService<ILayoutPresetStore>().LayoutsPath));
-        // launchMissing's windows are placed as the launch tools place theirs (roadmap M3.F27); save_layout records a
-        // packaged app's window by its appId (roadmap M6.8)
+        // save_layout's presets, from the open windows or an agent's placements: a packaged app's window is recorded by its
+        // appId (roadmap M6.8)
+        services.AddSingleton<ILayoutCapturer, LayoutCapturer>();
+        // launchMissing's windows are placed as the launch tools place theirs (roadmap M3.F27)
         services.AddSingleton<ILayoutService, LayoutService>();
 
         // Verified window activation (focus_window, apply_layout, and the input guard): all attach and

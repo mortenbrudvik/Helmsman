@@ -17,13 +17,12 @@ public sealed class WiredLayoutService : LayoutService
         LayoutPresetStore store,
         LaunchConfirmationStore confirmations,
         ILaunchPlacementService launchPlacement,
-        INativeAppsWrapper? apps,
-        IInstalledAppsService? installedApps)
-        : base(windowService, monitorService, processService, foregroundService, store, confirmations, launchPlacement, apps,
-            installedApps)
+        LayoutCapturer capturer)
+        : base(windowService, monitorService, processService, foregroundService, store, confirmations, launchPlacement, capturer)
     {
         Store = store;
         Confirmations = confirmations;
+        Capturer = capturer;
     }
 
     /// <summary>Stores the presets.</summary>
@@ -31,6 +30,9 @@ public sealed class WiredLayoutService : LayoutService
 
     /// <summary>The launches the user confirmed.</summary>
     public LaunchConfirmationStore Confirmations { get; }
+
+    /// <summary>save_layout's presets: captured, or from an agent's placements.</summary>
+    public LayoutCapturer Capturer { get; }
 
     /// <summary>
     /// The parts wired over the presets in <paramref name="layoutsPath"/>, without migrating or seeding anything; when it is
@@ -66,7 +68,8 @@ public sealed class WiredLayoutService : LayoutService
     {
         var store = new LayoutPresetStore(options, folderAccess, logger);
         var confirmations = new LaunchConfirmationStore(store.LayoutsPath);
+        var capturer = new LayoutCapturer(windowService, monitorService, processService, store, apps, installedApps);
         return new WiredLayoutService(windowService, monitorService, processService, foregroundService, store, confirmations,
-            launchPlacement, apps, installedApps);
+            launchPlacement, capturer);
     }
 }
