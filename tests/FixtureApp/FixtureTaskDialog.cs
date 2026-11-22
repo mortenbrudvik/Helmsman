@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
-using static WinDesktopMcp.FixtureApp.FixtureContract;
+using static Helmsman.FixtureApp.FixtureContract;
 
-namespace WinDesktopMcp.FixtureApp;
+namespace Helmsman.FixtureApp;
 
 /// <summary>
 /// The task dialog the main window's Task dialog button shows (roadmap M3.F4): TaskDialogIndirect with two command links

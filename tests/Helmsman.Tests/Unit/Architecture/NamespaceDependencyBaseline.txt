@@ -1,0 +1,310 @@
+# Today's layering violations, which NamespaceDependencyTests lets pass until they are fixed: one line per (offending
+# type -> type it depends on), grouped under "## rule: how the group is meant to go away". Do not add a line to make
+# the test pass: move the type to the layer it belongs in, or depend on an interface in Services.Interfaces. Only when the
+# dependency cannot be avoided yet, add "Owner -> Target  # reason" under its rule. The test fails on a line that no
+# longer occurs: delete it, or run the tests with UPDATE_SNAPSHOTS=1, which deletes stale lines and sorts the file but
+# never adds one (see TESTING.md).
+
+## Models -> Services.Interfaces: move the data the models carry (the Uia*State enums, PixelView) to Models; LaunchRequest, which carries an IProcessHandle, belongs next to that port
+Models.ElementState -> Services.Interfaces.UiaExpandCollapseState
+Models.ElementState -> Services.Interfaces.UiaToggleState
+Models.ElementState -> Services.Interfaces.UiaWindowVisualState
+Models.FoundElement -> Services.Interfaces.UiaExpandCollapseState
+Models.FoundElement -> Services.Interfaces.UiaToggleState
+Models.LaunchRequest -> Services.Interfaces.IProcessHandle
+Models.VisualSignature -> Services.Interfaces.PixelView
+
+## Models -> Native (constant): move the Win32 values the models compute with (NativeEnums' WDA_* and input constants) to a Models type that NativeEnums refers to
+src/Helmsman/Models/DisplayAffinity.cs -> Native.NativeEnums
+src/Helmsman/Models/InputModels.cs -> Native.NativeEnums
+src/Helmsman/Models/InputSessionModels.cs -> Native.NativeEnums
+
+## Models -> Services: move CaptureOutputMode to Models, and the modifier-name check KeyList calls (PressKeysParser.IsModifierName) to Models
+Models.CaptureOptions -> Services.CaptureOutputMode
+Models.KeyList -> Services.PressKeysParser
+
+## Models -> Services (constant): move ElementReadService.MaxTextLength to a Models type that both use
+src/Helmsman/Models/BrowserReading.cs -> Services.ElementReadService
+
+## Models -> Infrastructure: move AppText (the cap on application text that results apply) to Models
+Models.ElementAtPointResult -> Infrastructure.AppText
+Models.FindElementsResult -> Infrastructure.AppText
+Models.FocusedElementResult -> Infrastructure.AppText
+Models.FoundElement -> Infrastructure.AppText
+Models.UIElementAncestor -> Infrastructure.AppText
+Models.UIElementDetails -> Infrastructure.AppText
+Models.UIElementInfo -> Infrastructure.AppText
+Models.UIElementResult -> Infrastructure.AppText
+Models.WindowCandidateDto -> Infrastructure.AppText
+
+## Models -> Infrastructure (constant): move ToolErrorReporting's error codes (InvalidArgumentsErrorCode and the rest) to a Models type that ToolErrorReporting refers to
+src/Helmsman/Models/BrowserPage.cs -> Infrastructure.ToolErrorReporting
+src/Helmsman/Models/BrowserTabs.cs -> Infrastructure.ToolErrorReporting
+src/Helmsman/Models/CoordinateSpace.cs -> Infrastructure.ToolErrorReporting
+src/Helmsman/Models/DesktopStateModels.cs -> Infrastructure.ToolErrorReporting
+src/Helmsman/Models/DialogModels.cs -> Infrastructure.ToolErrorReporting
+src/Helmsman/Models/ElementActionModels.cs -> Infrastructure.ToolErrorReporting
+src/Helmsman/Models/ElementSearchModels.cs -> Infrastructure.ToolErrorReporting
+src/Helmsman/Models/ElementWaitModels.cs -> Infrastructure.ToolErrorReporting
+src/Helmsman/Models/InputModels.cs -> Infrastructure.ToolErrorReporting
+src/Helmsman/Models/OcrModels.cs -> Infrastructure.ToolErrorReporting
+src/Helmsman/Models/PopupModels.cs -> Infrastructure.ToolErrorReporting
+src/Helmsman/Models/RelativeArea.cs -> Infrastructure.ToolErrorReporting
+src/Helmsman/Models/StepSequenceModels.cs -> Infrastructure.ToolErrorReporting
+src/Helmsman/Models/TextControlChars.cs -> Infrastructure.ToolErrorReporting
+src/Helmsman/Models/TextInputMethod.cs -> Infrastructure.ToolErrorReporting
+src/Helmsman/Models/ToolArgumentEnums.cs -> Infrastructure.ToolErrorReporting
+src/Helmsman/Models/VisualWaitModels.cs -> Infrastructure.ToolErrorReporting
+src/Helmsman/Models/WindowConditionWait.cs -> Infrastructure.ToolErrorReporting
+src/Helmsman/Models/WindowEventModels.cs -> Infrastructure.ToolErrorReporting
+
+## Models -> Tools: move WindowInfoDto and LaunchPlacementResultDto from Tools to Models
+Models.LaunchResultItem -> Tools.LaunchPlacementResultDto
+Models.LaunchResultItem -> Tools.WindowInfoDto
+
+## Services.Interfaces -> Services: move the types the ports name (ElementCriteria, SystemKeyboardHotkeys, OcrTextMatcher, MinimizedWindowRestore) to Models or Services.Interfaces
+Services.Interfaces.ElementOrigin -> Services.ElementCriteria
+Services.Interfaces.INativeKeyboardLayoutWrapper -> Services.SystemKeyboardHotkeys
+Services.Interfaces.IOcrService -> Services.OcrTextMatcher
+Services.Interfaces.IScreenshotService -> Services.MinimizedWindowRestore
+
+## Services.Interfaces -> Services (constant): move CdpEndpointValidator.Host (the loopback address ICdpService's endpoints use) to Models
+src/Helmsman/Services/Interfaces/ICdpService.cs -> Services.CdpEndpointValidator
+
+## Services.Interfaces -> MCP SDK: let IAuditLog take a model of the call's outcome, which AuditLogToolFilter (Infrastructure) builds from the CallToolResult
+Services.Interfaces.IAuditLog -> ModelContextProtocol.Protocol.CallToolResult
+
+## Native -> Services: move the hotkey types NativeKeyboardLayoutWrapper returns (InputMethodHotkey, LanguageToggle, SystemKeyboardHotkeys) to Models or Services.Interfaces
+Native.NativeKeyboardLayoutWrapper -> Services.InputMethodHotkey
+Native.NativeKeyboardLayoutWrapper -> Services.LanguageToggle
+Native.NativeKeyboardLayoutWrapper -> Services.SystemKeyboardHotkeys
+
+## Native -> Services (constant): move the constants the wrappers read (SystemKeyboardHotkeys', CaptureMethods') to Models
+src/Helmsman/Native/NativeKeyboardLayoutWrapper.cs -> Services.SystemKeyboardHotkeys
+src/Helmsman/Native/ScreenCaptureWrapper.cs -> Services.CaptureMethods
+
+## Services -> Native: use the ports instead of the concrete wrappers' static helpers, and move UiaControlTypes and the NativeEnums values the logic needs to Models
+Services.ApplicationLauncher -> Native.NativeProcessWrapper  # moved out of ProcessService when it was split; the same dependency it had
+Services.ApplicationLauncher -> Native.NativeWindowWrapper  # moved out of ProcessService when it was split; the same dependency it had
+Services.ElementCriteria -> Native.UiaControlTypes
+Services.InterpreterGuard -> Native.NativeMethods
+Services.MonitorService -> Native.NativeMonitorWrapper
+Services.ProcessListingService -> Native.NativeProcessWrapper  # moved out of ProcessService when it was split; the same dependency it had
+Services.UIElementService -> Native.UiaControlTypes
+Services.UiaConditionEvaluator -> Native.UiaControlTypes
+Services.WindowZOrderService -> Native.NativeEnums  # moved out of WindowService when it was split; the same dependency it had
+
+## Services -> Native (constant): move the Win32 constants the logic computes with (NativeEnums' VK_*, WS_*, WDA_* and the like) to a Models type that NativeEnums refers to
+src/Helmsman/Services/AppWindowProbe.cs -> Native.NativeEnums
+src/Helmsman/Services/CaptureRequest.cs -> Native.ScreenCaptureWrapper
+src/Helmsman/Services/ClipboardOrigin.cs -> Native.NativeEnums
+src/Helmsman/Services/DeniedWindowMask.cs -> Native.NativeEnums
+src/Helmsman/Services/DesktopStateService.cs -> Native.NativeEnums
+src/Helmsman/Services/DialogService.cs -> Native.NativeEnums
+src/Helmsman/Services/ElementSearchService.Virtualized.cs -> Native.UiaControlTypes
+src/Helmsman/Services/ForegroundService.cs -> Native.NativeEnums
+src/Helmsman/Services/HeldInputTracker.cs -> Native.NativeEnums
+src/Helmsman/Services/InputBatchBuilder.cs -> Native.NativeEnums
+src/Helmsman/Services/InputSession.cs -> Native.NativeEnums
+src/Helmsman/Services/InputSimulationService.KeyReport.cs -> Native.NativeEnums
+src/Helmsman/Services/InputSimulationService.Paste.cs -> Native.NativeEnums
+src/Helmsman/Services/InputSimulationService.cs -> Native.NativeEnums
+src/Helmsman/Services/InputTargetGuard.cs -> Native.NativeEnums
+src/Helmsman/Services/KeySpecParser.cs -> Native.NativeEnums
+src/Helmsman/Services/KeyTable.cs -> Native.NativeEnums
+src/Helmsman/Services/KeyboardLayout.cs -> Native.NativeEnums
+src/Helmsman/Services/MinimizedWindowRestore.cs -> Native.NativeEnums
+src/Helmsman/Services/OwnedWindows.cs -> Native.NativeEnums
+src/Helmsman/Services/PauseHotkeyOptions.cs -> Native.NativeEnums
+src/Helmsman/Services/PopupService.cs -> Native.NativeEnums
+src/Helmsman/Services/PressKeysParser.cs -> Native.NativeEnums
+src/Helmsman/Services/ScreenshotService.cs -> Native.ScreenCaptureWrapper
+src/Helmsman/Services/SecurityPrompts.cs -> Native.NativeEnums
+src/Helmsman/Services/SendKeysParser.cs -> Native.NativeEnums
+src/Helmsman/Services/ServerInfoService.cs -> Native.NativeEnums
+src/Helmsman/Services/ServerInfoService.cs -> Native.Uia3Tree
+src/Helmsman/Services/WindowChangeFailures.cs -> Native.NativeEnums  # moved out of WindowService when it was split; the same dependency it had
+src/Helmsman/Services/WindowClassification.cs -> Native.NativeEnums
+src/Helmsman/Services/WindowClosingService.cs -> Native.NativeEnums  # moved out of WindowService when it was split; the same dependency it had
+src/Helmsman/Services/WindowEventJournal.cs -> Native.NativeEnums
+src/Helmsman/Services/WindowGeometryService.cs -> Native.NativeEnums  # moved out of WindowService when it was split; the same dependency it had
+src/Helmsman/Services/WindowInfoReader.cs -> Native.NativeEnums  # moved out of WindowService when it was split; the same dependency it had
+src/Helmsman/Services/WindowOwnerChain.cs -> Native.NativeEnums
+src/Helmsman/Services/WindowQueryService.cs -> Native.NativeEnums  # moved out of WindowService when it was split; the same dependency it had
+src/Helmsman/Services/WindowReads.cs -> Native.NativeEnums  # moved out of WindowService when it was split; the same dependency it had
+src/Helmsman/Services/WindowZOrderService.cs -> Native.NativeEnums  # moved out of WindowService when it was split; the same dependency it had
+
+## Services -> Infrastructure: move ToolErrorException and AppText inward (Models), give services ports for what they take from the filters (InputGateToolFilter, AuditScope, ToolsetSelection, ToolJson, CommandLineRedactor), and pass them the version instead of ServerVersion
+Services.AppWindowProbe -> Infrastructure.AppText
+Services.AuditLog -> Infrastructure.AuditRecord
+Services.BrowserPageService -> Infrastructure.InputGateToolFilter
+Services.BrowserTabService -> Infrastructure.InputGateToolFilter
+Services.BrowserTabService -> Infrastructure.ToolErrorException
+Services.DebugBrowserLifecycle -> Infrastructure.ToolErrorException
+Services.DesktopStateService -> Infrastructure.AppText
+Services.DesktopStateService -> Infrastructure.ToolsetSelection
+Services.DialogService -> Infrastructure.AppText
+Services.DialogService -> Infrastructure.AuditScope
+Services.DialogService -> Infrastructure.InputGateToolFilter
+Services.DialogService -> Infrastructure.ToolErrorException
+Services.DisplayAffinityScan -> Infrastructure.AppText
+Services.ElementActionService -> Infrastructure.InputGateToolFilter
+Services.ElementActionService -> Infrastructure.ToolErrorException
+Services.ElementActionService -> Infrastructure.ToolsetSelection
+Services.ElementReadService -> Infrastructure.ToolJson
+Services.ElementRefs -> Infrastructure.ToolErrorException
+Services.FileDialogService -> Infrastructure.AuditScope
+Services.FileDialogService -> Infrastructure.InputGateToolFilter
+Services.FileDialogService -> Infrastructure.ToolErrorException
+Services.LaunchPlanner -> Infrastructure.AppText  # moved out of ProcessService when it was split; the same dependency it had
+Services.PopupService -> Infrastructure.AppText
+Services.ProcessListingService -> Infrastructure.AppText  # moved out of ProcessService when it was split; the same dependency it had
+Services.ProcessListingService -> Infrastructure.CommandLineRedactor  # moved out of ProcessService when it was split; the same dependency it had
+Services.ProcessListingService -> Infrastructure.RedactedCommandLine  # moved out of ProcessService when it was split; the same dependency it had
+Services.ServerInfoService -> Infrastructure.AppText
+Services.ServerInfoService -> Infrastructure.ToolsetCatalog
+Services.ServerInfoService -> Infrastructure.ToolsetSelection
+Services.ServerInfoService -> ServerVersion
+Services.ServerStartupLog -> Infrastructure.ToolsetSelection
+Services.ServerStartupLog -> ServerVersion
+Services.TextPages -> Infrastructure.ToolJson
+Services.WindowEventJournal -> Infrastructure.AppText
+Services.WorkspaceService -> Infrastructure.AppText
+
+## Services -> Infrastructure (constant): move ToolErrorReporting's error codes to Models (as for Models), and the AppText, AuditRecord, ServerIdentity and ToolsetSelection constants services read
+src/Helmsman/Services/AuditLog.cs -> Infrastructure.AuditRecord
+src/Helmsman/Services/BrowserCdpTargets.cs -> Infrastructure.ToolErrorReporting
+src/Helmsman/Services/BrowserDialogService.cs -> Infrastructure.ToolErrorReporting
+src/Helmsman/Services/BrowserPageService.cs -> Infrastructure.ToolErrorReporting
+src/Helmsman/Services/BrowserTabService.cs -> Infrastructure.ToolErrorReporting
+src/Helmsman/Services/DebugBrowserLauncher.cs -> Infrastructure.ToolErrorReporting  # moved out of ProcessService when it was split; the same dependency it had
+src/Helmsman/Services/DebugBrowserLifecycle.cs -> Infrastructure.ToolErrorReporting
+src/Helmsman/Services/DesktopStateService.cs -> Infrastructure.ToolErrorReporting
+src/Helmsman/Services/DialogService.cs -> Infrastructure.AppText
+src/Helmsman/Services/DialogService.cs -> Infrastructure.ToolErrorReporting
+src/Helmsman/Services/ElementActionService.Plans.cs -> Infrastructure.ToolErrorReporting
+src/Helmsman/Services/ElementActionService.cs -> Infrastructure.ToolErrorReporting
+src/Helmsman/Services/ElementRefs.Arguments.cs -> Infrastructure.ToolErrorReporting
+src/Helmsman/Services/FileDialogPaths.cs -> Infrastructure.ToolErrorReporting
+src/Helmsman/Services/FileDialogService.cs -> Infrastructure.ToolErrorReporting
+src/Helmsman/Services/LaunchPlanner.cs -> Infrastructure.ToolErrorReporting  # moved out of ProcessService when it was split; the same dependency it had
+src/Helmsman/Services/LayoutApplier.cs -> Infrastructure.ToolErrorReporting  # moved out of LayoutService when it was split; the same dependency it had
+src/Helmsman/Services/LayoutCapturer.cs -> Infrastructure.ToolErrorReporting  # moved out of LayoutService when it was split; the same dependency it had
+src/Helmsman/Services/MenuPathService.cs -> Infrastructure.ToolErrorReporting
+src/Helmsman/Services/ServerInfoService.cs -> Infrastructure.ServerIdentity
+src/Helmsman/Services/ServerStartupLog.cs -> Infrastructure.ToolsetSelection
+
+## Services -> Tools: move UIElementTextFormat (it formats a model) from Tools to Services, where DesktopStateService and the tools can both use it
+Services.DesktopStateService -> Tools.UIElementTextFormat
+
+## Services -> MCP SDK: let AuditLog take a model of the outcome (see IAuditLog), and move what ServerStartupLog reads from the SDK's options to Infrastructure
+Services.AuditLog -> ModelContextProtocol.Protocol.CallToolResult
+Services.ServerStartupLog -> ModelContextProtocol.Server.McpServerOptions
+Services.ServerStartupLog -> ModelContextProtocol.Server.McpServerPrimitiveCollection`1
+Services.ServerStartupLog -> ModelContextProtocol.Server.McpServerTool
+
+## Infrastructure -> Services: use the ports of the input gate and audit log, and let a service behind a port parse and guard keys for StepRunner (KeySpecParser, PressKeysParser, SendKeysParser, HostGuard and the rest)
+Infrastructure.AuditLogToolFilter -> Services.AuditLog
+Infrastructure.InputGateToolFilter -> Services.InputGate
+Infrastructure.StepRunner -> Services.CaptureOutputMode
+Infrastructure.StepRunner -> Services.DestructiveChord
+Infrastructure.StepRunner -> Services.HostGuard
+Infrastructure.StepRunner -> Services.InputGate
+Infrastructure.StepRunner -> Services.InputGuardOptions
+Infrastructure.StepRunner -> Services.KeyChord
+Infrastructure.StepRunner -> Services.KeyModifiers
+Infrastructure.StepRunner -> Services.KeySpec
+Infrastructure.StepRunner -> Services.KeySpecParser
+Infrastructure.StepRunner -> Services.KeyboardLayout
+Infrastructure.StepRunner -> Services.PressKeysParser
+Infrastructure.StepRunner -> Services.SendKeysParser
+Infrastructure.StepRunner -> Services.TakeoverMessages
+
+## Infrastructure -> Services (constant): move the limits AuditRecord and StepRunner read (MonitorSelection's, MonitorIdentity's, ElementWaitService's, WindowWaitService's) to Models
+src/Helmsman/Infrastructure/AuditRecord.cs -> Services.MonitorIdentity
+src/Helmsman/Infrastructure/AuditRecord.cs -> Services.MonitorSelection
+src/Helmsman/Infrastructure/StepRunner.cs -> Services.ElementWaitService
+src/Helmsman/Infrastructure/StepRunner.cs -> Services.WindowWaitService
+
+## Infrastructure -> Prompts: ResourcesAndPrompts registers the prompts: move it to the composition root (Host), or its lists into Prompts and Resources
+Infrastructure.ResourcesAndPrompts -> Prompts.WorkflowPrompts
+
+## Infrastructure -> Prompts (constant): as for Infrastructure -> Prompts
+src/Helmsman/Infrastructure/ResourcesAndPrompts.cs -> Prompts.WorkflowPrompts
+
+## Infrastructure -> Resources: ResourcesAndPrompts registers the resources: move it to the composition root (Host), or its lists into Prompts and Resources
+Infrastructure.ResourcesAndPrompts -> Resources.DesktopResources
+
+## Infrastructure -> Resources (constant): as for Infrastructure -> Resources
+src/Helmsman/Infrastructure/ResourcesAndPrompts.cs -> Resources.DesktopResources
+
+## Tools -> Services: call services through their ports; move the helpers tools share with services (ElementRefs, ElementCriteria, WindowTitles, BrowserNavigationUrls, CaptureOutputMode...) to Models, and IWorkspaceService to Services.Interfaces
+Tools.BrowserReadingTools -> Services.BrowserNavigationUrls
+Tools.BrowserReadingTools -> Services.CdpEndpointValidator
+Tools.BrowserReadingTools -> Services.ChromiumSwitchGuard
+Tools.BrowserReadingTools -> Services.DebugBrowserLocator
+Tools.BrowserReadingTools -> Services.DebugBrowserProfiles
+Tools.BrowserReadingTools -> Services.ProfileFolderProblem
+Tools.BrowserTabTools -> Services.BrowserNavigationUrls
+Tools.BrowserTabTools -> Services.CdpEndpointValidator
+Tools.DialogTools -> Services.DialogButtons
+Tools.DialogTools -> Services.FileDialogPathCheck
+Tools.DialogTools -> Services.FileDialogPaths
+Tools.ElementActionTools -> Services.ElementActionService
+Tools.ElementActionTools -> Services.ElementCriteria
+Tools.ElementActionTools -> Services.ElementRefs
+Tools.ElementActionTools -> Services.MenuPaths
+Tools.ElementReadTools -> Services.ElementCriteria
+Tools.ElementReadTools -> Services.ElementRefs
+Tools.ElementWaitTools -> Services.ElementCriteria
+Tools.ElementWaitTools -> Services.ElementRefs
+Tools.ElementWaitTools -> Services.ElementWaitService
+Tools.ElementWaitTools -> Services.UIElementService
+Tools.InputControlTools -> Services.InputSession
+Tools.LaunchPlacing -> Services.WindowService
+Tools.LayoutPresetTools -> Services.LayoutPresetSchema
+Tools.LayoutPresetTools -> Services.LayoutService
+Tools.MonitorInfoTools -> Services.MonitorSelection
+Tools.OcrTools -> Services.OcrTextMatcher
+Tools.OcrTools -> Services.WindowTitles
+Tools.ScreenshotTools -> Services.CaptureException
+Tools.ScreenshotTools -> Services.CaptureOutputMode
+Tools.ScreenshotTools -> Services.CaptureRequest
+Tools.ScreenshotTools -> Services.CaptureTargetPolicy
+Tools.ScreenshotTools -> Services.ElementRefs
+Tools.ScreenshotTools -> Services.MinimizedWindowRestore
+Tools.StepSequenceTools -> Services.HostGuard
+Tools.StepSequenceTools -> Services.InputGuardOptions
+Tools.UIElementTools -> Services.AccessibilityWarmup
+Tools.UIElementTools -> Services.ElementCriteria
+Tools.UIElementTools -> Services.ElementRefs
+Tools.UIElementTools -> Services.ElementSearchService
+Tools.WindowFinderTools -> Services.VirtualDesktops
+Tools.WindowFinderTools -> Services.WindowTitles
+Tools.WindowFinderTools -> Services.WindowWaitService
+Tools.WindowManagerTools -> Services.RelativeRectMath
+Tools.WindowManagerTools -> Services.WindowService
+Tools.WindowTargeting -> Services.WindowMatching
+Tools.WindowTargeting -> Services.WindowService
+Tools.WorkspaceTools -> Services.IWorkspaceService
+
+## Tools -> Services (constant): move the limits and defaults the tools state (ElementWaitService's, WindowWaitService's, InputSimulationService's and the rest) to Models
+src/Helmsman/Tools/ClipboardTools.cs -> Services.ClipboardService
+src/Helmsman/Tools/ElementWaitTools.cs -> Services.ElementWaitService
+src/Helmsman/Tools/InputSimulationTools.cs -> Services.InputBatchBuilder
+src/Helmsman/Tools/InputSimulationTools.cs -> Services.InputSimulationService
+src/Helmsman/Tools/InputSimulationTools.cs -> Services.PressKeysParser
+src/Helmsman/Tools/MonitorTargeting.cs -> Services.MonitorSelection
+src/Helmsman/Tools/UIElementTools.cs -> Services.ElementSearchService
+src/Helmsman/Tools/VisualTools.cs -> Services.VisualChangeService
+src/Helmsman/Tools/WindowFinderTools.Wait.cs -> Services.WindowWaitService
+src/Helmsman/Tools/WindowFinderTools.cs -> Services.WindowService
+src/Helmsman/Tools/WindowManagerTools.cs -> Services.WindowService
+
+## Resources -> Tools: move the DTOs DesktopResources returns (WindowInfoDto, MonitorsResult, LayoutDetailDto) to Models, and call the services, not the tool classes
+Resources.DesktopResources -> Tools.LayoutDetailDto
+Resources.DesktopResources -> Tools.LayoutPresetTools
+Resources.DesktopResources -> Tools.MonitorInfoTools
+Resources.DesktopResources -> Tools.MonitorsResult
+Resources.DesktopResources -> Tools.WindowFinderTools
+Resources.DesktopResources -> Tools.WindowInfoDto

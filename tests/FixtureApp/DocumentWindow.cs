@@ -4,9 +4,9 @@ using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
-using static WinDesktopMcp.FixtureApp.FixtureContract;
+using static Helmsman.FixtureApp.FixtureContract;
 
-namespace WinDesktopMcp.FixtureApp;
+namespace Helmsman.FixtureApp;
 
 /// <summary>
 /// A separate, unowned top-level window holding a "document" that starts with unsaved changes. Closing it

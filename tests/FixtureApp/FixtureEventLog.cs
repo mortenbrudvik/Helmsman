@@ -2,7 +2,7 @@ using System.IO;
 using System.Text;
 using System.Text.Json.Nodes;
 
-namespace WinDesktopMcp.FixtureApp;
+namespace Helmsman.FixtureApp;
 
 /// <summary>
 /// Writes the fixture's event log: one JSON object per line, flushed as it is written, so the harness

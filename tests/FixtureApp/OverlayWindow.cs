@@ -2,9 +2,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
-using static WinDesktopMcp.FixtureApp.FixtureContract;
+using static Helmsman.FixtureApp.FixtureContract;
 
-namespace WinDesktopMcp.FixtureApp;
+namespace Helmsman.FixtureApp;
 
 /// <summary>
 /// A small WS_EX_TOPMOST tool window of the fixture itself (roadmap M6.7), always centred on the primary monitor, so z-order

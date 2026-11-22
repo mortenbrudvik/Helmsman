@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace WinDesktopMcp.FixtureApp;
+namespace Helmsman.FixtureApp;
 
 /// <summary>
 /// The one folder the fixture's Save As button writes into (roadmap M3.F4): the folder of its event log, which the harness

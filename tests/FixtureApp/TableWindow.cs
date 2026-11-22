@@ -3,9 +3,9 @@ using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Interop;
-using static WinDesktopMcp.FixtureApp.FixtureContract;
+using static Helmsman.FixtureApp.FixtureContract;
 
-namespace WinDesktopMcp.FixtureApp;
+namespace Helmsman.FixtureApp;
 
 /// <summary>
 /// A separate, unowned top-level window holding a read-only WPF DataGrid of <see cref="TableRowCount"/> rows, with column

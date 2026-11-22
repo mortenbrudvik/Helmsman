@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace WinDesktopMcp.FixtureApp;
+namespace Helmsman.FixtureApp;
 
 /// <summary>The DPI awareness the fixture sets for its process before it creates a window.</summary>
 public enum FixtureDpiAwareness

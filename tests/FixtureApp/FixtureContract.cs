@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace WinDesktopMcp.FixtureApp;
+namespace Helmsman.FixtureApp;
 
 /// <summary>
 /// The contract between the fixture app (tests/FixtureApp) and the end-to-end tests: process name,

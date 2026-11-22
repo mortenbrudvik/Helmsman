@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace WinDesktopMcp.FixtureApp;
+namespace Helmsman.FixtureApp;
 
 /// <summary>
 /// The few Win32 calls the fixture needs: its DPI awareness, its own geometry for the ready event, the Win32 menu bar
