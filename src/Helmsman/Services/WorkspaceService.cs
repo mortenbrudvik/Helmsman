@@ -385,21 +385,25 @@ public sealed class WorkspaceService : IWorkspaceService
         var program = placement.Launch?.Executable ?? placement.Matcher.ExePath ?? placement.Matcher.ProcessName;
         var processName = placement.Matcher.ProcessName ?? Path.GetFileNameWithoutExtension(program) ?? string.Empty;
 
+        // The browser the file names, read as the layout part of the same file reads it (ProcessNames): 'msedge.exe' is
+        // msedge; a path or a blank name names no browser, so its pages are unsupported, as before
+        var browser = ProcessNames.FromArgument(processName) ?? string.Empty;
+
         // Only pages a workspace keeps are opened, whatever the file says: http and https, without secrets
         var pages = urls.Select(WorkspaceUrls.Clean).OfType<string>().Take(WorkspaceUrls.MaxUrlsPerWindow).ToList();
 
         // The window is open when a window of its browser has the title it had (the page it showed), or shows one of its
         // pages (a window an earlier restore opened shows its first page, under that page's own title)
-        if (await OpenBrowserWindowAsync(processName, placement.Matcher.TitlePattern, pages, windows, cancellationToken).ConfigureAwait(false)
+        if (await OpenBrowserWindowAsync(browser, placement.Matcher.TitlePattern, pages, windows, cancellationToken).ConfigureAwait(false)
             is { } open)
         {
             return new WorkspaceContentOutcome(index, "pages", "alreadyOpen", program, urls.Count, open.ToInt64());
         }
-        var arguments = NewWindowArguments(processName, pages);
+        var arguments = browser.Length == 0 ? null : NewWindowArguments(browser, pages);
 
         // The program is the browser the window was: a file edited by hand must not start another program with these arguments
-        var isThatBrowser = program != null &&
-                            string.Equals(Path.GetFileNameWithoutExtension(program), processName, StringComparison.OrdinalIgnoreCase);
+        var isThatBrowser = program != null && browser.Length > 0 &&
+                            string.Equals(Path.GetFileNameWithoutExtension(program), browser, StringComparison.OrdinalIgnoreCase);
         if (program == null || arguments == null || pages.Count == 0 || !isThatBrowser)
         {
             return new WorkspaceContentOutcome(index, "pages", "unsupported", program, urls.Count,
@@ -418,11 +422,14 @@ public sealed class WorkspaceService : IWorkspaceService
             : new WorkspaceContentOutcome(index, "pages", "failed", program, pages.Count, Error: launched.ErrorMessage);
     }
 
-    /// <summary>A window of the browser that has <paramref name="title"/> or shows one of <paramref name="pages"/>; null when none does.</summary>
-    private async Task<nint?> OpenBrowserWindowAsync(string processName, string? title, IReadOnlyList<string> pages,
+    /// <summary>
+    /// A window of the browser (<paramref name="browser"/>, already read as <see cref="ProcessNames"/> reads a name; "" for
+    /// none) that has <paramref name="title"/> or shows one of <paramref name="pages"/>; null when none does.
+    /// </summary>
+    private async Task<nint?> OpenBrowserWindowAsync(string browser, string? title, IReadOnlyList<string> pages,
         IReadOnlyList<WindowInfo> windows, CancellationToken cancellationToken)
     {
-        foreach (var window in windows.Where(w => string.Equals(w.ProcessName, processName, StringComparison.OrdinalIgnoreCase) &&
+        foreach (var window in windows.Where(w => browser.Length > 0 && string.Equals(w.ProcessName, browser, StringComparison.OrdinalIgnoreCase) &&
                                                   !IsPrivateWindow(w)))
         {
             if (title != null && string.Equals(window.Title, title, StringComparison.Ordinal))

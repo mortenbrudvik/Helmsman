@@ -385,6 +385,56 @@ public class WorkspaceServiceTests : IDisposable
         _processes.VerifyNoOtherCalls();
     }
 
+    [Theory]
+    [InlineData("msedge.exe")]
+    [InlineData("\"MSEDGE.EXE\"")]
+    public async Task Restore_ABrowserNamedAsTheLayoutPartReadsIt_FindsItsOpenWindow(string processName)
+    {
+        // A file edited by hand: the layout part of the same file reads 'msedge.exe' as msedge (ProcessNames), so must this
+        _windows.Setup(w => w.GetAllWindows(It.IsAny<bool>())).Returns([Window(Edge, "Docs - Microsoft Edge", "msedge")]);
+        _browsers.Setup(b => b.GetBrowserUrlAsync(Edge, It.IsAny<CdpOptions?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new BrowserUrlResult(true, "https://docs.example.com/a", "edge", "Docs", null, BrowserErrorCode.None));
+        Saved(Preset(Placement(processName, "Inbox - Microsoft Edge", @"C:\Edge\msedge.exe",
+            new WorkspaceContent(Urls: ["https://docs.example.com/a"]))));
+
+        var result = await CreateSut().RestoreAsync("morning", dryRun: false);
+
+        result.Opened!.Single().Status.Should().Be("alreadyOpen");
+        _processes.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task Restore_ABrowserNamedWithExe_OpensItsPagesInANewWindowOfThatBrowser()
+    {
+        _windows.Setup(w => w.GetAllWindows(It.IsAny<bool>())).Returns([]);
+        Saved(Preset(Placement("msedge.exe", "Inbox - Microsoft Edge", @"C:\Edge\msedge.exe",
+            new WorkspaceContent(Urls: ["https://docs.example.com/a"]))));
+
+        var result = await CreateSut().RestoreAsync("morning", dryRun: false);
+
+        result.Opened!.Single().Status.Should().Be("opened");
+        _processes.Verify(p => p.LaunchApplicationAsync(@"C:\Edge\msedge.exe",
+            It.Is<string[]?>(a => a!.SequenceEqual(new[] { "--new-window", "https://docs.example.com/a" })), null, true,
+            WorkspaceService.OpenWaitMs, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData(@"C:\Edge\msedge.exe")]
+    [InlineData(".exe")]
+    public async Task Restore_ABrowserNamedByAPathOrABlankName_StartsNothing(string processName)
+    {
+        // A path or a blank name names no browser, as in the layout part (which skips such a placement): its pages are
+        // unsupported, as they were
+        _windows.Setup(w => w.GetAllWindows(It.IsAny<bool>())).Returns([Window(Edge, "Docs - Microsoft Edge", "msedge")]);
+        Saved(Preset(Placement(processName, "Inbox - Microsoft Edge", @"C:\Edge\msedge.exe",
+            new WorkspaceContent(Urls: ["https://docs.example.com/a"]))));
+
+        var result = await CreateSut().RestoreAsync("morning", dryRun: false);
+
+        result.Opened!.Single().Status.Should().Be("unsupported");
+        _processes.VerifyNoOtherCalls();
+    }
+
     [Fact]
     public async Task Restore_APresetWhoseProgramIsNotTheBrowser_StartsNothing()
     {
