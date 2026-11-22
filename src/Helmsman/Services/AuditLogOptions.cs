@@ -16,7 +16,7 @@ public sealed record AuditLogOptions(string Folder, TimeSpan Retention)
     /// </summary>
     public const string FolderEnvironmentVariable = "WAM_AUDIT_PATH";
 
-    /// <summary>The audit folder's name under %LOCALAPPDATA%\win-desktop-mcp.</summary>
+    /// <summary>The audit folder's name under %LOCALAPPDATA%\Helmsman.</summary>
     public const string FolderName = "audit";
 
     /// <summary>How long a day's file is kept by default: 7 days.</summary>
@@ -27,7 +27,7 @@ public sealed record AuditLogOptions(string Folder, TimeSpan Retention)
 
     /// <summary>
     /// Options for the running server: the folder from <see cref="FolderEnvironmentVariable"/> or
-    /// <c>%LOCALAPPDATA%\win-desktop-mcp\audit</c>. Reading them touches no file.
+    /// <c>%LOCALAPPDATA%\Helmsman\audit</c>. Reading them touches no file.
     /// </summary>
     public static AuditLogOptions FromEnvironment() => ForFolder(ResolveFolder(
         Environment.GetEnvironmentVariable(FolderEnvironmentVariable),
@@ -35,7 +35,7 @@ public sealed record AuditLogOptions(string Folder, TimeSpan Retention)
 
     /// <summary>
     /// The override path (quotes stripped, environment variables expanded) when it is set, otherwise
-    /// <c>&lt;localAppDataPath&gt;\win-desktop-mcp\audit</c>.
+    /// <c>&lt;localAppDataPath&gt;\Helmsman\audit</c>.
     /// </summary>
     public static string ResolveFolder(string? overridePath, string localAppDataPath)
     {

@@ -138,7 +138,7 @@ public sealed class ContractServices : IDisposable
     /// <summary>The debug browser close_debug_browser's typical call closes: the one the typical launch started.</summary>
     public static readonly DebugBrowserCloseTarget TypicalDebugBrowser = new(
         31_337, "chrome", new DateTime(2026, 10, 15, 9, 0, 0, DateTimeKind.Utc),
-        @"C:\Users\user\AppData\Local\Temp\win-desktop-mcp\browser-debug\6f1c2d3e4a5b6c7d8e9f0a1b2c3d4e5f",
+        @"C:\Users\user\AppData\Local\Temp\Helmsman\browser-debug\6f1c2d3e4a5b6c7d8e9f0a1b2c3d4e5f",
         DebugProfileKind.Temporary, StartedByServer: true, DeletesProfile: true, Helpers: []);
     public InputSession Session { get; }
 
@@ -315,7 +315,7 @@ public sealed class ContractServices : IDisposable
             .Returns((nint h) => TypicalDesktop.Windows.FirstOrDefault(w => w.Handle == h)?.Title ?? string.Empty);
         NativeWindows.Setup(w => w.GetWindowThreadProcessId(It.IsAny<nint>()))
             .Returns((nint h) => (uint)(TypicalDesktop.Windows.FirstOrDefault(w => w.Handle == h)?.ProcessId ?? 0));
-        Layouts.Setup(l => l.LayoutsPath).Returns(@"C:\Users\user\AppData\Local\win-desktop-mcp\layouts");
+        Layouts.Setup(l => l.LayoutsPath).Returns(@"C:\Users\user\AppData\Local\Helmsman\layouts");
     }
 
     private void SetUpTypical()
@@ -469,7 +469,7 @@ public sealed class ContractServices : IDisposable
                 apps.Select((_, i) => TypicalLaunch(wait, TypicalDesktop.Windows[i], 20_000 + i)).ToList());
         Processes.Setup(p => p.LaunchBrowserWithDebugAsync(It.IsAny<DebugBrowserLaunchRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new DebugBrowserLaunchResult(true, 31_337, (nint)TypicalDesktop.BrowserHandle, 9222,
-                @"C:\Users\user\AppData\Local\Temp\win-desktop-mcp\browser-9222", null, null,
+                @"C:\Users\user\AppData\Local\Temp\Helmsman\browser-9222", null, null,
                 LaunchStatus: LaunchStatus.WindowObserved, CdpReady: true, BrowserVersion: "Chrome/141.0.7390.55",
                 CdpEndpoint: "http://127.0.0.1:9222",
                 BrowserWsEndpoint: "ws://127.0.0.1:9222/devtools/browser/6f1c2d3e-4a5b-6c7d-8e9f-0a1b2c3d4e5f"));

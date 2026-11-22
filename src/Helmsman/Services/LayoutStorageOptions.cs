@@ -13,9 +13,9 @@ public sealed record SampleLayout(string FileName, string Json);
 /// <remarks>
 /// Presets used to live in <c>&lt;exe folder&gt;\layouts</c>. For the Claude Code plugin that is inside a
 /// per-version cache folder, so every plugin update started with an empty folder. Presets now live in
-/// <c>%LOCALAPPDATA%\win-desktop-mcp\layouts</c> (or <see cref="LayoutsPathEnvironmentVariable"/>).
-/// Presets saved under the previous folder name, <c>%LOCALAPPDATA%\WindowsAppManagerMcp\layouts</c>,
-/// are copied once into the new folder.
+/// <c>%LOCALAPPDATA%\Helmsman\layouts</c> (or <see cref="LayoutsPathEnvironmentVariable"/>).
+/// Presets saved under the earlier folder names, <c>%LOCALAPPDATA%\win-desktop-mcp\layouts</c> and
+/// <c>%LOCALAPPDATA%\WindowsAppManagerMcp\layouts</c>, are copied once into the new folder.
 /// </remarks>
 /// <param name="LayoutsPath">Folder that holds the preset JSON files.</param>
 /// <param name="MigrationSources">
@@ -37,19 +37,33 @@ public sealed record LayoutStorageOptions(
     /// <summary>
     /// Folder name under %LOCALAPPDATA% used by this server.
     /// </summary>
-    public const string AppDataFolderName = "win-desktop-mcp";
+    public const string AppDataFolderName = "Helmsman";
 
     /// <summary>
-    /// Folder name under %LOCALAPPDATA% used before the project was renamed to <see cref="AppDataFolderName"/>.
-    /// Layout presets there are copied once; they are not moved.
+    /// Folder name under %LOCALAPPDATA% of the server published on main before the rename to Helmsman: the
+    /// windows-app-manager 3.2.0 plugin whose exe was win-desktop-mcp.exe. Layout presets there are copied once;
+    /// they are not moved.
     /// </summary>
-    public const string PreviousAppDataFolderName = "WindowsAppManagerMcp";
+    public const string PreviousAppDataFolderName = "win-desktop-mcp";
 
     /// <summary>
-    /// Folder name of this plugin in the Claude Code plugin cache (<c>...\cache\&lt;marketplace&gt;\win-desktop-mcp\&lt;version&gt;</c>):
+    /// Folder name under %LOCALAPPDATA% of release 3.2.0 and older (WindowsAppManagerMcp.exe). Layout presets there
+    /// are copied once; they are not moved.
+    /// </summary>
+    public const string OriginalAppDataFolderName = "WindowsAppManagerMcp";
+
+    /// <summary>
+    /// The earlier %LOCALAPPDATA% folders whose layouts are copied on first use, newest generation first. When both
+    /// hold a preset of the same name, LayoutPresetStore's rule for several sources applies: the most recently
+    /// written file wins. On equal write times the folder listed first wins, so the newer generation's copy is kept.
+    /// </summary>
+    private static readonly string[] PreviousAppDataFolderNames = [PreviousAppDataFolderName, OriginalAppDataFolderName];
+
+    /// <summary>
+    /// Folder name of this plugin in the Claude Code plugin cache (<c>...\cache\&lt;marketplace&gt;\helmsman\&lt;version&gt;</c>):
     /// the plugin's name. VersionConsistencyTests keeps it equal to the name in .claude-plugin/plugin.json.
     /// </summary>
-    public const string PluginFolderName = "win-desktop-mcp";
+    public const string PluginFolderName = "helmsman";
 
     /// <summary>
     /// Folder name of the plugin in the cache before release 4.0.0 renamed it to <see cref="PluginFolderName"/>
@@ -62,7 +76,7 @@ public sealed record LayoutStorageOptions(
     /// Folder name of this plugin's marketplace in the cache: the marketplace's name. VersionConsistencyTests keeps it
     /// equal to the name in .claude-plugin/marketplace.json.
     /// </summary>
-    public const string MarketplaceFolderName = "win-desktop-mcp-marketplace";
+    public const string MarketplaceFolderName = "helmsman-marketplace";
 
     /// <summary>The marketplace's folder name in the cache before release 4.0.0 renamed it to <see cref="MarketplaceFolderName"/>.</summary>
     public const string PreviousMarketplaceFolderName = "windows-app-manager-marketplace";
@@ -97,7 +111,7 @@ public sealed record LayoutStorageOptions(
         var sources = FindLegacyLayoutFolders(baseDirectory).ToList();
         if (string.IsNullOrWhiteSpace(overridePath))
         {
-            sources.Add(Path.Combine(localAppDataPath, PreviousAppDataFolderName, LayoutsFolderName));
+            sources.AddRange(PreviousAppDataFolderNames.Select(name => Path.Combine(localAppDataPath, name, LayoutsFolderName)));
         }
 
         return new(ResolveLayoutsPath(overridePath, localAppDataPath), sources, samples);
@@ -105,7 +119,7 @@ public sealed record LayoutStorageOptions(
 
     /// <summary>
     /// Returns the override path (quotes stripped, environment variables expanded) when it is set,
-    /// otherwise <c>&lt;localAppDataPath&gt;\win-desktop-mcp\layouts</c>.
+    /// otherwise <c>&lt;localAppDataPath&gt;\Helmsman\layouts</c>.
     /// </summary>
     public static string ResolveLayoutsPath(string? overridePath, string localAppDataPath)
     {

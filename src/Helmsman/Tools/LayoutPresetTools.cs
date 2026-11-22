@@ -34,7 +34,7 @@ public class LayoutPresetTools
     }
 
     [McpServerTool(Name = "list_layouts", Title = "List Layouts", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
-    [Description(@"List the saved layout presets (name, description, window count), then any invalid preset file, with its error. Presets are JSON files in %LOCALAPPDATA%\win-desktop-mcp\layouts (or the folder in the WAM_LAYOUTS_PATH environment variable); the samples work-setup, dual-monitor and focus-mode are added on first run.")]
+    [Description(@"List the saved layout presets (name, description, window count), then any invalid preset file, with its error. Presets are JSON files in %LOCALAPPDATA%\Helmsman\layouts (or the folder in the WAM_LAYOUTS_PATH environment variable); the samples work-setup, dual-monitor and focus-mode are added on first run.")]
     public IReadOnlyList<LayoutSummaryDto> ListLayouts()
     {
         ThrowIfStorageUnavailable();

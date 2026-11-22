@@ -15,7 +15,7 @@ public class BrowserReadingToolsDebugLifecycleTests
         TestDataFactory.CreateWindowInfo(handleValue: 0x5678, title: "New Tab - Google Chrome", processName: "chrome", processId: 4321);
 
     private static readonly DebugBrowserCloseTarget Target = new(
-        4321, "chrome", new DateTime(2026, 10, 15, 9, 0, 0, DateTimeKind.Utc), @"C:\Temp\win-desktop-mcp\browser-debug\0123456789abcdef0123456789abcdef",
+        4321, "chrome", new DateTime(2026, 10, 15, 9, 0, 0, DateTimeKind.Utc), @"C:\Temp\Helmsman\browser-debug\0123456789abcdef0123456789abcdef",
         DebugProfileKind.Temporary, StartedByServer: true, DeletesProfile: true, Helpers: []);
 
     private readonly Mock<IBrowserReadingService> _reads = new();

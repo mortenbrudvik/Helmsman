@@ -22,12 +22,12 @@ public static class ServiceRegistration
     /// <param name="services">The service collection.</param>
     /// <param name="layoutStorage">
     /// Creates the layout storage options when <see cref="ILayoutService"/> is first resolved. Defaults to
-    /// <see cref="LayoutStorageOptions.FromEnvironment"/>: %LOCALAPPDATA%\win-desktop-mcp\layouts or
+    /// <see cref="LayoutStorageOptions.FromEnvironment"/>: %LOCALAPPDATA%\Helmsman\layouts or
     /// WAM_LAYOUTS_PATH, outside the versioned plugin folder. Tests pass a temporary folder.
     /// </param>
     /// <param name="auditLog">
     /// Creates the audit log's options when <see cref="IAuditLog"/> is first resolved (roadmap M2.17). Defaults to
-    /// <see cref="AuditLogOptions.FromEnvironment"/>: %LOCALAPPDATA%\win-desktop-mcp\audit or WAM_AUDIT_PATH.
+    /// <see cref="AuditLogOptions.FromEnvironment"/>: %LOCALAPPDATA%\Helmsman\audit or WAM_AUDIT_PATH.
     /// Nothing is written until an audited tool is called; tests that call one pass a temporary folder.
     /// </param>
     public static IServiceCollection AddHelmsmanServices(

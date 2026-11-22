@@ -4,8 +4,8 @@ namespace Helmsman.Services;
 
 /// <summary>
 /// The server's own profile folders for debug browsers (roadmap M5.4): named profiles kept between launches under
-/// %LOCALAPPDATA%\win-desktop-mcp\browser-profiles\&lt;name&gt;, and a new temporary profile per launch under
-/// %TEMP%\win-desktop-mcp\browser-debug\&lt;32 hex digits&gt;. Only a folder directly under one of these roots, with a
+/// %LOCALAPPDATA%\Helmsman\browser-profiles\&lt;name&gt;, and a new temporary profile per launch under
+/// %TEMP%\Helmsman\browser-debug\&lt;32 hex digits&gt;. Only a folder directly under one of these roots, with a
 /// name of its kind, is the server's: close_debug_browser closes an untracked browser only when its command line names
 /// such a folder, and only such a folder is ever deleted. The user's real browser profile is never one of them.
 /// </summary>
@@ -43,7 +43,7 @@ public sealed class DebugBrowserProfiles
         _utcNow = utcNow ?? (() => DateTime.UtcNow);
     }
 
-    /// <summary>The server's folders: %LOCALAPPDATA%\win-desktop-mcp\browser-profiles and %TEMP%\win-desktop-mcp\browser-debug.</summary>
+    /// <summary>The server's folders: %LOCALAPPDATA%\Helmsman\browser-profiles and %TEMP%\Helmsman\browser-debug.</summary>
     public static DebugBrowserProfiles FromEnvironment() => new(
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), LayoutStorageOptions.AppDataFolderName, "browser-profiles"),
         Path.Combine(Path.GetTempPath(), LayoutStorageOptions.AppDataFolderName, "browser-debug"));

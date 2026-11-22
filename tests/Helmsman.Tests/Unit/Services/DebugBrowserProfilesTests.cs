@@ -261,9 +261,9 @@ public sealed class DebugBrowserProfilesTests : IDisposable
     {
         var profiles = DebugBrowserProfiles.FromEnvironment();
 
-        profiles.NamedRoot.Should().EndWith(@"win-desktop-mcp\browser-profiles")
+        profiles.NamedRoot.Should().EndWith(@"Helmsman\browser-profiles")
             .And.StartWith(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData));
-        profiles.TemporaryRoot.Should().EndWith(@"win-desktop-mcp\browser-debug")
+        profiles.TemporaryRoot.Should().EndWith(@"Helmsman\browser-debug")
             .And.StartWith(Path.TrimEndingDirectorySeparator(Path.GetTempPath()));
     }
 }

@@ -18,7 +18,7 @@ builder.Logging.AddConsole(options =>
 builder.Logging.AddHelmsmanLogLevels();
 
 // Register services and MCP tool classes (shared with DependencyInjectionTests, see ServiceRegistration).
-// Layout presets live in %LOCALAPPDATA%\win-desktop-mcp\layouts or WAM_LAYOUTS_PATH, outside the
+// Layout presets live in %LOCALAPPDATA%\Helmsman\layouts or WAM_LAYOUTS_PATH, outside the
 // versioned plugin folder (LayoutStorageOptions.FromEnvironment).
 builder.Services.AddHelmsmanServices();
 

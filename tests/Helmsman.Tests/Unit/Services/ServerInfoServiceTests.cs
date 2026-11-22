@@ -47,8 +47,8 @@ public sealed class ServerInfoServiceTests : IDisposable
         };
         _safety.Setup(s => s.Read()).Returns(new InputSafetySnapshot(host, TargetPolicySettings.Default, ["%{F4}", "^w"], "default"));
         _hotkey.Setup(h => h.Status).Returns(new PauseHotkeyStatus("Ctrl+Alt+Shift+Pause", PauseHotkeyState.Registered, "default"));
-        _layouts.Setup(l => l.LayoutsPath).Returns(@"C:\Users\user\AppData\Local\win-desktop-mcp\layouts");
-        _audit.Setup(a => a.Folder).Returns(@"C:\Users\user\AppData\Local\win-desktop-mcp\audit");
+        _layouts.Setup(l => l.LayoutsPath).Returns(@"C:\Users\user\AppData\Local\Helmsman\layouts");
+        _audit.Setup(a => a.Folder).Returns(@"C:\Users\user\AppData\Local\Helmsman\audit");
         _windows.Setup(w => w.GetProcessName(It.IsAny<uint>())).Returns((uint id) => id switch
         {
             4242 => "win-desktop-mcp",
@@ -209,8 +209,8 @@ public sealed class ServerInfoServiceTests : IDisposable
         info.Safety.DenyListSource.Should().Be("default");
         info.Safety.AllowedProcesses.Should().BeNull();
         info.Safety.DestructiveChords.Should().Equal("%{F4}", "^w");
-        info.Paths.Layouts.Should().Be(@"C:\Users\user\AppData\Local\win-desktop-mcp\layouts");
-        info.Paths.AuditLog.Should().Be(@"C:\Users\user\AppData\Local\win-desktop-mcp\audit");
+        info.Paths.Layouts.Should().Be(@"C:\Users\user\AppData\Local\Helmsman\layouts");
+        info.Paths.AuditLog.Should().Be(@"C:\Users\user\AppData\Local\Helmsman\audit");
     }
 
     [Fact]
@@ -294,7 +294,7 @@ public sealed class ServerInfoServiceTests : IDisposable
     [Fact]
     public void Read_WarnsWhenTheAuditLogCannotBeWritten()
     {
-        _audit.Setup(a => a.LastError).Returns(@"Access to the path 'C:\Users\user\AppData\Local\win-desktop-mcp\audit' is denied.");
+        _audit.Setup(a => a.LastError).Returns(@"Access to the path 'C:\Users\user\AppData\Local\Helmsman\audit' is denied.");
 
         var warning = CreateSut().Read(Connection, 48).Warnings.Should().ContainSingle().Subject;
 

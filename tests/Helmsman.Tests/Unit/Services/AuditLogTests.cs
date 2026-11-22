@@ -49,8 +49,8 @@ public sealed class AuditLogTests : IDisposable
         AuditLogOptions.FolderEnvironmentVariable.Should().Be("WAM_AUDIT_PATH");
         AuditLogOptions.DefaultRetention.Should().Be(TimeSpan.FromDays(7));
         AuditLogOptions.ResolveFolder(null, @"C:\Users\someone\AppData\Local")
-            .Should().Be(@"C:\Users\someone\AppData\Local\win-desktop-mcp\audit");
-        AuditLogOptions.ResolveFolder("  ", @"C:\Local").Should().Be(@"C:\Local\win-desktop-mcp\audit");
+            .Should().Be(@"C:\Users\someone\AppData\Local\Helmsman\audit");
+        AuditLogOptions.ResolveFolder("  ", @"C:\Local").Should().Be(@"C:\Local\Helmsman\audit");
         AuditLogOptions.ResolveFolder("\"D:\\My Audit\"", @"C:\Local").Should().Be(@"D:\My Audit");
         AuditLogOptions.ResolveFolder(@"%SystemRoot%\audit", @"C:\Local")
             .Should().Be(Path.Combine(Environment.GetEnvironmentVariable("SystemRoot")!, "audit"));

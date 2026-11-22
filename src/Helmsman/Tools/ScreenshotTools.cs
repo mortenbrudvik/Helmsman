@@ -39,7 +39,7 @@ public class ScreenshotTools
 
     internal const string OutputPathDescription =
         "Absolute path on a drive letter (no network or device paths) of the image file for output 'file' or 'both', ending in .png, .jpg or .jpeg to match the format. " +
-        "The folder must exist; it is not created. Default: a new file in %TEMP%\\win-desktop-mcp\\captures.";
+        "The folder must exist; it is not created. Default: a new file in %TEMP%\\Helmsman\\captures.";
 
     internal const string OverwriteDescription =
         "Allow outputPath to replace an existing file. Default: false, which reports an existing file as FileExists.";

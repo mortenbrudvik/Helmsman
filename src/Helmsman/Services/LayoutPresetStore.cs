@@ -397,7 +397,7 @@ public class LayoutPresetStore : ILayoutPresetStore
         try
         {
             File.WriteAllText(markerPath,
-                "win-desktop-mcp migrated older layout presets and added the sample presets to this folder." + Environment.NewLine +
+                "Helmsman migrated older layout presets and added the sample presets to this folder." + Environment.NewLine +
                 "Delete this file to run that first-time setup again (existing presets are never overwritten)." + Environment.NewLine);
         }
         catch (Exception ex) when (IsFileSystemError(ex))

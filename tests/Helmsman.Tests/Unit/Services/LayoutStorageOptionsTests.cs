@@ -25,7 +25,7 @@ public class LayoutStorageOptionsTests : IDisposable
     {
         var path = LayoutStorageOptions.ResolveLayoutsPath(null, @"C:\Users\someone\AppData\Local");
 
-        path.Should().Be(@"C:\Users\someone\AppData\Local\win-desktop-mcp\layouts");
+        path.Should().Be(@"C:\Users\someone\AppData\Local\Helmsman\layouts");
     }
 
     [Theory]
@@ -35,7 +35,7 @@ public class LayoutStorageOptionsTests : IDisposable
     {
         var path = LayoutStorageOptions.ResolveLayoutsPath(overridePath, @"C:\Local");
 
-        path.Should().Be(@"C:\Local\win-desktop-mcp\layouts");
+        path.Should().Be(@"C:\Local\Helmsman\layouts");
     }
 
     [Fact]
@@ -84,7 +84,7 @@ public class LayoutStorageOptionsTests : IDisposable
     }
 
     [Theory]
-    [InlineData("win-desktop-mcp-marketplace", "win-desktop-mcp")]
+    [InlineData("helmsman-marketplace", "helmsman")]
     [InlineData("windows-app-manager-marketplace", "windows-app-manager")]
     public void FindLegacyLayoutFolders_InPluginCache_UnderEitherPluginName_IncludesOtherInstalledVersions(
         string marketplace, string plugin)
@@ -106,7 +106,7 @@ public class LayoutStorageOptionsTests : IDisposable
     }
 
     [Theory]
-    [InlineData("win-desktop-mcp")]
+    [InlineData("helmsman")]
     [InlineData("windows-app-manager")]
     public void FindLegacyLayoutFolders_UnderAnArbitraryMarketplace_RecognisesItselfAndItsOwnSiblings(string plugin)
     {
@@ -127,14 +127,14 @@ public class LayoutStorageOptionsTests : IDisposable
     }
 
     [Theory]
-    [InlineData("win-desktop-mcp")]
+    [InlineData("helmsman")]
     [InlineData("windows-app-manager")]
     public void FindLegacyLayoutFolders_PluginOfOurNameUnderAnUnrelatedMarketplace_IsNotScanned(string plugin)
     {
         // Arrange - a preset without authoredBy counts as the user's own and launches without asking, so another
         // marketplace that ships a plugin under one of our names must not be able to plant presets.
         var cache = Path.Combine(_root, "plugins", "cache");
-        var currentBin = Path.Combine(cache, "win-desktop-mcp-marketplace", "win-desktop-mcp", "4.0.0", "bin");
+        var currentBin = Path.Combine(cache, "helmsman-marketplace", "helmsman", "4.0.0", "bin");
         Directory.CreateDirectory(currentBin);
         Directory.CreateDirectory(Path.Combine(cache, "unrelated-marketplace", plugin, "9.9.9", "bin", "layouts"));
 
@@ -148,10 +148,10 @@ public class LayoutStorageOptionsTests : IDisposable
     [Fact]
     public void FindLegacyLayoutFolders_AfterTheRename_IncludesTheVersionsInstalledUnderTheOldPluginName()
     {
-        // Arrange - 4.x is installed as win-desktop-mcp@win-desktop-mcp-marketplace; the 3.x versions, which may still
+        // Arrange - Helmsman is installed as helmsman@helmsman-marketplace; the 3.x versions, which may still
         // hold presets next to their exe, stay under windows-app-manager@windows-app-manager-marketplace.
         var cache = Path.Combine(_root, "plugins", "cache");
-        var currentBin = Path.Combine(cache, "win-desktop-mcp-marketplace", "win-desktop-mcp", "4.0.0", "bin");
+        var currentBin = Path.Combine(cache, "helmsman-marketplace", "helmsman", "4.0.0", "bin");
         var oldPlugin = Path.Combine(cache, "windows-app-manager-marketplace", "windows-app-manager");
         Directory.CreateDirectory(currentBin);
         Directory.CreateDirectory(Path.Combine(oldPlugin, "1.10.0", "bin", "layouts"));
@@ -172,7 +172,7 @@ public class LayoutStorageOptionsTests : IDisposable
         // /update-plugin did before the rename) also finds the versions under the new name.
         var cache = Path.Combine(_root, "plugins", "cache");
         var currentBin = Path.Combine(cache, "windows-app-manager-marketplace", "windows-app-manager", "3.2.0", "bin");
-        var newPlugin = Path.Combine(cache, "win-desktop-mcp-marketplace", "win-desktop-mcp");
+        var newPlugin = Path.Combine(cache, "helmsman-marketplace", "helmsman");
         Directory.CreateDirectory(currentBin);
         Directory.CreateDirectory(Path.Combine(newPlugin, "4.0.0", "bin"));
 
@@ -185,9 +185,9 @@ public class LayoutStorageOptionsTests : IDisposable
     public void FindLegacyLayoutFolders_InPluginCache_SkipsOtherPluginsOfTheCache()
     {
         var cache = Path.Combine(_root, "plugins", "cache");
-        var currentBin = Path.Combine(cache, "win-desktop-mcp-marketplace", "win-desktop-mcp", "4.0.0", "bin");
+        var currentBin = Path.Combine(cache, "helmsman-marketplace", "helmsman", "4.0.0", "bin");
         Directory.CreateDirectory(currentBin);
-        Directory.CreateDirectory(Path.Combine(cache, "win-desktop-mcp-marketplace", "another-plugin", "1.0.0", "bin", "layouts"));
+        Directory.CreateDirectory(Path.Combine(cache, "helmsman-marketplace", "another-plugin", "1.0.0", "bin", "layouts"));
         Directory.CreateDirectory(Path.Combine(cache, "other-marketplace", "another-plugin", "1.0.0", "bin", "layouts"));
 
         var folders = LayoutStorageOptions.FindLegacyLayoutFolders(currentBin);
@@ -195,12 +195,32 @@ public class LayoutStorageOptionsTests : IDisposable
         folders.Should().ContainSingle().Which.Should().Be(Path.Combine(currentBin, "layouts"));
     }
 
+    [Theory]
+    [InlineData("win-desktop-mcp-marketplace", "win-desktop-mcp")]
+    [InlineData("helmsman-marketplace", "win-desktop-mcp")]
+    [InlineData("win-desktop-mcp-marketplace", "helmsman")]
+    public void FindLegacyLayoutFolders_TheNeverPublishedWinDesktopMcpPluginNames_AreNotScanned(string marketplace, string plugin)
+    {
+        // Arrange - the plugin was never published as win-desktop-mcp@win-desktop-mcp-marketplace (main went from
+        // windows-app-manager straight to helmsman), so those folders are not this project's installs
+        var cache = Path.Combine(_root, "plugins", "cache");
+        var currentBin = Path.Combine(cache, "helmsman-marketplace", "helmsman", "4.0.0", "bin");
+        Directory.CreateDirectory(currentBin);
+        Directory.CreateDirectory(Path.Combine(cache, marketplace, plugin, "3.9.0", "bin", "layouts"));
+
+        // Act
+        var folders = LayoutStorageOptions.FindLegacyLayoutFolders(currentBin);
+
+        // Assert
+        folders.Should().Equal(Path.Combine(currentBin, "layouts"));
+    }
+
     [Fact]
     public void PluginAndMarketplaceFolderNames_AreTheNewAndThePreviousNames()
     {
-        LayoutStorageOptions.PluginFolderName.Should().Be("win-desktop-mcp");
+        LayoutStorageOptions.PluginFolderName.Should().Be("helmsman");
         LayoutStorageOptions.PreviousPluginFolderName.Should().Be("windows-app-manager");
-        LayoutStorageOptions.MarketplaceFolderName.Should().Be("win-desktop-mcp-marketplace");
+        LayoutStorageOptions.MarketplaceFolderName.Should().Be("helmsman-marketplace");
         LayoutStorageOptions.PreviousMarketplaceFolderName.Should().Be("windows-app-manager-marketplace");
     }
 
@@ -226,8 +246,8 @@ public class LayoutStorageOptionsTests : IDisposable
     [Fact]
     public void FindLegacyLayoutFolders_OutsidePluginCache_DoesNotScanSiblingFolders()
     {
-        // Arrange - a dev checkout such as C:\code\win-desktop-mcp\bin next to other projects
-        var currentBin = Path.Combine(_root, "code", "win-desktop-mcp", "bin");
+        // Arrange - a dev checkout such as C:\code\Helmsman\bin next to other projects
+        var currentBin = Path.Combine(_root, "code", "Helmsman", "bin");
         Directory.CreateDirectory(currentBin);
         Directory.CreateDirectory(Path.Combine(_root, "code", "OtherProject", "bin", "layouts"));
 
@@ -264,10 +284,40 @@ public class LayoutStorageOptionsTests : IDisposable
 
         var options = LayoutStorageOptions.Create(null, @"C:\Local", baseDirectory, samples);
 
-        options.LayoutsPath.Should().Be(@"C:\Local\win-desktop-mcp\layouts");
+        options.LayoutsPath.Should().Be(@"C:\Local\Helmsman\layouts");
         options.MigrationSources.Should().Contain(Path.Combine(baseDirectory, "layouts"));
+        options.MigrationSources.Should().Contain(@"C:\Local\win-desktop-mcp\layouts");
         options.MigrationSources.Should().Contain(@"C:\Local\WindowsAppManagerMcp\layouts");
         options.Samples.Should().BeEquivalentTo(samples);
+    }
+
+    [Fact]
+    public void Create_ListsBothEarlierAppDataFolders_TheNewerGenerationFirst()
+    {
+        // The store copies the most recently written of presets with the same name; on equal times the source listed
+        // first wins, so the win-desktop-mcp folder (published on main) comes before the 3.x WindowsAppManagerMcp one
+        var options = LayoutStorageOptions.Create(null, @"C:\Local", Path.Combine(_root, "app"), []);
+
+        options.MigrationSources.Should().EndWith([@"C:\Local\win-desktop-mcp\layouts", @"C:\Local\WindowsAppManagerMcp\layouts"]);
+    }
+
+    [Fact]
+    public void Create_WithOverride_CopiesFromNoAppDataFolder()
+    {
+        var baseDirectory = Path.Combine(_root, "app");
+
+        var options = LayoutStorageOptions.Create(@"D:\Sync\layouts", @"C:\Local", baseDirectory, []);
+
+        options.LayoutsPath.Should().Be(@"D:\Sync\layouts");
+        options.MigrationSources.Should().Equal(Path.Combine(baseDirectory, "layouts"));
+    }
+
+    [Fact]
+    public void AppDataFolderNames_AreHelmsmanAndTheTwoEarlierNames()
+    {
+        LayoutStorageOptions.AppDataFolderName.Should().Be("Helmsman");
+        LayoutStorageOptions.PreviousAppDataFolderName.Should().Be("win-desktop-mcp");
+        LayoutStorageOptions.OriginalAppDataFolderName.Should().Be("WindowsAppManagerMcp");
     }
 
     [Fact]

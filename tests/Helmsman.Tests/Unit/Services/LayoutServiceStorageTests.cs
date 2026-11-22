@@ -24,7 +24,7 @@ public class LayoutServiceStorageTests : IDisposable
 
     public LayoutServiceStorageTests()
     {
-        _layoutsPath = Path.Combine(_root, "LocalAppData", "win-desktop-mcp", "layouts");
+        _layoutsPath = Path.Combine(_root, "LocalAppData", "Helmsman", "layouts");
         _legacyPath = Path.Combine(_root, "old-install", "layouts");
     }
 
@@ -368,14 +368,14 @@ public class LayoutServiceStorageTests : IDisposable
     [Fact]
     public void FirstUse_FromTheRenamedPlugin_CopiesPresetsOfVersionsInstalledUnderEitherPluginName()
     {
-        // Arrange - 4.x runs from cache\win-desktop-mcp-marketplace\win-desktop-mcp\<version>\bin; presets kept next to
-        // the exe of a 3.x install (old plugin and marketplace name) and of an earlier 4.x install are both picked up.
+        // Arrange - Helmsman runs from cache\helmsman-marketplace\helmsman\<version>\bin; presets kept next to
+        // the exe of a 3.x install (old plugin and marketplace name) and of an earlier Helmsman install are both picked up.
         var cache = Path.Combine(_root, "plugins", "cache");
-        var currentBin = Path.Combine(cache, "win-desktop-mcp-marketplace", "win-desktop-mcp", "4.1.0", "bin");
+        var currentBin = Path.Combine(cache, "helmsman-marketplace", "helmsman", "4.1.0", "bin");
         Directory.CreateDirectory(currentBin);
         WritePreset(Path.Combine(cache, "windows-app-manager-marketplace", "windows-app-manager", "3.2.0", "bin", "layouts"),
             "morning.json", TestDataFactory.CreateLayoutPreset("morning"));
-        WritePreset(Path.Combine(cache, "win-desktop-mcp-marketplace", "win-desktop-mcp", "4.0.0", "bin", "layouts"),
+        WritePreset(Path.Combine(cache, "helmsman-marketplace", "helmsman", "4.0.0", "bin", "layouts"),
             "evening.json", TestDataFactory.CreateLayoutPreset("evening"));
         var options = LayoutStorageOptions.Create(null, Path.Combine(_root, "LocalAppData"), currentBin, []);
 
@@ -386,6 +386,70 @@ public class LayoutServiceStorageTests : IDisposable
         options.LayoutsPath.Should().Be(_layoutsPath);
         sut.GetPreset("morning").Should().NotBeNull();
         sut.GetPreset("evening").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void FirstUse_AfterTheRenameToHelmsman_CopiesPresetsFromBothEarlierAppDataFolders_WithoutDeletingThem()
+    {
+        // Arrange - the server published on main kept presets in %LOCALAPPDATA%\win-desktop-mcp, 3.x in WindowsAppManagerMcp
+        var localAppData = Path.Combine(_root, "LocalAppData");
+        var previous = Path.Combine(localAppData, "win-desktop-mcp", "layouts");
+        var original = Path.Combine(localAppData, "WindowsAppManagerMcp", "layouts");
+        WritePreset(previous, "morning.json", TestDataFactory.CreateLayoutPreset("morning"));
+        WritePreset(original, "evening.json", TestDataFactory.CreateLayoutPreset("evening"));
+        var options = LayoutStorageOptions.Create(null, localAppData, Path.Combine(_root, "app"), []);
+
+        // Act
+        var sut = CreateSut(options);
+
+        // Assert
+        options.LayoutsPath.Should().Be(_layoutsPath);
+        sut.GetPreset("morning").Should().NotBeNull();
+        sut.GetPreset("evening").Should().NotBeNull();
+        File.Exists(Path.Combine(previous, "morning.json")).Should().BeTrue();
+        File.Exists(Path.Combine(original, "evening.json")).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("win-desktop-mcp")]
+    [InlineData("WindowsAppManagerMcp")]
+    public void FirstUse_WithTheSamePresetInBothEarlierAppDataFolders_CopiesTheMostRecentlyWritten(string newerFolder)
+    {
+        // Arrange
+        var localAppData = Path.Combine(_root, "LocalAppData");
+        foreach (var folder in new[] { "win-desktop-mcp", "WindowsAppManagerMcp" })
+        {
+            var layouts = Path.Combine(localAppData, folder, "layouts");
+            WritePreset(layouts, "morning.json", TestDataFactory.CreateLayoutPreset("morning", folder));
+            File.SetLastWriteTimeUtc(Path.Combine(layouts, "morning.json"),
+                DateTime.UtcNow.AddDays(folder == newerFolder ? -1 : -2));
+        }
+
+        // Act
+        var sut = CreateSut(LayoutStorageOptions.Create(null, localAppData, Path.Combine(_root, "app"), []));
+
+        // Assert
+        sut.GetPreset("morning")!.Description.Should().Be(newerFolder);
+    }
+
+    [Fact]
+    public void FirstUse_WithTheSamePresetWrittenAtTheSameTimeInBothEarlierAppDataFolders_CopiesTheWinDesktopMcpOne()
+    {
+        // Arrange - equal write times (the published win-desktop-mcp build copied the 3.x presets): the newer generation wins
+        var localAppData = Path.Combine(_root, "LocalAppData");
+        var written = DateTime.UtcNow.AddDays(-1);
+        foreach (var folder in new[] { "WindowsAppManagerMcp", "win-desktop-mcp" })
+        {
+            var layouts = Path.Combine(localAppData, folder, "layouts");
+            WritePreset(layouts, "morning.json", TestDataFactory.CreateLayoutPreset("morning", folder));
+            File.SetLastWriteTimeUtc(Path.Combine(layouts, "morning.json"), written);
+        }
+
+        // Act
+        var sut = CreateSut(LayoutStorageOptions.Create(null, localAppData, Path.Combine(_root, "app"), []));
+
+        // Assert
+        sut.GetPreset("morning")!.Description.Should().Be("win-desktop-mcp");
     }
 
     [Fact]
