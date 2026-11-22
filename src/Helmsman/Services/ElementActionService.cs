@@ -52,6 +52,7 @@ public sealed partial class ElementActionService : IElementActionService
     private readonly INativeWindowWrapper _windows;
     private readonly IClipboardService? _clipboard;
     private readonly bool _clipboardWritesServed;
+    private readonly ICaptureFreshness? _captureFreshness;
 
     /// <summary>The tool whose absence (a toolset or exclusion the user chose) turns mode paste off.</summary>
     private const string SetClipboardTool = "set_clipboard";
@@ -81,8 +82,10 @@ public sealed partial class ElementActionService : IElementActionService
         IForegroundService foreground,
         INativeWindowWrapper windows,
         IClipboardService? clipboard = null,
-        ToolsetSelection? toolsets = null)
+        ToolsetSelection? toolsets = null,
+        ICaptureFreshness? captureFreshness = null)
     {
+        _captureFreshness = captureFreshness;
         _clipboardWritesServed = toolsets?.Serves(SetClipboardTool, readOnlyHint: false) ?? true;
         _tree = tree ?? throw new ArgumentNullException(nameof(tree));
         _worker = worker ?? throw new ArgumentNullException(nameof(worker));
@@ -381,6 +384,7 @@ public sealed partial class ElementActionService : IElementActionService
                     return unfinished;
                 }
 
+                TellCaptureFreshness(call.Window);
                 break;
             }
 
@@ -404,6 +408,7 @@ public sealed partial class ElementActionService : IElementActionService
                     return unfinished;
                 }
 
+                TellCaptureFreshness(call.Window);
                 break;
             }
 
@@ -434,6 +439,22 @@ public sealed partial class ElementActionService : IElementActionService
 
         return await AfterAsync(call, element, plan.Method, windowsBefore, targetProcess, receiving: null, cancellationToken)
             .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Tells the capture freshness store (warning CaptureUnchangedAfterInput) that a pattern or focus call on an element of
+    /// <paramref name="window"/> completed, as input to its top-level window. The mouse and keyboard paths go through the input
+    /// service, which tells it about what it sends.
+    /// </summary>
+    private void TellCaptureFreshness(nint window)
+    {
+        if (_captureFreshness == null)
+        {
+            return;
+        }
+
+        var root = _windows.GetAncestor(window, WindowAncestor.Root);
+        _captureFreshness.InputSent(root == nint.Zero ? window : root, pointerMoveOnly: false);
     }
 
     /// <summary>
@@ -621,6 +642,7 @@ public sealed partial class ElementActionService : IElementActionService
 
         var focused = await _runner.RunAsync(targetProcess, () => _tree.SetFocus(element.Node), Timeout(request), cancellationToken)
             .ConfigureAwait(false);
+        var focusCompleted = focused.Status == UiaActionStatus.Completed && focused.Error is null;
         if (focused.Status != UiaActionStatus.Completed || focused.Error is not null and not InvalidOperationException)
         {
             var failure = Unfinished(call, focused, _probe.Snapshot([]), ElementActionMethod.Focus);
@@ -633,6 +655,14 @@ public sealed partial class ElementActionService : IElementActionService
         if (await FocusRefusalAsync(call, element, targetProcess, "Nothing was typed.", cancellationToken).ConfigureAwait(false) is { } off)
         {
             return InputStep.Failed(off);
+        }
+
+        // Only a SetFocus that completed and left focus on the element counts as input; one that failed, or after which the
+        // action failed with FocusNotOnElement, does not. The keys that follow go through the input service, which tells the
+        // store itself
+        if (focusCompleted)
+        {
+            TellCaptureFreshness(call.Window);
         }
 
         var text = request.Value ?? string.Empty;

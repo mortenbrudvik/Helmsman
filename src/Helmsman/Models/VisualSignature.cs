@@ -178,4 +178,31 @@ public sealed class VisualSignature
 
         return new VisualSignature(pixels.ScreenOriginX, pixels.ScreenOriginY, width, height, hashes, uniform, pixels.Method, []);
     }
+
+    /// <summary>
+    /// One 64-bit hash of every pixel of <paramref name="pixels"/> and their size, mixed as <see cref="Of"/> mixes a tile's, the
+    /// undefined 4th byte left out: two reads of a target compare by it (warning CaptureUnchangedAfterInput) without keeping
+    /// their pixels. It keeps nothing of the lent memory.
+    /// </summary>
+    public static ulong HashOf(PixelView pixels)
+    {
+        var width = pixels.Width;
+        var hash = Seed ^ ((ulong)(uint)width << 32 | (uint)pixels.Height);
+        for (var y = 0; y < pixels.Height; y++)
+        {
+            var row = pixels.Row(y)[..(width * 4)];
+            foreach (var pair in MemoryMarshal.Cast<byte, ulong>(row))
+            {
+                hash = BitOperations.RotateLeft((hash ^ (pair & PairMask)) * Multiplier, Rotation);
+            }
+
+            if ((width & 1) != 0)
+            {
+                var value = BinaryPrimitives.ReadUInt32LittleEndian(row[^4..]) & PixelMask;
+                hash = BitOperations.RotateLeft((hash ^ value ^ LonePixel) * Multiplier, Rotation);
+            }
+        }
+
+        return hash;
+    }
 }

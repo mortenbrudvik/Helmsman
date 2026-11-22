@@ -112,6 +112,20 @@ public class DependencyInjectionTests : IDisposable
     }
 
     [Fact]
+    public void TheCaptures_AndTheInputAndElementActionServices_ShareOneCaptureFreshnessStore()
+    {
+        // CaptureUnchangedAfterInput: built without it, a service would silently leave the warning out or never tell it of input
+        var freshness = _serviceProvider.GetRequiredService<ICaptureFreshness>();
+        static object? Field(object service, string name) =>
+            service.GetType().GetField(name, BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(service);
+
+        freshness.Should().BeOfType<CaptureFreshness>();
+        Field(_serviceProvider.GetRequiredService<IScreenshotService>(), "_freshness").Should().BeSameAs(freshness);
+        Field(_serviceProvider.GetRequiredService<IInputSimulationService>(), "_captureFreshness").Should().BeSameAs(freshness);
+        Field(_serviceProvider.GetRequiredService<IElementActionService>(), "_captureFreshness").Should().BeSameAs(freshness);
+    }
+
+    [Fact]
     public void TheTakeoverMonitor_UsesTheModeTheServerReads()
     {
         // Takeover detection (roadmap M7.4): type_text, drag, run_steps and get_control_status take the monitor as a required

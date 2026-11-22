@@ -53,7 +53,8 @@ public class ScreenshotTools
 
     internal const string WarningsDescription =
         "A successful capture can carry warnings, each starting with a code: ImageBlank (one solid color), " +
-        "WindowNotResponding (copied from the screen, covering windows show), DpiScaledWindow, RegionClipped and others. ";
+        "WindowNotResponding (copied from the screen, covering windows show), DpiScaledWindow, RegionClipped, " +
+        "CaptureUnchangedAfterInput and ExclusiveFullscreen (maybe an older frame) and others. ";
 
     internal const string IncludeCursorDescription =
         "Draw the mouse pointer into the image (default: false). The result always says where it is (cursor)";

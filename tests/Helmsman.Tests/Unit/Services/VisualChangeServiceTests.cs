@@ -1279,6 +1279,8 @@ public class VisualChangeServiceTests
 
         public PointerState? GetPointer() => null;
 
+        public int? GetUserNotificationState() => null;
+
         public bool DrawPointer(nint hdc, int originX, int originY) => false;
     }
 

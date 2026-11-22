@@ -190,6 +190,10 @@ public class ScreenCaptureWrapper : IScreenCaptureWrapper
         }
     }
 
+    /// <inheritdoc />
+    public int? GetUserNotificationState() =>
+        NativeMethods.Shell32.SHQueryUserNotificationState(out var state) >= 0 ? state : null;
+
     public bool IsValidWindow(nint windowHandle)
     {
         return windowHandle != nint.Zero && NativeMethods.User32.IsWindow(windowHandle);

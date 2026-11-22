@@ -402,6 +402,20 @@ public static class CaptureWarnings
     /// </summary>
     public const string DesktopUnavailable = "DesktopUnavailable";
 
+    /// <summary>
+    /// The pixels are identical to the previous capture of the same window or region, read the same way, although the server
+    /// sent input to it in between: the input changed nothing visible, or the image is an older frame (a fullscreen game
+    /// in front can keep returning one).
+    /// </summary>
+    public const string CaptureUnchangedAfterInput = "CaptureUnchangedAfterInput";
+
+    /// <summary>
+    /// Windows reports a full-screen 3D app (QUNS_RUNNING_D3D_FULL_SCREEN), the window in front fills its monitor, and the
+    /// image shows it: while it stays in front, captures of that monitor can keep returning the frame from when it came to
+    /// the front.
+    /// </summary>
+    public const string ExclusiveFullscreen = "ExclusiveFullscreen";
+
     /// <summary>"Code: text".</summary>
     public static string Format(string code, string text) => $"{code}: {text}";
 }

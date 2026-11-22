@@ -72,6 +72,18 @@ public static class WindowZones
     }
 
     /// <summary>
+    /// Whether <paramref name="frame"/> fills <paramref name="monitor"/>'s bounds, its taskbar included, each edge within the
+    /// <see cref="Tolerance"/>: the rectangle of <see cref="WholeMonitor"/>, whatever the work area is and whatever
+    /// <see cref="Match"/> names it (fullscreen where the work area is the whole monitor).
+    /// </summary>
+    public static bool FillsMonitor(WindowRect frame, MonitorInfo monitor)
+    {
+        ArgumentNullException.ThrowIfNull(frame);
+        ArgumentNullException.ThrowIfNull(monitor);
+        return EdgeDistance(frame, monitor.Bounds) <= Tolerance(monitor);
+    }
+
+    /// <summary>
     /// Whether <paramref name="frame"/> covers more than one monitor, each by more than the tolerance across and down, so an
     /// edge a window manager rounded onto the neighbour does not count. <paramref name="monitors"/> is read only for a frame
     /// that leaves <paramref name="monitor"/>, its own. False for a minimized window.

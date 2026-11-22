@@ -64,6 +64,7 @@ public class ScreenshotService : IScreenshotService
     private readonly INativeVirtualDesktopWrapper? _virtualDesktops;
     private readonly IGraphicsCaptureWrapper? _graphicsCapture;
     private readonly IProcessSecurityProbe _security;
+    private readonly ICaptureFreshness? _freshness;
 
     /// <summary>The monitor index of the whole virtual screen (take_screenshot's monitor 'all' or -1): every monitor in one image (roadmap M3.11).</summary>
     public const int VirtualScreenIndex = -1;
@@ -119,8 +120,10 @@ public class ScreenshotService : IScreenshotService
         TimeSpan? restoreStateTimeout = null,
         ICaptureRegistry? captureRegistry = null,
         INativeVirtualDesktopWrapper? virtualDesktops = null,
-        IGraphicsCaptureWrapper? graphicsCapture = null)
+        IGraphicsCaptureWrapper? graphicsCapture = null,
+        ICaptureFreshness? captureFreshness = null)
     {
+        _freshness = captureFreshness;
         _security = security ?? throw new ArgumentNullException(nameof(security));
         _virtualDesktops = virtualDesktops;
         _graphicsCapture = graphicsCapture;
@@ -242,6 +245,15 @@ public class ScreenshotService : IScreenshotService
         /// show only the window.
         /// </summary>
         public IReadOnlyList<ExcludedWindow> Excluded { get; init; } = [];
+
+        /// <summary>The window a window capture read, as it was asked for; null for a screen capture.</summary>
+        public CaptureTarget.Window? WindowTarget { get; init; }
+
+        /// <summary>
+        /// The capture freshness store's input sequence read before the pixels (0 without the store), so input that lands
+        /// while they are read counts as after them (CaptureUnchangedAfterInput).
+        /// </summary>
+        public long InputSequence { get; init; }
     }
 
     /// <summary>
@@ -260,6 +272,8 @@ public class ScreenshotService : IScreenshotService
     /// <exception cref="CaptureException">The target was refused.</exception>
     private Acquired Acquire(CaptureTarget target, CaptureRequest? request = null)
     {
+        // Before the pixels: input that lands while they are read counts as after them (CaptureUnchangedAfterInput)
+        var inputSequence = _freshness?.InputSequence ?? 0;
         var scan = AffinityScan();
         var leaveOut = target is CaptureTarget.Window captured ? Root(captured.Handle) : nint.Zero;
         var before = scan.Read(leaveOut);
@@ -271,6 +285,7 @@ public class ScreenshotService : IScreenshotService
             _ => throw new ArgumentException($"Unknown capture target {target.GetType().Name}", nameof(target))
         };
 
+        acquired = acquired with { InputSequence = inputSequence };
         CaptureHealthWarnings.AddSessionWarning(_security, acquired.Warnings);
         if (!acquired.WindowCapture || !CaptureMethods.ShowsOnlyTheWindow(acquired.Capture.Method))
         {
@@ -422,7 +437,8 @@ public class ScreenshotService : IScreenshotService
         return new Acquired(capture, monitor?.Index, monitor?.ScaleFactor ?? 1.0, warnings, WindowCapture: true,
             WithClientArea(window, capture))
         {
-            ScaleUnknown = monitor is not { DpiUnknown: false }
+            ScaleUnknown = monitor is not { DpiUnknown: false },
+            WindowTarget = new CaptureTarget.Window(windowHandle, includeFrame, method)
         };
     }
 
@@ -478,6 +494,7 @@ public class ScreenshotService : IScreenshotService
             var scan = AffinityScan();
             var root = Root(windowHandle);
             var before = scan.Read(root);
+            var inputSequence = _freshness?.InputSequence ?? 0;
             var captureStopwatch = Stopwatch.StartNew();
             var capture = CaptureWindowPixels(windowHandle, includeFrame, warnings, options.CaptureMethod);
             var captureMs = captureStopwatch.Elapsed.TotalMilliseconds;
@@ -509,6 +526,8 @@ public class ScreenshotService : IScreenshotService
             CaptureHealthWarnings.AddDpiWarning(_windows, windowHandle, monitor, warnings);
             CaptureHealthWarnings.AddDisplayAffinityWarning(_windows, Root(windowHandle), warnings);
             CaptureHealthWarnings.AddBlankWarning(capture, warnings);
+            AddFreshnessWarnings(capture, new CaptureTarget.Window(windowHandle, includeFrame, options.CaptureMethod), _captureWrapper.GetPointer(),
+                compare: true, inputSequence, warnings);
 
             // Element bounds are screen pixels; the image starts at the capture's screen origin, which is the client
             // area's corner when the frame is left out. The marks are placed in the returned image's pixels and drawn on
@@ -932,8 +951,9 @@ public class ScreenshotService : IScreenshotService
 
     /// <summary>
     /// The metadata and image of a successful capture, registered under its captureId. The window is the captured window
-    /// as it was before the capture (<see cref="ReadCapturedWindow"/>) for a window capture. With <paramref name="signed"/>,
-    /// the registration keeps the capture's visual signature while the registry keeps signatures (roadmap M6.4).
+    /// as it was before the capture (<see cref="ReadCapturedWindow"/>) for a window capture. With <paramref name="signed"/>
+    /// (not a crop to a ref), the registration keeps the capture's visual signature while the registry keeps signatures
+    /// (roadmap M6.4), and the pixels are compared with the previous capture of the target (CaptureUnchangedAfterInput).
     /// </summary>
     private ScreenCapture<ScreenshotResult> Complete(Acquired acquired, CaptureRequest request, bool signed = true)
     {
@@ -944,6 +964,7 @@ public class ScreenshotService : IScreenshotService
 
         // The pointer (roadmap M7.1): always where it is, and drawn into the pixels before they are scaled when asked
         var pointer = _captureWrapper.GetPointer();
+        AddFreshnessWarnings(capture, acquired.WindowTarget, pointer, compare: signed, acquired.InputSequence, warnings);
         var drawn = false;
         Action<Bitmap>? drawPointer = request.IncludeCursor && pointer is { Visible: true }
             ? bitmap => drawn = DrawPointer(bitmap, capture.ScreenOriginX, capture.ScreenOriginY)
@@ -995,6 +1016,26 @@ public class ScreenshotService : IScreenshotService
         };
 
         return new ScreenCapture<ScreenshotResult>(metadata, request.ReturnsImage ? rendered.Image : null);
+    }
+
+    /// <summary>
+    /// The warnings about an image that may be an older frame (<see cref="CaptureFreshnessWarnings"/>), for the full-resolution
+    /// pixels before they are scaled or drawn on. With <paramref name="compare"/>, the pixels are compared with the previous
+    /// capture of the target and remembered, unless the window was restored for this capture (restoreIfMinimized), which is
+    /// minimized again right after it; <paramref name="window"/> is null for a screen capture, and
+    /// <paramref name="inputSequence"/> the store's input sequence read before the pixels.
+    /// </summary>
+    private void AddFreshnessWarnings(CaptureResult capture, CaptureTarget.Window? window, PointerState? pointer, bool compare,
+        long inputSequence, List<string> warnings)
+    {
+        var root = window == null ? nint.Zero : Root(window.Handle);
+        if (compare && (window == null || !_restorer.IsRestoredForCapture(window.Handle)))
+        {
+            CaptureFreshnessWarnings.AddUnchangedAfterInputWarning(_freshness, _windows, capture, window?.Handle ?? nint.Zero, root,
+                window?.IncludeFrame ?? false, pointer, inputSequence, warnings);
+        }
+
+        CaptureFreshnessWarnings.AddExclusiveFullscreenWarning(_captureWrapper, _windows, _monitorService, capture, root, warnings);
     }
 
     /// <inheritdoc />

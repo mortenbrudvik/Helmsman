@@ -110,4 +110,48 @@ public class VisualSignatureTests
 
         large.ByteSize.Should().Be(small.ByteSize + 99 * sizeof(ulong));
     }
+
+    [Fact]
+    public void HashOf_TheSamePixels_IsTheSame_WhateverTheFourthByte()
+    {
+        // Arrange - painting again in the same color leaves new random 4th bytes
+        var first = new VisualFrames(65, 33, color: (10, 20, 30));
+        var second = new VisualFrames(65, 33, color: (10, 20, 30));
+
+        // Act / Assert
+        VisualSignature.HashOf(PixelView.Of(first.Capture())).Should().Be(VisualSignature.HashOf(PixelView.Of(second.Capture())));
+    }
+
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(31, 7)]
+    [InlineData(64, 32)]
+    public void HashOf_OnePixelChanged_Changes(int x, int y)
+    {
+        // Arrange - an odd width, so the last pixel of a row is alone
+        var before = new VisualFrames(65, 33);
+        var after = before.Copy().Paint(x, y, 1, 1, (0xF0, 0xF0, 0xF1));
+
+        // Act / Assert
+        VisualSignature.HashOf(PixelView.Of(before.Capture())).Should().NotBe(VisualSignature.HashOf(PixelView.Of(after.Capture())));
+    }
+
+    [Fact]
+    public void HashOf_PixelsSwapped_Changes()
+    {
+        var before = new VisualFrames(16, 16).Paint(0, 0, 1, 1, (1, 2, 3)).Paint(5, 9, 1, 1, (4, 5, 6));
+        var after = new VisualFrames(16, 16).Paint(0, 0, 1, 1, (4, 5, 6)).Paint(5, 9, 1, 1, (1, 2, 3));
+
+        VisualSignature.HashOf(PixelView.Of(before.Capture())).Should().NotBe(VisualSignature.HashOf(PixelView.Of(after.Capture())));
+    }
+
+    [Fact]
+    public void HashOf_ACropWithTheParentsStride_IsTheHashOfTheCroppedPixels()
+    {
+        var parent = new VisualFrames(48, 40, originX: 100, originY: 200).Paint(10, 12, 5, 5, (1, 200, 3));
+        var cropped = new VisualFrames(21, 20, originX: 108, originY: 208).Paint(2, 4, 5, 5, (1, 200, 3));
+
+        VisualSignature.HashOf(PixelView.Of(parent.Capture()).Crop(108, 208, 21, 20))
+            .Should().Be(VisualSignature.HashOf(PixelView.Of(cropped.Capture())));
+    }
 }

@@ -227,7 +227,9 @@ public static class WrapperCatalog
                 // The pointer (roadmap M7.1): its position, and its shape drawn into a device context of the server's own image;
                 // the pointer is never moved and its shape never changed
                 [nameof(IScreenCaptureWrapper.GetPointer)] = WrapperMember.Read,
-                [nameof(IScreenCaptureWrapper.DrawPointer)] = WrapperMember.Read
+                [nameof(IScreenCaptureWrapper.DrawPointer)] = WrapperMember.Read,
+                // SHQueryUserNotificationState: whether a full-screen 3D app is in front (capture warning ExclusiveFullscreen)
+                [nameof(IScreenCaptureWrapper.GetUserNotificationState)] = WrapperMember.Read
             },
             // Windows.Graphics.Capture (roadmap M7.1): one frame of a window as the compositor shows it, copied through a
             // Direct3D device of the server's own; it changes no window and sends no input

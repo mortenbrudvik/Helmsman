@@ -54,6 +54,7 @@ public partial class InputSimulationService : IInputSimulationService
     private readonly IPasteClipboard? _pasteClipboard;
     private readonly TimeSpan _pasteSettleTime;
     private readonly ITakeoverMonitor _takeover;
+    private readonly ICaptureFreshness? _captureFreshness;
 
     /// <param name="monitorService">The monitors, for coordinate checks.</param>
     /// <param name="inputWrapper">The native input layer, for cursor reads; input itself goes through <paramref name="session"/>.</param>
@@ -98,8 +99,10 @@ public partial class InputSimulationService : IInputSimulationService
         IClipboardOrigin? clipboardOrigin = null,
         INativeKeyboardLayoutWrapper? keyboardLayout = null,
         IPasteClipboard? pasteClipboard = null,
-        TimeSpan? pasteSettleTime = null)
+        TimeSpan? pasteSettleTime = null,
+        ICaptureFreshness? captureFreshness = null)
     {
+        _captureFreshness = captureFreshness;
         _takeover = takeover ?? throw new ArgumentNullException(nameof(takeover));
         _monitorService = monitorService;
         _inputWrapper = inputWrapper;
@@ -746,6 +749,7 @@ public partial class InputSimulationService : IInputSimulationService
                 }
 
                 var sent = _session.Send(inputs);
+                TellCaptureFreshness(inputs, sent, approved);
                 if (sent.PausedByUser)
                 {
                     return Finish(new TypeTextResult(false, length, charactersTyped,
@@ -1744,7 +1748,27 @@ public partial class InputSimulationService : IInputSimulationService
             _clipboardOrigin!.InputSent(copy);
         }
 
+        TellCaptureFreshness(batch, sent, approved);
         return sent;
+    }
+
+    /// <summary>
+    /// Tells the capture freshness store (warning CaptureUnchangedAfterInput) that input SendInput inserted, at least partly,
+    /// reached the receiving window, and whether the batch only moved the pointer.
+    /// </summary>
+    private void TellCaptureFreshness(IReadOnlyList<InputEvent> batch, InputSendOutcome sent, InputGuardResult approved)
+    {
+        if (sent.Inserted > 0)
+        {
+            _captureFreshness?.InputSent(approved.Receiving, OnlyMovesThePointer(batch));
+        }
+    }
+
+    /// <summary>Whether every event of <paramref name="batch"/> is a pointer move: no button, wheel or key.</summary>
+    private static bool OnlyMovesThePointer(IReadOnlyList<InputEvent> batch)
+    {
+        const uint Move = NativeEnums.MOUSEEVENTF_MOVE | NativeEnums.MOUSEEVENTF_ABSOLUTE | NativeEnums.MOUSEEVENTF_VIRTUALDESK;
+        return batch.Count > 0 && batch.All(e => e.Kind == InputEventKind.Mouse && (e.Flags & ~Move) == 0);
     }
 
     /// <summary>

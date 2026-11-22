@@ -60,9 +60,10 @@ public sealed class ElementActionServiceTests : IDisposable
 
     /// <param name="toggleStatePoll">How often a toggle reads the state while it waits for it to change (1 ms by default);
     /// it waits 30 ms of <see cref="_clock"/> at most, so a box that never changes fails fast.</param>
-    private ElementActionService CreateSut(ToolsetSelection? toolsets = null, TimeSpan? toggleStatePoll = null, IUiaWorker? worker = null) => new(
+    private ElementActionService CreateSut(ToolsetSelection? toolsets = null, TimeSpan? toggleStatePoll = null, IUiaWorker? worker = null,
+        ICaptureFreshness? captureFreshness = null) => new(
         _tree, worker ?? _worker, _registry, _guard.Object, _session, _runner, _probe.Object, _input.Object, _foreground.Object,
-        _windows.Object, _clipboard.Object, toolsets)
+        _windows.Object, _clipboard.Object, toolsets, captureFreshness)
     {
         SettleDelay = TimeSpan.Zero,
         GateTimeout = TimeSpan.FromSeconds(10),
@@ -2158,6 +2159,111 @@ public sealed class ElementActionServiceTests : IDisposable
         result.After!.HasKeyboardFocus.Should().BeTrue();
         result.OutcomeVerified.Should().BeTrue();
         _foreground.Verify(f => f.EnsureForeground(Handle, It.IsAny<int>()), Times.Once);
+    }
+
+    #endregion
+
+    #region Capture freshness
+
+    private Task<ElementActionResult> ActTellingAsync(ICaptureFreshness freshness, string elementRef, ElementActionKind action) =>
+        CreateSut(captureFreshness: freshness).ActAsync(new ElementActionRequest(elementRef, action));
+
+    [Fact]
+    public async Task APatternActionThatCompleted_TellsTheCaptureFreshnessStoreItsWindow()
+    {
+        // Arrange - input that a capture of the window should show (warning CaptureUnchangedAfterInput)
+        var freshness = new Mock<ICaptureFreshness>();
+        var save = RefOf(Button("Save"));
+
+        // Act
+        var result = await ActTellingAsync(freshness.Object, save, ElementActionKind.Invoke);
+
+        // Assert
+        result.Success.Should().BeTrue(result.Error);
+        freshness.Verify(f => f.InputSent(Handle, false), Times.Once);
+    }
+
+    [Fact]
+    public async Task AFocusActionThatCompleted_TellsTheCaptureFreshnessStoreItsWindow()
+    {
+        // Arrange
+        var freshness = new Mock<ICaptureFreshness>();
+        var name = RefOf(Edit(new FakeValuePattern("")));
+
+        // Act
+        var result = await ActTellingAsync(freshness.Object, name, ElementActionKind.Focus);
+
+        // Assert
+        result.Success.Should().BeTrue(result.Error);
+        freshness.Verify(f => f.InputSent(Handle, false), Times.Once);
+    }
+
+    [Fact]
+    public async Task SetValue_ModeType_WhoseFocusLanded_TellsTheCaptureFreshnessStoreItsWindowOnce()
+    {
+        // Arrange - the keys go through the input service (mocked here), which tells the store itself; SetFocus is told here
+        var freshness = new Mock<ICaptureFreshness>();
+        var name = RefOf(Edit(new FakeValuePattern("old")));
+        _input.Setup(i => i.SendKeysAsync(It.IsAny<string>(), It.IsAny<InputTarget>(), false, It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string k, InputTarget _, bool _, int _, CancellationToken _) => new SendKeysResult(true, k) { ReceivingWindow = Main });
+        _input.Setup(i => i.TypeTextAsync("Ada", 0, It.IsAny<InputTarget>(), false, It.IsAny<TextControlChars?>(), It.IsAny<TextInputMethod>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TypeTextResult(true, 3, 3) { ReceivingWindow = Main });
+
+        // Act
+        await CreateSut(captureFreshness: freshness.Object)
+            .ActAsync(new ElementActionRequest(name, ElementActionKind.SetValue, "Ada", ElementValueMode.Type));
+
+        // Assert
+        freshness.Verify(f => f.InputSent(Handle, false), Times.Once);
+    }
+
+    [Fact]
+    public async Task SetValue_ModeType_WhenFocusDoesNotLandOnTheElement_TellsNothing()
+    {
+        // Arrange - FocusNotOnElement: nothing was typed, so a capture should not expect a change
+        var freshness = new Mock<ICaptureFreshness>();
+        var name = RefOf(Edit(new FakeValuePattern("old")));
+        _tree.SetFocusMovesFocus = false;
+
+        // Act
+        var result = await CreateSut(captureFreshness: freshness.Object)
+            .ActAsync(new ElementActionRequest(name, ElementActionKind.SetValue, "Ada", ElementValueMode.Type));
+
+        // Assert
+        result.ErrorCode.Should().Be("FocusNotOnElement");
+        freshness.Verify(f => f.InputSent(It.IsAny<nint>(), It.IsAny<bool>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(UiaActionStatus.Pending)]
+    [InlineData(UiaActionStatus.Refused)]
+    public async Task APatternActionThatDidNotComplete_TellsNothing(UiaActionStatus outcome)
+    {
+        // Arrange
+        _runner.Outcome = outcome;
+        var freshness = new Mock<ICaptureFreshness>();
+        var save = RefOf(Button("Save"));
+
+        // Act
+        await ActTellingAsync(freshness.Object, save, ElementActionKind.Invoke);
+
+        // Assert
+        freshness.Verify(f => f.InputSent(It.IsAny<nint>(), It.IsAny<bool>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task APatternActionTheApplicationRefused_TellsNothing()
+    {
+        // Arrange
+        var freshness = new Mock<ICaptureFreshness>();
+        var save = RefOf(Button("Save", new FakeInvokePattern { OnInvoke = () => throw new InvalidOperationException("disabled") }));
+
+        // Act
+        var result = await ActTellingAsync(freshness.Object, save, ElementActionKind.Invoke);
+
+        // Assert
+        result.ErrorCode.Should().Be("ActionFailed");
+        freshness.Verify(f => f.InputSent(It.IsAny<nint>(), It.IsAny<bool>()), Times.Never);
     }
 
     #endregion

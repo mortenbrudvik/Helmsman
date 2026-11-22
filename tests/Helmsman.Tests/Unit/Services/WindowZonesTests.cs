@@ -156,6 +156,34 @@ public class WindowZonesTests
 
     #endregion
 
+    #region Whole monitor
+
+    [Fact]
+    public void FillsMonitor_AFrameOverTheMonitorsBounds_WithinTheTolerance_IsTrue()
+    {
+        // 3 px at 125%: a window manager that rounds the other way
+        WindowZones.FillsMonitor(Frame(Primary.Bounds), Primary).Should().BeTrue();
+        WindowZones.FillsMonitor(new WindowRect(-3, 3, 2563, 1437), Primary).Should().BeTrue();
+    }
+
+    [Fact]
+    public void FillsMonitor_OnAMonitorWhoseWorkAreaIsTheWholeMonitor_IsTrue()
+    {
+        // Where Match says fullscreen, the frame still covers the whole monitor
+        var noTaskbar = Primary with { WorkArea = Primary.Bounds };
+
+        WindowZones.FillsMonitor(Frame(noTaskbar.Bounds), noTaskbar).Should().BeTrue();
+    }
+
+    [Fact]
+    public void FillsMonitor_TheWorkAreaOrAnotherMonitor_IsFalse()
+    {
+        WindowZones.FillsMonitor(Frame(Primary.WorkArea), Primary).Should().BeFalse();
+        WindowZones.FillsMonitor(Frame(Left.Bounds), Primary).Should().BeFalse();
+    }
+
+    #endregion
+
     #region Spanning monitors
 
     [Fact]

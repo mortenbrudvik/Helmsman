@@ -157,6 +157,9 @@ public static class ServiceRegistration
         services.AddSingleton<ICaptureTargetPolicy, CaptureTargetPolicy>();
         // Windows.Graphics.Capture for window captures (roadmap M7.1): its Direct3D device is made with the first capture
         services.AddSingleton<IGraphicsCaptureWrapper, NativeGraphicsCaptureWrapper>();
+        // The input sent to each window and the last capture of each target, so a capture identical to the previous one
+        // although input reached it in between warns CaptureUnchangedAfterInput: the input and element action services tell it
+        services.AddSingleton<ICaptureFreshness, CaptureFreshness>();
         services.AddSingleton<IScreenshotService, ScreenshotService>();
         // The captures written without outputPath go to %TEMP%\Helmsman\captures; the server's own files there are deleted
         // once they are a day old, by a sweep a minute after the server starts and every hour, outside any tool call

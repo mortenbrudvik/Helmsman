@@ -158,11 +158,12 @@ public class ToolPayloadBudgetTests
     /// then 67,317 tokens, 269,268 bytes after the input tools' allowHostTarget description said only primary clicks, moves and scrolls without modifiers go to the host, and named the right and middle clicks of PasteNotAllowed more briefly (+5);
     /// then 67,309 tokens, 269,233 bytes after the rename to Helmsman shortened the captures' default folder and list_layouts' presets folder in their descriptions (-8);
     /// then 67,311 tokens, 269,243 bytes after the settings were renamed HELMSMAN_ (HELMSMAN_ALLOW_USER_CLIPBOARD in get_clipboard's description, HELMSMAN_LAYOUTS_PATH in list_layouts') (+2);
+    /// then 67,349 tokens, 269,393 bytes after the capture warnings CaptureUnchangedAfterInput and ExclusiveFullscreen in capture_window's and capture_with_elements' warnings sentence (+38);
     /// DefaultToolListTokenBudget measures the tools served by default), so every addition to the surface is a decision. When a change
     /// adds to the surface on purpose, raise it in the same change by what the failure message measures; when a change
     /// trims descriptions, lower it.
     /// </summary>
-    public const int ToolListTokenBudget = 67_322;
+    public const int ToolListTokenBudget = 67_349;
 
     /// <summary>
     /// The token budget of the default tools/list (roadmap M6.1): the tools a server started without HELMSMAN_TOOLSETS,
@@ -190,11 +191,12 @@ public class ToolPayloadBudgetTests
     /// (+63); then 55,795 tokens (223,180 bytes) with both, merged, after review F1-F3's launch_application arguments and kill_process wording (+77); then 55,792 tokens (223,166 bytes) after run_steps' tool stopped offering null, which it refuses (-3); then 55,809 tokens (223,235 bytes) after issue #8's oem key names in press_keys' keys (+17); then 55,865 tokens (223,458 bytes) after issue #8's modifiers on scroll (+56), 223,459 bytes after issue #8's follow-up oem key wording; then 56,034 tokens (224,133 bytes) after the review's description pass, as for ToolListTokenBudget (+169); then 56,009 tokens (224,033 bytes) after its second pass, as for ToolListTokenBudget (-25); then 56,021 tokens (224,083 bytes) after the docs pass's cross-file notes, press_keys' key names (+12); then 56,039 tokens (224,153 bytes) after the follow-up to the docs pass, as for ToolListTokenBudget less the OCR tools (+18), 224,156 bytes with both, merged, after the merge's fixups, as for ToolListTokenBudget; then 56,201 tokens (224,802 bytes) after issues #12 and #16, as for ToolListTokenBudget (+162); then 56,381 tokens (225,523 bytes) after issue #14, as for ToolListTokenBudget (+180); then 56,443 tokens (225,772 bytes) with the fixes of issues #8 to #18 merged, as for ToolListTokenBudget (+62); then 56,490 tokens (225,959 bytes) after the launch guard blocklist, as for ToolListTokenBudget (+47); then 56,634 tokens (226,533 bytes) after allowHostTarget's question to the user, as for ToolListTokenBudget (+144); then 56,680 tokens (226,718 bytes) after Win+R and Win+X, as for ToolListTokenBudget (+46); then 56,830 tokens (227,317 bytes) after the whole input in allowHostTarget's question, as for ToolListTokenBudget (+150); then 56,972 tokens (227,885 bytes) after the paste refusal for the host, as for ToolListTokenBudget (+142); then 57,159 tokens (228,634 bytes) after the allowlist for the host, as for ToolListTokenBudget (+187); then 57,206 tokens (228,823 bytes) after the narrower allowlist, as for ToolListTokenBudget (+47); then 57,210 tokens (228,840 bytes) after the System32 consoles in launch_application's arguments, as for ToolListTokenBudget (+4);
     /// then 57,216 tokens (228,861 bytes) after only primary clicks, moves and scrolls in allowHostTarget's description, as for ToolListTokenBudget (+6);
     /// then 57,207 tokens (228,826 bytes) after the rename to Helmsman, as for ToolListTokenBudget (-9);
-    /// then 57,209 tokens (228,836 bytes) after the HELMSMAN_ settings, as for ToolListTokenBudget (+2).
+    /// then 57,209 tokens (228,836 bytes) after the HELMSMAN_ settings, as for ToolListTokenBudget (+2);
+    /// then 57,247 tokens (228,986 bytes) after the capture warnings CaptureUnchangedAfterInput and ExclusiveFullscreen, as for ToolListTokenBudget (+38).
     /// A tool in a toolset that is off by default never moves it; a change to the default
     /// surface raises it by what the failure message measures, in the same change, or lowers it.
     /// </summary>
-    public const int DefaultToolListTokenBudget = 57_220;
+    public const int DefaultToolListTokenBudget = 57_247;
 
     /// <summary>
     /// The most tokens one tool object (name, title, description, input schema, annotations) may cost in tools/list (roadmap

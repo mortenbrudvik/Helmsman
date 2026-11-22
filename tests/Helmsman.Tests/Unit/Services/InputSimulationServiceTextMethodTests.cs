@@ -31,12 +31,12 @@ public class InputSimulationServiceTextMethodTests
         WindowIs("Notepad", "notepad");
     }
 
-    private InputSimulationService CreateSut(bool withPasteClipboard = true) =>
+    private InputSimulationService CreateSut(bool withPasteClipboard = true, ICaptureFreshness? captureFreshness = null) =>
         new(TestDataFactory.CreateMockMonitorService().Object, _input, _guard.Object, _session,
             new ClipboardPasteGuard(_clipboard, _origin, ClipboardOptions.Default, _windows.Object),
             Permissive.Takeover, clipboardOrigin: _origin, keyboardLayout: _layouts,
             pasteClipboard: withPasteClipboard ? new PasteClipboard(_clipboard, _origin, _windows.Object) : null,
-            pasteSettleTime: TimeSpan.Zero);
+            pasteSettleTime: TimeSpan.Zero, captureFreshness: captureFreshness);
 
     private Task<TypeTextResult> Type(string text, TextInputMethod method, TextControlChars? controlChars = null, int delayMs = 0,
         InputTarget target = default) =>
@@ -72,6 +72,23 @@ public class InputSimulationServiceTextMethodTests
     }
 
     #region method paste
+
+    [Fact]
+    public async Task Paste_ThatWasSent_TellsTheCaptureFreshnessStoreTheReceivingWindow()
+    {
+        // Arrange - Ctrl+V is input a capture of the window should show (warning CaptureUnchangedAfterInput)
+        var freshness = new Mock<ICaptureFreshness>();
+
+        // Act
+        var result = await CreateSut(captureFreshness: freshness.Object)
+            .TypeTextAsync("hello", 0, default, releaseHeldModifiers: false, null, TextInputMethod.Paste, CancellationToken.None);
+
+        // Assert
+        result.Success.Should().BeTrue(result.Error);
+        result.Method.Should().Be("paste");
+        freshness.Verify(f => f.InputSent(Window, false), Times.AtLeastOnce);
+        freshness.Verify(f => f.InputSent(It.IsAny<nint>(), true), Times.Never);
+    }
 
     [Fact]
     public async Task Paste_PutsTheTextOnTheClipboard_PressesCtrlV_AndPutsTheClipboardBack()

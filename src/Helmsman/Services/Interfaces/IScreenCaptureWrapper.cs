@@ -228,6 +228,13 @@ public interface IScreenCaptureWrapper
     bool DrawPointer(nint hdc, int originX, int originY);
 
     /// <summary>
+    /// The shell's notification state (SHQueryUserNotificationState, a QUERY_USER_NOTIFICATION_STATE value such as 3,
+    /// QUNS_RUNNING_D3D_FULL_SCREEN: a full-screen 3D app is in front); null when it cannot be read. It is one value for the
+    /// whole session, not per monitor.
+    /// </summary>
+    int? GetUserNotificationState();
+
+    /// <summary>
     /// Reads <paramref name="source"/>'s pixels and lends them to <paramref name="read"/> without copying them (roadmap M6,
     /// for polling): the reader runs on the calling thread, once, while the pixels exist, and its result is returned.
     /// The pixels, origin and method are those the matching Capture member returns, and the same sizes are refused
