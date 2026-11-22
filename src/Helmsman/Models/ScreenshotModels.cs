@@ -295,7 +295,8 @@ public sealed record CaptureOptions
 
     /// <summary>
     /// Longest edge of the output image in pixels; 0 keeps full resolution. Null means
-    /// <see cref="DefaultMaxDimension"/>, unless <see cref="MaxWidth"/> is set: then only the width is limited.
+    /// <see cref="DefaultMaxDimension"/>, unless <see cref="MaxWidth"/> is set: then only the width is limited. An image
+    /// returned in the result is refused over <see cref="CaptureLimits"/>' inline bound, whatever this says.
     /// </summary>
     public int? MaxDimension { get; init; }
 

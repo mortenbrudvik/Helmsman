@@ -456,7 +456,10 @@ public enum ScreenshotErrorCode
     /// <summary>The format is not auto, png, jpeg or jpg.</summary>
     InvalidFormat = 1,
 
-    /// <summary>maxDimension or maxWidth is out of range, zoom or gridSpacing is, or zoom would make the image larger than a capture may be.</summary>
+    /// <summary>
+    /// maxDimension or maxWidth is out of range, zoom or gridSpacing is, zoom would make the image larger than a capture may
+    /// be, or an image returned in the result would be over the inline bound (CaptureLimits: pixels, or encoded bytes).
+    /// </summary>
     InvalidImageSize = 2,
 
     /// <summary>The output mode is unknown, or outputPath was given without a file output.</summary>

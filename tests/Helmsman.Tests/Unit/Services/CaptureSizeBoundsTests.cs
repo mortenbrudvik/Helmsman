@@ -260,6 +260,177 @@ public sealed class CaptureSizeBoundsTests : IDisposable
 
     #endregion
 
+    #region Inline images over the bound
+
+    [Theory]
+    [InlineData(8001, 2)] // one pixel over the longest inline edge
+    [InlineData(8000, 4195)] // within the edge, but 33,560,000 pixels: over 32 megapixels (33,554,432)
+    public void CaptureRegion_WhoseInlineImageWouldBeOverTheBound_IsInvalidImageSize_BeforeAnythingIsCaptured(int width, int height)
+    {
+        // Arrange
+        _capture.Setup(c => c.GetVirtualScreenBounds()).Returns((0, 0, width, height));
+
+        // Act
+        var capture = CreateSut().CaptureRegion(0, 0, width, height, FullResolution());
+
+        // Assert
+        capture.Metadata.Success.Should().BeFalse();
+        capture.Metadata.ErrorCode.Should().Be(nameof(ScreenshotErrorCode.InvalidImageSize));
+        capture.Metadata.Error.Should().Contain($"{width}x{height}").And.Contain("8000 pixels on an edge").And.Contain("32 megapixels")
+            .And.Contain("output 'file'").And.Contain("maxDimension");
+        capture.Image.Should().BeNull();
+        VerifyNothingCaptured();
+    }
+
+    [Fact]
+    public void TakeScreenshot_OfThreeFourKMonitorsAtFullResolution_IsInvalidImageSize_BeforeAnythingIsCaptured()
+    {
+        // Arrange - 11520 x 2160: within the 64-megapixel budget, but no client takes an image 11520 pixels wide
+        _capture.Setup(c => c.GetVirtualScreenBounds()).Returns((0, 0, 11520, 2160));
+
+        // Act
+        var capture = CreateSut().CaptureMonitor(ScreenshotService.VirtualScreenIndex, FullResolution());
+
+        // Assert
+        capture.Metadata.ErrorCode.Should().Be(nameof(ScreenshotErrorCode.InvalidImageSize));
+        capture.Metadata.Error.Should().Contain("11520x2160");
+        capture.Image.Should().BeNull();
+        VerifyNothingCaptured();
+    }
+
+    [Fact]
+    public void TakeScreenshot_OfAMonitorOverTheInlineEdge_IsInvalidImageSize_BeforeAnythingIsCaptured()
+    {
+        // Arrange
+        UseMonitors(TestDataFactory.CreateMonitorInfo(boundsWidth: 8001, boundsHeight: 2));
+
+        // Act
+        var capture = CreateSut().CaptureMonitor(0, FullResolution());
+
+        // Assert
+        capture.Metadata.ErrorCode.Should().Be(nameof(ScreenshotErrorCode.InvalidImageSize));
+        VerifyNothingCaptured();
+    }
+
+    [Fact]
+    public void EveryWindowRoute_WhoseInlineImageWouldBeOverTheBound_IsInvalidImageSize_WithoutAnImage()
+    {
+        // Arrange - a window's size is known only with its pixels, so it is refused before its image is made
+        UseWindow(8001, 2, 0, 0);
+        var sut = CreateSut();
+
+        // Act
+        var window = sut.CaptureWindow(Window, includeFrame: true, FullResolution());
+        var area = sut.CaptureWindowArea(Window, includeFrame: true, new BoundsDto(0, 0, 8001, 2), FullResolution());
+        var marked = sut.CaptureWindowWithElements(Window, null, [], includeFrame: true, ElementOverlayOptions.Default, FullResolution());
+
+        // Assert
+        window.Metadata.ErrorCode.Should().Be(nameof(ScreenshotErrorCode.InvalidImageSize));
+        window.Image.Should().BeNull();
+        area.Metadata.ErrorCode.Should().Be(nameof(ScreenshotErrorCode.InvalidImageSize));
+        area.Image.Should().BeNull();
+        marked.Metadata.ErrorCode.Should().Be(nameof(ScreenshotErrorCode.InvalidImageSize));
+        marked.Image.Should().BeNull();
+    }
+
+    [Fact]
+    public void CaptureWindow_OverTheInlineBound_WithAMetadataOutput_KeepsItsFullSize()
+    {
+        // Arrange - only an image in the result is held to the inline bound
+        UseWindow(8001, 2, 0, 0);
+
+        // Act
+        var capture = CreateSut().CaptureWindow(Window, includeFrame: true, FullResolution(CaptureOutputMode.Metadata));
+
+        // Assert
+        capture.Metadata.Success.Should().BeTrue(capture.Metadata.Error);
+        (capture.Metadata.Width, capture.Metadata.Height).Should().Be((8001, 2));
+    }
+
+    [Fact]
+    public void CaptureRegion_AZoomThatWouldTakeTheInlineImageOverTheBound_IsInvalidImageSize_BeforeAnythingIsCaptured()
+    {
+        // Arrange - 2001 x 1 at zoom 4 is 8004 x 4
+        _capture.Setup(c => c.GetVirtualScreenBounds()).Returns((0, 0, 2001, 10));
+
+        // Act
+        var capture = CreateSut().CaptureRegion(0, 0, 2001, 1, FullResolution() with { Zoom = 4 });
+
+        // Assert
+        capture.Metadata.ErrorCode.Should().Be(nameof(ScreenshotErrorCode.InvalidImageSize));
+        capture.Metadata.Error.Should().Contain("8004x4");
+        VerifyNothingCaptured();
+    }
+
+    [Fact]
+    public void CaptureRegion_WithOnlyTheLegacyMaxWidth_IsHeldToTheInlineBoundOnItsHeight()
+    {
+        // Arrange - maxWidth alone lifts the 1568 long-edge default, so a tall strip keeps its height
+        _capture.Setup(c => c.GetVirtualScreenBounds()).Returns((0, 0, 1920, 8001));
+
+        // Act
+        var capture = CreateSut().CaptureRegion(0, 0, 100, 8001, new CaptureOptions { MaxWidth = 200 });
+
+        // Assert
+        capture.Metadata.ErrorCode.Should().Be(nameof(ScreenshotErrorCode.InvalidImageSize));
+        VerifyNothingCaptured();
+    }
+
+    [Fact]
+    public void AnInlineImageOverTheByteBound_IsInvalidImageSize_WithoutAnImage()
+    {
+        // Arrange - a PNG of noise at 1900 x 1900 is about 12 MB, over the 10 MB an inline image may be
+        UseNoise(1900, 1900);
+
+        // Act
+        var capture = CreateSut().CaptureRegion(0, 0, 1900, 1900, FullResolution() with { Format = CaptureFormat.Png });
+
+        // Assert
+        capture.Metadata.Success.Should().BeFalse();
+        capture.Metadata.ErrorCode.Should().Be(nameof(ScreenshotErrorCode.InvalidImageSize));
+        capture.Metadata.Error.Should().Contain("10 MB").And.Contain("1900x1900").And.Contain("output 'file'");
+        capture.Image.Should().BeNull();
+    }
+
+    [Fact]
+    public void AnImageOverTheByteBound_WithOutputBoth_IsRefused_AndNoFileIsWritten()
+    {
+        // Arrange
+        UseNoise(1900, 1900);
+        var path = Path.Combine(_folder, "noise.png");
+
+        // Act
+        var capture = CreateSut().CaptureRegion(0, 0, 1900, 1900,
+            FullResolution(CaptureOutputMode.Both) with { Format = CaptureFormat.Png, OutputPath = path });
+
+        // Assert
+        capture.Metadata.ErrorCode.Should().Be(nameof(ScreenshotErrorCode.InvalidImageSize));
+        File.Exists(path).Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(CaptureOutputMode.Metadata)]
+    [InlineData(CaptureOutputMode.File)]
+    public void AnImageOverTheByteBound_WithoutAnImageInTheResult_IsMadeAsBefore(CaptureOutputMode output)
+    {
+        // Arrange
+        UseNoise(1900, 1900);
+        var options = FullResolution(output) with
+        {
+            Format = CaptureFormat.Png,
+            OutputPath = output == CaptureOutputMode.File ? Path.Combine(_folder, "noise.png") : null
+        };
+
+        // Act
+        var capture = CreateSut().CaptureRegion(0, 0, 1900, 1900, options);
+
+        // Assert
+        capture.Metadata.Success.Should().BeTrue(capture.Metadata.Error);
+        capture.Metadata.ByteSize.Should().BeGreaterThan(10L * 1024 * 1024);
+    }
+
+    #endregion
+
     #region The target policy comes first
 
     [Fact]

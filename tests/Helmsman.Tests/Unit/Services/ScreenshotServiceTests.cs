@@ -942,11 +942,15 @@ public class ScreenshotServiceTests
     }
 
     [Fact]
-    public void CapturePixels_EncodesNothing_SoPixelsNoImageCanHoldStillComeBack()
+    public void CapturePixels_MakesNoImage_SoPixelsWhoseImageCannotBeBuiltStillComeBack()
     {
-        // Arrange - JPEG cannot hold an edge longer than 65535 pixels: capture_window fails to encode these pixels
-        var pixels = Pattern(70000, 1);
-        UseWindowPixels(includeFrame: false, pixels, 70000, 1, 0, 0);
+        // Arrange - capture_window's image cannot be built: drawing the pointer into it fails (an edge too long for JPEG did
+        // this before the size bounds refused such a capture before its image is made)
+        var pixels = Pattern(200, 100);
+        UseWindowPixels(includeFrame: false, pixels, 200, 100, 0, 0);
+        _mockCaptureWrapper.Setup(c => c.GetPointer()).Returns(new PointerState(40, 30, Visible: true));
+        _mockCaptureWrapper.Setup(c => c.DrawPointer(It.IsAny<nint>(), It.IsAny<int>(), It.IsAny<int>()))
+            .Throws(new InvalidOperationException("DrawIconEx failed"));
         var registry = new Mock<ICaptureRegistry>();
         _calls.Setup(c => c.Run(It.IsAny<nint>(), It.IsAny<Func<CaptureResult>>()))
             .Returns((nint _, Func<CaptureResult> call) => call());
@@ -954,7 +958,7 @@ public class ScreenshotServiceTests
             Permissive.TargetPolicy, Permissive.SecurityProbe, _calls.Object, captureRegistry: registry.Object);
 
         // Act
-        var tool = sut.CaptureWindow(PixelWindow, includeFrame: false, new CaptureOptions { MaxDimension = 0, Format = CaptureFormat.Jpeg }).Metadata;
+        var tool = sut.CaptureWindow(PixelWindow, includeFrame: false, new CaptureOptions { MaxDimension = 0, IncludeCursor = true }).Metadata;
         var raw = sut.CapturePixels(new CaptureTarget.Window(PixelWindow, IncludeFrame: false));
 
         // Assert - and the raw capture is not registered either until RegisterRaw

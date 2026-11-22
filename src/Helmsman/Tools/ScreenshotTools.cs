@@ -30,8 +30,8 @@ public class ScreenshotTools
     internal const string QualityDescription = "JPEG quality, clamped to 1-100. Only used for JPEG. Default: 80";
 
     internal const string MaxDimensionDescription =
-        "Longest edge of the image in pixels; larger captures are scaled down proportionally. " +
-        "Default (null): 1568, the size vision models work at. 0 keeps full resolution. imageToScreen reports the resulting scale.";
+        "Longest image edge in pixels; a larger capture is scaled down (see imageToScreen). Default: 1568, the size vision models use. " +
+        "0: full size; a returned image over 8000 px, 32 MP or 10 MB is InvalidImageSize.";
 
     internal const string OutputDescription =
         "What to return: 'image' (default: the image and the metadata), 'file' (write the image to a file and return only the metadata with filePath), " +

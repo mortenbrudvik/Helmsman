@@ -251,8 +251,8 @@ public class ScreenshotService : IScreenshotService
     /// DPI warning. A screen capture also reads the screen layout right after its pixels (<see cref="CaptureRegistrar.ReadScreen"/>), so
     /// that its registration keeps the layout the pixels were read in, however long after them it is registered. The
     /// target policy is not checked here (see <see cref="CapturePixels"/>), and no image is made. With <paramref name="request"/>,
-    /// a monitor or region whose image would be over the budget (<see cref="CaptureRequest.ThrowIfOutputTooLarge"/>: a zoom)
-    /// is refused before its pixels are read; a window's size is known only with its pixels, so its image is checked when
+    /// a monitor or region whose image would be over the budget (<see cref="CaptureRequest.ThrowIfOutputTooLarge"/>: a zoom),
+    /// or over the inline bound of an image in the result, is refused before its pixels are read; a window's size is known only with its pixels, so its image is checked when
     /// it is made. The windows that declare a display affinity are read before and after the pixels, and kept when the
     /// pixels can show other windows (issue #17); a window capture leaves its own window out of them, which its
     /// DisplayAffinity warning reports. A locked session, or an input desktop out of reach, adds its warning first.
@@ -321,13 +321,12 @@ public class ScreenshotService : IScreenshotService
     private Acquired AcquireVirtualScreen(IReadOnlyList<MonitorInfo> monitors, CaptureRequest? request)
     {
         var screen = _captureWrapper.GetVirtualScreenBounds();
-        if ((long)screen.Width * screen.Height > ScreenCaptureWrapper.MaxCapturePixels ||
-            screen.Width > ScreenCaptureWrapper.MaxCaptureSize || screen.Height > ScreenCaptureWrapper.MaxCaptureSize)
+        if (!CaptureLimits.WithinCaptureBudget(screen.Width, screen.Height))
         {
             throw new CaptureException(ScreenshotErrorCode.CaptureFailed,
                 $"The virtual screen is {screen.Width}x{screen.Height} pixels, more than one capture may hold " +
-                $"({ScreenCaptureWrapper.MaxCapturePixels / (1024 * 1024)} megapixels, {ScreenCaptureWrapper.MaxCaptureSize} " +
-                "pixels on an edge). Nothing was captured. Capture one monitor at a time with take_screenshot, or parts with capture_region.");
+                $"({CaptureLimits.CaptureBudgetText}). Nothing was captured. Capture one monitor at a time with take_screenshot, or " +
+                "parts with capture_region.");
         }
 
         request?.ThrowIfOutputTooLarge(screen.Width, screen.Height);
@@ -363,22 +362,22 @@ public class ScreenshotService : IScreenshotService
                 "physical pixels of the virtual screen; get_monitors shows where each monitor is.");
         }
 
-        if ((long)region.Width * region.Height > ScreenCaptureWrapper.MaxCapturePixels)
+        if ((long)region.Width * region.Height > CaptureLimits.MaxCapturePixels)
         {
             throw new CaptureException(ScreenshotErrorCode.InvalidRegion,
                 $"The region on screen is {region.Width}x{region.Height} pixels, more than the budget of " +
-                $"{ScreenCaptureWrapper.MaxCapturePixels / (1024 * 1024)} megapixels per capture. Capture it in parts, " +
+                $"{CaptureLimits.MaxCapturePixels / (1024 * 1024)} megapixels per capture. Capture it in parts, " +
                 "or one monitor at a time with take_screenshot.");
         }
 
-        if (region.Width > ScreenCaptureWrapper.MaxCaptureSize || region.Height > ScreenCaptureWrapper.MaxCaptureSize)
+        if (region.Width > CaptureLimits.MaxCaptureEdge || region.Height > CaptureLimits.MaxCaptureEdge)
         {
             throw new CaptureException(ScreenshotErrorCode.InvalidRegion,
-                $"The region on screen is {region.Width}x{region.Height} pixels, more than {ScreenCaptureWrapper.MaxCaptureSize} " +
+                $"The region on screen is {region.Width}x{region.Height} pixels, more than {CaptureLimits.MaxCaptureEdge} " +
                 "pixels on an edge. Capture it in parts, or one monitor at a time with take_screenshot.");
         }
 
-        // The part on the screen, as it will be captured: the size zoom enlarges
+        // The part on the screen, as it will be captured: the size zoom enlarges, and the size an image in the result is held to
         request?.ThrowIfOutputTooLarge(region.Width, region.Height);
         var warnings = new List<string>();
         if (region != requested)
@@ -939,8 +938,10 @@ public class ScreenshotService : IScreenshotService
     /// Turns raw pixels into the output image: scaling to the size limit, optional overlays drawn on the scaled image (so
     /// they keep their size in pixels of the returned image), encoding, and the file write when the output includes a
     /// file. A failure to build, scale or encode the image is <see cref="ScreenshotErrorCode.EncodeFailed"/>; the file
-    /// write reports its own codes. An image over the budget (a zoom, <see cref="CaptureRequest.ThrowIfOutputTooLarge"/>) is
-    /// refused before its bitmap is allocated, whatever captured the pixels.
+    /// write reports its own codes. An image over the budget (a zoom), or one for the result over the inline bound
+    /// (<see cref="CaptureRequest.ThrowIfOutputTooLarge"/>), is refused before its bitmap is allocated, whatever captured the
+    /// pixels; an image for the result that encodes to more bytes than the inline bound
+    /// (<see cref="CaptureRequest.ThrowIfEncodedTooLarge"/>) is refused before anything is returned or written.
     /// </summary>
     private static RenderedImage Render(CaptureResult capture, CaptureRequest request, Action<Bitmap>? annotate,
         Action<Bitmap>? beforeScaling = null)
@@ -970,6 +971,8 @@ public class ScreenshotService : IScreenshotService
                 $"The pixels were captured, but the {CaptureRequest.FormatName(encoding)} image could not be built: {ex.Message}");
         }
 
+        // Before the file of output both is written: a refused call writes nothing
+        request.ThrowIfEncodedTooLarge(data.LongLength, encoding, width, height);
         var filePath = request.WritesFile ? CaptureFileWriter.WriteFile(data, encoding, request) : null;
 
         return new RenderedImage(

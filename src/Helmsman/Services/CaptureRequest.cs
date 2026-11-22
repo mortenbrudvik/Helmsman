@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Text.Json.Serialization;
 using Helmsman.Models;
-using Helmsman.Native;
 
 namespace Helmsman.Services;
 
@@ -185,30 +184,59 @@ public sealed record CaptureRequest(
 
     /// <summary>
     /// Refuses a <paramref name="width"/> x <paramref name="height"/> capture whose output image (<see cref="OutputSize"/>) is
-    /// enlarged beyond what a capture may be: <see cref="ScreenCaptureWrapper.MaxCapturePixels"/> (64 megapixels) and
-    /// <see cref="ScreenCaptureWrapper.MaxCaptureSize"/> pixels on an edge. Only <see cref="Zoom"/> makes an image larger than
-    /// its capture, which is held to those limits itself, so an image that is not enlarged passes as it is; zoom enlarges
-    /// each edge up to 4 times, 16 times the pixels, and maxDimension 0 lifts the only cap after it: capture_region over a
-    /// 4K monitor would be a 15360 x 8640 bitmap (about 530 MB) before the resize, the encoding and base64. Called with the
+    /// larger than it may be (<see cref="CaptureLimits"/>). First an image enlarged beyond what a capture may be
+    /// (<see cref="CaptureLimits.MaxCapturePixels"/>, 64 megapixels, and <see cref="CaptureLimits.MaxCaptureEdge"/> pixels on
+    /// an edge): only <see cref="Zoom"/> makes an image larger than its capture, which is held to those limits itself, so an
+    /// image that is not enlarged passes as it is; zoom enlarges each edge up to 4 times, 16 times the pixels, and
+    /// maxDimension 0 lifts the only cap after it: capture_region over a 4K monitor would be a 15360 x 8640 bitmap (about
+    /// 530 MB) before the resize, the encoding and base64. Then an image returned in the result (<see cref="ReturnsImage"/>)
+    /// over the inline bound (<see cref="CaptureLimits.MaxInlineEdge"/> pixels on an edge,
+    /// <see cref="CaptureLimits.MaxInlinePixels"/> pixels), which maxDimension 0, a maxDimension over it, maxWidth alone or a
+    /// zoom can ask for; a file keeps the whole budget. Nothing is scaled to fit: the caller chose the size. Called with the
     /// size on the screen before anything is captured, and again before the image is made.
     /// </summary>
-    /// <exception cref="CaptureException">InvalidImageSize: the image would be over the budget; nothing was captured.</exception>
+    /// <exception cref="CaptureException">InvalidImageSize: the image would be over a limit; no image was made.</exception>
     public void ThrowIfOutputTooLarge(int width, int height)
     {
         var (outputWidth, outputHeight) = OutputSize(width, height);
-        if ((outputWidth <= width && outputHeight <= height) ||
-            ((long)outputWidth * outputHeight <= ScreenCaptureWrapper.MaxCapturePixels &&
-             outputWidth <= ScreenCaptureWrapper.MaxCaptureSize && outputHeight <= ScreenCaptureWrapper.MaxCaptureSize))
+        var enlarged = outputWidth > width || outputHeight > height;
+        if (enlarged && !CaptureLimits.WithinCaptureBudget(outputWidth, outputHeight))
+        {
+            var zoom = Zoom.ToString("0.##", CultureInfo.InvariantCulture);
+            throw new CaptureException(ScreenshotErrorCode.InvalidImageSize,
+                $"At zoom {zoom} the {width}x{height} capture would be a {outputWidth}x{outputHeight} image, more than one image " +
+                $"may hold ({CaptureLimits.CaptureBudgetText}). Nothing was captured. Capture a smaller region, use a lower zoom, " +
+                $"or pass a maxDimension (the default, {CaptureOptions.DefaultMaxDimension}, caps the long edge).");
+        }
+
+        if (ReturnsImage && !CaptureLimits.FitsInline(outputWidth, outputHeight))
+        {
+            throw new CaptureException(ScreenshotErrorCode.InvalidImageSize,
+                $"The {width}x{height} capture would be a {outputWidth}x{outputHeight} image, more than an image returned in the " +
+                $"result may be ({CaptureLimits.InlineBoundText}). No image was made. Pass a maxDimension of at most " +
+                $"{CaptureLimits.MaxInlineEdge} (the default, {CaptureOptions.DefaultMaxDimension}, is the size vision models work at), " +
+                $"use output 'file' for the full size (a file may hold {CaptureLimits.CaptureBudgetText}), or capture a smaller area.");
+        }
+    }
+
+    /// <summary>
+    /// Refuses an image returned in the result (<see cref="ReturnsImage"/>) that encoded to more than
+    /// <see cref="CaptureLimits.MaxInlineBytes"/>, before it is returned or a file of output both is written. Only an image
+    /// larger than the default size can: see <see cref="CaptureLimits.MaxInlineBytes"/>.
+    /// </summary>
+    /// <exception cref="CaptureException">InvalidImageSize: the encoded image is over the inline bound.</exception>
+    public void ThrowIfEncodedTooLarge(long byteCount, ImageEncoding encoding, int width, int height)
+    {
+        if (!ReturnsImage || byteCount <= CaptureLimits.MaxInlineBytes)
         {
             return;
         }
 
-        var zoom = Zoom.ToString("0.##", CultureInfo.InvariantCulture);
+        var megabytes = (byteCount / (1024.0 * 1024)).ToString("0.0", CultureInfo.InvariantCulture);
         throw new CaptureException(ScreenshotErrorCode.InvalidImageSize,
-            $"At zoom {zoom} the {width}x{height} capture would be a {outputWidth}x{outputHeight} image, more than one image " +
-            $"may hold ({ScreenCaptureWrapper.MaxCapturePixels / (1024 * 1024)} megapixels, {ScreenCaptureWrapper.MaxCaptureSize} " +
-            "pixels on an edge). Nothing was captured. Capture a smaller region, use a lower zoom, or pass a maxDimension " +
-            $"(the default, {CaptureOptions.DefaultMaxDimension}, caps the long edge).");
+            $"The {width}x{height} {FormatName(encoding)} image is {megabytes} MB ({byteCount} bytes), more than an image returned " +
+            $"in the result may be ({CaptureLimits.InlineBytesText}). Nothing was returned or written. Pass a smaller maxDimension, " +
+            "format 'jpeg' or a lower quality, or use output 'file' for the full image.");
     }
 
     /// <summary>The encoding for an output image of this size: <see cref="Format"/>, or the "auto" choice.</summary>

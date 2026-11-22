@@ -90,7 +90,8 @@ public class CaptureRequestTests
     [InlineData(70000, 1, 1.0)] // nor checked again: its capture was (only a fake makes this one)
     public void ThrowIfOutputTooLarge_AnImageWithinTheBudget_Passes(int width, int height, double zoom)
     {
-        var request = CaptureRequest.Resolve(new CaptureOptions { Zoom = zoom, MaxDimension = 0 });
+        // A file: an image in the result is also held to the smaller inline bound
+        var request = CaptureRequest.Resolve(new CaptureOptions { Zoom = zoom, MaxDimension = 0, Output = CaptureOutputMode.File });
 
         request.Invoking(r => r.ThrowIfOutputTooLarge(width, height)).Should().NotThrow();
     }
@@ -121,6 +122,49 @@ public class CaptureRequestTests
     {
         // The default maxDimension (1568) keeps a zoomed 4K capture small
         CaptureRequest.Resolve(new CaptureOptions { Zoom = 4 }).Invoking(r => r.ThrowIfOutputTooLarge(3840, 2160)).Should().NotThrow();
+    }
+
+    [Theory]
+    [InlineData(8000, 1)] // the longest inline edge
+    [InlineData(1, 8000)]
+    [InlineData(8000, 4194)] // 33,552,000 pixels: just under 32 megapixels (33,554,432)
+    [InlineData(7680, 4320)] // an 8K display
+    [InlineData(5792, 5792)] // 33,547,264 pixels: square, just under
+    public void ThrowIfOutputTooLarge_AnInlineImageAtOrJustUnderTheInlineBound_Passes(int width, int height)
+    {
+        var request = CaptureRequest.Resolve(new CaptureOptions { MaxDimension = 0 });
+
+        request.Invoking(r => r.ThrowIfOutputTooLarge(width, height)).Should().NotThrow();
+    }
+
+    [Theory]
+    [InlineData(8001, 1, 0)] // one pixel over the longest inline edge
+    [InlineData(1, 8001, 0)]
+    [InlineData(8000, 4195, 0)] // 33,560,000 pixels: just over 32 megapixels
+    [InlineData(5793, 5793, 0)] // 33,558,849 pixels: square, just over
+    [InlineData(16384, 2, 8001)] // a maxDimension over the inline edge does not lift it
+    public void ThrowIfOutputTooLarge_AnInlineImageJustOverTheInlineBound_IsInvalidImageSize(int width, int height, int maxDimension)
+    {
+        // Arrange
+        var request = CaptureRequest.Resolve(new CaptureOptions { MaxDimension = maxDimension });
+
+        // Act
+        var act = () => request.ThrowIfOutputTooLarge(width, height);
+
+        // Assert
+        var failure = act.Should().Throw<CaptureException>().Which;
+        failure.Code.Should().Be(ScreenshotErrorCode.InvalidImageSize);
+        failure.Message.Should().Contain("8000 pixels on an edge").And.Contain("32 megapixels").And.Contain("output 'file'");
+    }
+
+    [Theory]
+    [InlineData(CaptureOutputMode.File)]
+    [InlineData(CaptureOutputMode.Metadata)]
+    public void ThrowIfOutputTooLarge_AnImageNotReturnedInline_IsHeldOnlyToThePixelBudget(CaptureOutputMode output)
+    {
+        var request = CaptureRequest.Resolve(new CaptureOptions { MaxDimension = 0, Output = output });
+
+        request.Invoking(r => r.ThrowIfOutputTooLarge(16384, 4096)).Should().NotThrow();
     }
 
     [Fact]

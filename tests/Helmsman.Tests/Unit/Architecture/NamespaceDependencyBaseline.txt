@@ -96,7 +96,6 @@ Services.WindowZOrderService -> Native.NativeEnums  # moved out of WindowService
 
 ## Services -> Native (constant): move the Win32 constants the logic computes with (NativeEnums' VK_*, WS_*, WDA_* and the like) to a Models type that NativeEnums refers to
 src/Helmsman/Services/AppWindowProbe.cs -> Native.NativeEnums
-src/Helmsman/Services/CaptureRequest.cs -> Native.ScreenCaptureWrapper
 src/Helmsman/Services/ClipboardOrigin.cs -> Native.NativeEnums
 src/Helmsman/Services/DeniedWindowMask.cs -> Native.NativeEnums
 src/Helmsman/Services/DesktopStateService.cs -> Native.NativeEnums
@@ -118,7 +117,6 @@ src/Helmsman/Services/OwnedWindows.cs -> Native.NativeEnums
 src/Helmsman/Services/PauseHotkeyOptions.cs -> Native.NativeEnums
 src/Helmsman/Services/PopupService.cs -> Native.NativeEnums
 src/Helmsman/Services/PressKeysParser.cs -> Native.NativeEnums
-src/Helmsman/Services/ScreenshotService.cs -> Native.ScreenCaptureWrapper
 src/Helmsman/Services/SecurityPrompts.cs -> Native.NativeEnums
 src/Helmsman/Services/SendKeysParser.cs -> Native.NativeEnums
 src/Helmsman/Services/ServerInfoService.cs -> Native.NativeEnums

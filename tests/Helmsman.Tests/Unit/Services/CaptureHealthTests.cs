@@ -625,12 +625,14 @@ public class CaptureHealthTests
     [Fact]
     public void CaptureWindow_WhenTheImageCannotBeEncoded_IsEncodeFailed()
     {
-        // Arrange - JPEG cannot hold an edge longer than 65535 pixels; the pixels themselves were captured (the real
-        // wrapper refuses such an edge, and capture_region refuses it before capturing, so only a fake gets this far)
-        _capture.Setup(c => c.CaptureWindow(Window, false)).Returns(new CaptureResult(Pattern(70000, 1), 70000, 1, 0, 0, "PrintWindow"));
+        // Arrange - the pixels were captured, but drawing the pointer into the image fails. (A fake capture with an edge
+        // longer than JPEG takes did this before; the size bounds now refuse such a capture before its image is made.)
+        _capture.Setup(c => c.CaptureWindow(Window, false)).Returns(new CaptureResult(Pattern(200, 100), 200, 100, 0, 0, "PrintWindow"));
+        _capture.Setup(c => c.GetPointer()).Returns(new PointerState(40, 30, Visible: true));
+        _capture.Setup(c => c.DrawPointer(It.IsAny<nint>(), It.IsAny<int>(), It.IsAny<int>())).Throws(new InvalidOperationException("DrawIconEx failed"));
 
         // Act
-        var metadata = CreateSut().CaptureWindow(Window, includeFrame: false, new CaptureOptions { MaxDimension = 0, Format = CaptureFormat.Jpeg }).Metadata;
+        var metadata = CreateSut().CaptureWindow(Window, includeFrame: false, new CaptureOptions { MaxDimension = 0, IncludeCursor = true }).Metadata;
 
         // Assert
         metadata.Success.Should().BeFalse();

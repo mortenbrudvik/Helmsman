@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Helmsman.Models;
 using Helmsman.Services;
 using Helmsman.Services.Interfaces;
 
@@ -13,16 +14,6 @@ namespace Helmsman.Native;
 /// </summary>
 public class ScreenCaptureWrapper : IScreenCaptureWrapper
 {
-    /// <summary>The longest edge GDI captures, in pixels.</summary>
-    public const int MaxCaptureSize = 16384;
-
-    /// <summary>
-    /// The pixel budget of one capture: 64 megapixels (for example 8192 x 8192), 256 MB of pixels. A larger capture
-    /// is refused before any memory is allocated, and so is an image larger than that (a zoom, refused by
-    /// <see cref="Services.CaptureRequest.ThrowIfOutputTooLarge"/>), so a capture can never take gigabytes of the user's memory.
-    /// </summary>
-    public const long MaxCapturePixels = 64L * 1024 * 1024;
-
     /// <summary>The pixels were copied from the screen: what is on screen there, covering windows included.</summary>
     internal const string ScreenBitBltMethod = CaptureMethods.ScreenBitBlt;
 
@@ -255,20 +246,21 @@ public class ScreenCaptureWrapper : IScreenCaptureWrapper
     }
 
     /// <summary>
-    /// Refuses sizes GDI cannot capture and captures over the pixel budget, before any memory is allocated.
+    /// Refuses sizes GDI cannot capture and captures over the pixel budget (<see cref="CaptureLimits"/>), before any memory
+    /// is allocated.
     /// </summary>
     internal static void ValidateDimensions(int width, int height)
     {
         if (width <= 0 || height <= 0)
             throw new ArgumentException("Width and height must be positive");
 
-        if (width > MaxCaptureSize || height > MaxCaptureSize)
-            throw new ArgumentException($"Capture dimensions exceed maximum of {MaxCaptureSize}x{MaxCaptureSize}");
+        if (width > CaptureLimits.MaxCaptureEdge || height > CaptureLimits.MaxCaptureEdge)
+            throw new ArgumentException($"Capture dimensions exceed maximum of {CaptureLimits.MaxCaptureEdge}x{CaptureLimits.MaxCaptureEdge}");
 
-        if ((long)width * height > MaxCapturePixels)
+        if ((long)width * height > CaptureLimits.MaxCapturePixels)
         {
             throw new ArgumentException(
-                $"The capture of {width}x{height} pixels is over the budget of {MaxCapturePixels / (1024 * 1024)} megapixels");
+                $"The capture of {width}x{height} pixels is over the budget of {CaptureLimits.MaxCapturePixels / (1024 * 1024)} megapixels");
         }
     }
 
