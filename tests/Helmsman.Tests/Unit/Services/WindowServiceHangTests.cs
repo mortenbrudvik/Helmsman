@@ -127,19 +127,31 @@ public class WindowServiceHangTests
     [Fact]
     public async Task SetWindowBoundsBatch_CancelledDuringThePauseBetweenWindows_StopsAtOnce()
     {
-        // Arrange - two windows five seconds apart; the call is cancelled during the pause
-        var sut = CreateSut();
-        using var call = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
-        var stopwatch = Stopwatch.StartNew();
+        // Arrange - two windows five seconds apart; the call is cancelled as the first window is changed, so the pause after it
+        // is the batch's next step. Cancelled on a timer instead, a machine slow to reach the first window would cancel the
+        // batch before it, and one slow to start the call's thread could see the first window's call given up on. The
+        // deadline is long, as the call is never meant to be given up on here
+        using var call = new CancellationTokenSource();
+        var cancelled = Stopwatch.StartNew();
+        _native.Setup(n => n.SetWindowPos(Responsive, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<uint>()))
+            .Returns(() =>
+            {
+                call.Cancel();
+                cancelled.Restart();
+                return Win32CallResult.Ok;
+            });
+        var sut = CreateSut(Long);
 
         // Act
         var act = () => sut.SetWindowBoundsBatchAsync(
             [(Responsive, 0, 0, 640, 480, false), (Responsive, 640, 0, 640, 480, false)], delayBetweenMs: 5000,
             cancellationToken: call.Token);
 
-        // Assert - the batch, which holds the input gate, ends with the call; the second window is not changed
+        // Assert - the batch, which holds the input gate, ends with the call; the second window is not changed. A pause the
+        // cancellation did not end lasts the whole five seconds; one it ended takes no time, so the bound, timed from the
+        // cancellation, sits seconds away from both
         await act.Should().ThrowAsync<OperationCanceledException>();
-        stopwatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(4));
+        cancelled.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(4));
         _native.Verify(n => n.SetWindowPos(Responsive, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<uint>()),
             Times.Once);
     }
