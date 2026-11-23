@@ -26,15 +26,19 @@ namespace Helmsman.Tests.Contract;
 /// </remarks>
 public sealed class UserConfirmationFailClosedContractTests : IDisposable
 {
-    /// <summary>The tools' answer timeout here: short, so a question nobody answers ends the call at once.</summary>
-    private static readonly TimeSpan AnswerTimeout = TimeSpan.FromMilliseconds(200);
+    /// <summary>
+    /// The tools' answer timeout here: short, so a question nobody answers ends the call soon, but long enough for the question
+    /// to reach the client first, which every test asserts (the user was asked once). The deadline starts before the question
+    /// is sent: at 200 ms, a loaded test run now and then had it pass before the client was asked at all.
+    /// </summary>
+    private static readonly TimeSpan AnswerTimeout = TimeSpan.FromSeconds(1);
 
     /// <summary>
-    /// When the user's yes comes in a late answer: over a second after <see cref="AnswerTimeout"/>, so a test run whose thread pool
-    /// is slow to fire the deadline's timer still has the deadline pass first. Only the default revision waits for it; on the
-    /// others the deadline cancels the question.
+    /// When the user's yes comes in a late answer: a second and a half after <see cref="AnswerTimeout"/>, so a test run whose
+    /// thread pool is slow to fire the deadline's timer still has the deadline pass first. Only the default revision waits for
+    /// it; on the others the deadline cancels the question.
     /// </summary>
-    private static readonly TimeSpan LateAnswer = TimeSpan.FromMilliseconds(1500);
+    private static readonly TimeSpan LateAnswer = AnswerTimeout + TimeSpan.FromMilliseconds(1500);
 
     private static readonly long[] FourWindows =
         [TypicalDesktop.NotepadHandle, TypicalDesktop.BrowserHandle, 0x300000 + 2 * 0x1F4, 0x300000 + 4 * 0x1F4];

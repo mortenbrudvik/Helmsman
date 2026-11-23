@@ -21,7 +21,15 @@ public sealed class HostTargetConfirmationContractTests : IDisposable
     /// <remarks>drag is left out: a drop onto the host is refused outright (see its own tests).</remarks>
     public static TheoryData<string> InputTools() => new(InputGateToolFilter.InputTools.Where(t => t != "drag").Order(StringComparer.Ordinal));
 
-    private static readonly TimeSpan AnswerTimeout = TimeSpan.FromMilliseconds(300);
+    /// <summary>
+    /// How long the user has to answer: short, so a question nobody answers ends the call soon, but long enough for the question
+    /// to reach the client first, which the tests assert. The deadline starts before the question is sent: at 300 ms, a loaded
+    /// test run could have it pass before the client was asked at all.
+    /// </summary>
+    private static readonly TimeSpan AnswerTimeout = TimeSpan.FromSeconds(1);
+
+    /// <summary>When the user's yes comes when nobody answers in time: seconds after <see cref="AnswerTimeout"/>, which cancels it first.</summary>
+    private static readonly TimeSpan LateAnswer = AnswerTimeout + TimeSpan.FromSeconds(2);
 
     private static readonly nint Terminal = 0x100;
     private static readonly nint Notepad = 0x200;
@@ -147,7 +155,7 @@ public sealed class HostTargetConfirmationContractTests : IDisposable
                             case Answer.ClientFails:
                                 throw new InvalidOperationException("The client could not show the question.");
                             case Answer.NoAnswerInTime:
-                                await Task.Delay(TimeSpan.FromSeconds(2), token);
+                                await Task.Delay(LateAnswer, token);
                                 break;
                         }
 
