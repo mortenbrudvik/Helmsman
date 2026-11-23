@@ -260,10 +260,12 @@ public sealed class CdpTabService : ICdpTabService
         // With a dialog answer, the dialog the navigation opens (a beforeunload prompt, the new page's own) is answered on
         // this connection, and the navigation goes on
         using var opening = connection.ExpectEvent("Page.javascriptDialogOpening");
-        var dialogOpened = opening.WaitAsync(timeout, cancellationToken);
         var answered = dialogAnswer is { } answer ? connection.AnswerNextDialog(answer.Accept, answer.PromptText) : null;
         var navigated = await NavigateOnAsync(connection, target, url, waitUntil, gate, timeout, stopwatch, cancellationToken).ConfigureAwait(false);
-        if (answered == null || !navigated.Success || dialogOpened is not { IsCompletedSuccessfully: true, Result.Success: true })
+
+        // Whether the dialog opened is read from the listener itself: the event came before the navigation's reply, so it is
+        // there by now, while a wait on it would complete on a later turn of the thread pool, after the end on a busy machine
+        if (answered == null || !navigated.Success || opening.Received is not { Success: true })
             return navigated;
 
         // The dialog opened: its answer comes back at once

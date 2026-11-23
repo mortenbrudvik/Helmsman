@@ -567,6 +567,8 @@ public sealed class CdpConnection : ICdpConnection
 
         public void Complete(CdpResult<JsonElement> result) => _event.TrySetResult(result);
 
+        public CdpResult<JsonElement>? Received => _event.Task.IsCompleted ? _event.Task.Result : null;
+
         public async Task<CdpResult<JsonElement>> WaitAsync(TimeSpan timeout, CancellationToken cancellationToken)
         {
             using var wait = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);

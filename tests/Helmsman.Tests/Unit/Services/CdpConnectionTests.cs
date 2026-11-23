@@ -203,6 +203,29 @@ public class CdpConnectionTests
     }
 
     [Fact]
+    public async Task ExpectEvent_AnEventBeforeAReply_IsReceived_OnceTheReplyIsIn_WithoutWaitingForIt()
+    {
+        // Arrange - the event arrives before the command's reply; nobody waits for it
+        var socket = new FakeCdpWebSocket((s, command) =>
+        {
+            s.EnqueueEvent("Page.javascriptDialogOpening", new { type = "beforeunload" });
+            s.ReplyEmpty(command);
+        });
+        await using var connection = Connect(socket);
+        using var opening = connection.ExpectEvent("Page.javascriptDialogOpening");
+        using var never = connection.ExpectEvent("Page.loadEventFired");
+
+        // Act
+        await connection.SendAsync("Page.navigate", new { url = "about:blank" }, LongTimeout, CancellationToken.None);
+
+        // Assert - read as the event came, before the reply: no turn of the thread pool is needed to see it
+        opening.Received.Should().NotBeNull();
+        opening.Received!.Success.Should().BeTrue();
+        opening.Received.Value.GetProperty("type").GetString().Should().Be("beforeunload");
+        never.Received.Should().BeNull("that event never came");
+    }
+
+    [Fact]
     public async Task ExpectEvent_HonoursItsFilter_AndDropsEventsNobodyWaitsFor()
     {
         // Arrange

@@ -110,6 +110,14 @@ public interface ICdpEventWaiter : IDisposable
 {
     /// <summary>Waits for the event and returns its params; CdpTimeout after <paramref name="timeout"/>.</summary>
     Task<CdpResult<JsonElement>> WaitAsync(TimeSpan timeout, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The event's params once it came (or why listening ended, such as the connection closing), else null; does not wait.
+    /// Set as the event is read, before the connection handles any later message: once the reply to a command the browser
+    /// answered after the event is in, it is there, while a <see cref="WaitAsync"/> started before completes on a later turn
+    /// of the thread pool, which a busy machine can delay past that reply's handling.
+    /// </summary>
+    CdpResult<JsonElement>? Received { get; }
 }
 
 /// <summary>How a command is sent (<see cref="ICdpConnection.SendAsync"/>).</summary>
