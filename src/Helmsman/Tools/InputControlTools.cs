@@ -28,29 +28,31 @@ public class InputControlTools
     private readonly TimeSpan _answerTimeout;
     private readonly ITakeoverMonitor _takeover;
     private readonly IProcessSecurityProbe _securityProbe;
-    private readonly TimeProvider _clock;
 
     /// <param name="session">The input session.</param>
     /// <param name="hotkey">The pause hotkey.</param>
     /// <param name="takeover">Takeover detection (roadmap M7.4), whose mode and state get_control_status reports.</param>
     /// <param name="securityProbe">Whether the session is locked, which get_control_status' message adds (issue #18).</param>
     /// <param name="answerTimeout">How long resume_input waits for the user; default <see cref="DefaultAnswerTimeout"/>.</param>
-    /// <param name="clock">The clock of <paramref name="answerTimeout"/>; the system clock by default.</param>
     public InputControlTools(
         IInputSession session,
         IPauseHotkey hotkey,
         ITakeoverMonitor takeover,
         IProcessSecurityProbe securityProbe,
-        TimeSpan? answerTimeout = null,
-        TimeProvider? clock = null)
+        TimeSpan? answerTimeout = null)
     {
         _takeover = takeover ?? throw new ArgumentNullException(nameof(takeover));
         _securityProbe = securityProbe ?? throw new ArgumentNullException(nameof(securityProbe));
         _session = session ?? throw new ArgumentNullException(nameof(session));
         _hotkey = hotkey ?? throw new ArgumentNullException(nameof(hotkey));
         _answerTimeout = answerTimeout ?? DefaultAnswerTimeout;
-        _clock = clock ?? TimeProvider.System;
     }
+
+    /// <summary>
+    /// The clock of the answer timeout; the system clock by default. A test seam: the SDK creates this class for every call
+    /// with the server's services, which serve no clock.
+    /// </summary>
+    public TimeProvider AnswerClock { get; init; } = TimeProvider.System;
 
     [McpServerTool(Name = "get_control_status", Title = "Get Input Control Status", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
     [Description("Whether input is paused (how, by whom and since when), whether the pause hotkey is registered, the keys or " +
@@ -221,7 +223,7 @@ public class InputControlTools
         };
 
         ElicitResult answer;
-        using (var deadline = new CancellationTokenSource(_answerTimeout, _clock))
+        using (var deadline = new CancellationTokenSource(_answerTimeout, AnswerClock))
         using (var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, deadline.Token))
         {
             try

@@ -106,7 +106,7 @@ public sealed class InputControlToolContractTests : IDisposable
                 // instance from the services for every call, so no state of theirs outlives a call. Only a test
                 // that needs a shorter answer timeout registers one instance instead.
                 _ = answerTimeout is { } timeout
-                    ? builder.WithServerTools(new InputControlTools(session, _hotkey, Permissive.Takeover, securityProbe ?? Permissive.SecurityProbe, timeout, clock))
+                    ? builder.WithServerTools(new InputControlTools(session, _hotkey, Permissive.Takeover, securityProbe ?? Permissive.SecurityProbe, timeout) { AnswerClock = clock ?? TimeProvider.System })
                     : builder.WithServerTools<InputControlTools>();
             },
             clientOptions: InProcessMcpServer.WithRevision(options, revision),
