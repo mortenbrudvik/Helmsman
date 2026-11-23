@@ -792,15 +792,24 @@ public class PopupServiceTests
     [Fact]
     public async Task GetActivePopups_WithAStopGrace_GivesUpOnAStuckRead_AfterIt_AndStillListsThePopup()
     {
-        // Arrange - the menu's provider does not answer; the real worker abandons the read after the grace
+        // Arrange - the menu's provider does not answer until the test ends; the real worker abandons the read after the
+        // grace. The worker is wrapped to record the grace each read is given
         using var release = new ManualResetEventSlim();
+        var readEnded = false;
         var main = AddMain("Editor");
         var menu = AddPopup("", PopupService.MenuClass, owner: main);
-        _tree.WithWindow(menu, new FakeUiaNode("Menu", "Context") { OnRead = () => release.Wait(TimeSpan.FromSeconds(3)) });
+        _tree.WithWindow(menu, new FakeUiaNode("Menu", "Context")
+        {
+            OnRead = () =>
+            {
+                release.Wait(TimeSpan.FromSeconds(30));
+                Volatile.Write(ref readEnded, true);
+            }
+        });
         Registry = new ElementRegistry(_tree, _worker, _desktop.Native.Object, ElementRegistry.DefaultCapacity, 1, TimeProvider.System);
+        var worker = new GraceRecordingWorker(new UiaWorker());
         var sut = new PopupService(_desktop.Native.Object, _desktop.HostGuard.Object, _policy.Object, _processes.Object, _tree,
-            new UiaWorker(), Registry);
-        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            worker, Registry);
 
         try
         {
@@ -808,11 +817,11 @@ public class PopupServiceTests
             var result = await sut.GetActivePopupsAsync(main, TimeSpan.FromMilliseconds(100), CancellationToken.None,
                 stopGrace: TimeSpan.FromMilliseconds(50));
 
-            // Assert - without the grace it would wait PopupService's default grace, a whole second, after the 100 ms
-            // timeout: at least 1100 ms. The bound sits just below that, not near the ~150 ms the call takes, so a test
-            // run that starves the worker's thread for most of a second still passes, while a call that ignored the
-            // grace (or hung on the stuck read, which blocks for 3 s) still fails
-            stopwatch.Elapsed.Should().BeLessThan(TimeSpan.FromMilliseconds(100 + 1000 - 50));
+            // Assert - the read was given the grace asked for, not PopupService's default of a second, and the call came back
+            // while the read was still stuck (it is released only below): the worker gave up on it. Neither depends on how
+            // fast the machine is; a call that waited for the read would not come back until the read's 30 s backstop
+            worker.Graces.Should().Equal(TimeSpan.FromMilliseconds(50));
+            Volatile.Read(ref readEnded).Should().BeFalse("the call gave up on the stuck read instead of waiting for it");
             result.Success.Should().BeTrue();
             result.Popups.Should().ContainSingle().Which.Ref.Should().BeNull();
         }
@@ -909,6 +918,33 @@ public class PopupServiceTests
     }
 
     #endregion
+
+    /// <summary>Runs each read on <paramref name="inner"/>, recording the grace it was given.</summary>
+    private sealed class GraceRecordingWorker(IUiaWorker inner) : IUiaWorker
+    {
+        private readonly List<TimeSpan> _graces = [];
+
+        public IReadOnlyList<TimeSpan> Graces
+        {
+            get
+            {
+                lock (_graces)
+                {
+                    return _graces.ToList();
+                }
+            }
+        }
+
+        public Task<T> RunAsync<T>(int targetProcessId, Func<CancellationToken, T> read, CancellationToken cancellationToken, TimeSpan grace)
+        {
+            lock (_graces)
+            {
+                _graces.Add(grace);
+            }
+
+            return inner.RunAsync(targetProcessId, read, cancellationToken, grace);
+        }
+    }
 }
 
 internal static class PopupServiceTestExtensions
