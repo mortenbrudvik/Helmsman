@@ -26,18 +26,19 @@ public class CdpTabServiceTests
     private static readonly CdpTarget Tab = new("T1", "page", "Docs", "https://example.com/", "ws://127.0.0.1:9222/devtools/page/T1", Port, BrowserPid);
 
     private static CdpTabService CreateSut(
-        FakeCdpHttpHandler http, ICdpWebSocketFactory sockets, int? portOwner = BrowserPid, bool listenerTableReadable = true)
+        FakeCdpHttpHandler http, ICdpWebSocketFactory sockets, int? portOwner = BrowserPid, bool listenerTableReadable = true,
+        TimeSpan? unansweredProbeTime = null)
     {
         var owners = new FakePortOwnerResolver(portOwner, listenerTableReadable);
         var transport = new CdpTransport(http, sockets, owners);
-        return new CdpTabService(new CdpService(transport, owners), transport, owners);
+        return new CdpTabService(new CdpService(transport, owners), transport, owners, unansweredProbeTime);
     }
 
     private static CdpTabService CreateSut(FakeCdpBrowser browser, int? portOwner = BrowserPid, bool listenerTableReadable = true) =>
         CreateSut(browser.Http, browser.Sockets, portOwner, listenerTableReadable);
 
-    private static CdpTabService CreateSut(FakeTab tab) =>
-        CreateSut(FakeCdpHttpHandler.Targets(), new FakeCdpWebSocketFactory(tab.Socket));
+    private static CdpTabService CreateSut(FakeTab tab, TimeSpan? unansweredProbeTime = null) =>
+        CreateSut(FakeCdpHttpHandler.Targets(), new FakeCdpWebSocketFactory(tab.Socket), unansweredProbeTime: unansweredProbeTime);
 
     /// <summary>A normal window at the pixels of a browser window's DIP bounds at 100 %.</summary>
     private static CdpWindow At(string title, int left, int top, int width, int height) =>
@@ -539,20 +540,22 @@ public class CdpTabServiceTests
     [Fact]
     public async Task NavigateAsync_AServerThatIsSlowToAnswer_TimesOut_AsStillLoading_NotAsCdpTimeout()
     {
-        // No Page.navigate reply in time, but the tab answers: the navigation is under way and the server is slow
+        // No Page.navigate reply in time, but the tab answers: the navigation is under way and the server is slow. Of the 5 s,
+        // 4.5 s are kept to ask the tab, not production's half a second (a quarter of 1.5 s here before), so a loaded machine
+        // that is slow to send the check and read its answer still gets it in time
         var tab = new FakeTab { NavigateNeverAnswers = true };
-        var sut = CreateSut(tab);
+        var sut = CreateSut(tab, unansweredProbeTime: TimeSpan.FromMilliseconds(4500));
         var stopwatch = Stopwatch.StartNew();
 
         var result = await sut.NavigateAsync(Tab, "https://example.com/slow", BrowserWaitUntil.Load, new RecordingGate().EnterAsync,
-            TimeSpan.FromMilliseconds(1500));
+            TimeSpan.FromSeconds(5));
 
         result.Success.Should().BeTrue(result.Error);
         result.Value!.TimedOut.Should().BeTrue();
         result.Value.LoadState.Should().Be("loading");
         result.Value.Url.Should().BeNull("the tab still shows the old page, which is not the one asked for");
-        // The call ends at its 1.5 s limit; the reply never comes, so a call that ignored the limit would not end at all.
-        // HangBound catches that without failing a loaded test run that is slow to fire the limit's timer
+        // The call ends once Page.navigate's share has passed and the tab answered; the reply never comes, so a call that
+        // ignored the limit would not end at all
         stopwatch.Elapsed.Should().BeLessThan(HangBound);
     }
 

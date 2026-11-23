@@ -76,15 +76,19 @@ public sealed class CdpTabService : ICdpTabService
     private readonly ICdpService _cdp;
     private readonly ICdpTransport _transport;
     private readonly ITcpPortOwnerResolver _portOwners;
+    private readonly TimeSpan? _unansweredProbeTime;
 
     /// <param name="cdp">The tab list, /json/version and the browser windows.</param>
     /// <param name="transport">The DevTools connections.</param>
     /// <param name="portOwners">Tells which process listens on a debug port.</param>
-    public CdpTabService(ICdpService cdp, ICdpTransport transport, ITcpPortOwnerResolver portOwners)
+    /// <param name="unansweredProbeTime">The part of a navigation's time kept to ask the tab why Page.navigate got no
+    /// answer (at most what is left); by default a quarter of what is left, at most half a second. A test seam.</param>
+    public CdpTabService(ICdpService cdp, ICdpTransport transport, ITcpPortOwnerResolver portOwners, TimeSpan? unansweredProbeTime = null)
     {
         _cdp = cdp;
         _transport = transport;
         _portOwners = portOwners;
+        _unansweredProbeTime = unansweredProbeTime;
     }
 
     /// <inheritdoc />
@@ -691,9 +695,14 @@ public sealed class CdpTabService : ICdpTabService
     private static TimeSpan WindowLookupTime(TimeSpan remaining) =>
         remaining < MaxWindowLookupTime ? remaining / 2 : MaxWindowLookupTime;
 
-    /// <summary>The part of a navigation's time kept to ask the tab why Page.navigate got no answer: at most half a second or a quarter.</summary>
-    private static TimeSpan UnansweredProbeTime(TimeSpan remaining) =>
-        remaining / 4 < MaxUnansweredProbeTime ? remaining / 4 : MaxUnansweredProbeTime;
+    /// <summary>
+    /// The part of a navigation's time kept to ask the tab why Page.navigate got no answer: at most half a second or a quarter,
+    /// or the time the constructor was given, at most what is left.
+    /// </summary>
+    private TimeSpan UnansweredProbeTime(TimeSpan remaining) =>
+        _unansweredProbeTime is { } kept
+            ? kept < remaining ? kept : remaining
+            : remaining / 4 < MaxUnansweredProbeTime ? remaining / 4 : MaxUnansweredProbeTime;
 
     /// <summary>
     /// Whether a failed command ends a wait: a dialog, a closed connection, an answer too large or unreadable. A timeout
