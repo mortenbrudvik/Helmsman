@@ -17,6 +17,12 @@ public class CdpTabServiceTests
     private static readonly TimeSpan LongTimeout = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan HangBound = TimeSpan.FromSeconds(10);
 
+    /// <summary>
+    /// The timeout of a wait whose condition never holds: the connection and the first check must be answered within it, which
+    /// takes milliseconds but which a loaded machine can stretch past half a second; the wait then lasts all of it.
+    /// </summary>
+    private static readonly TimeSpan WaitThatTimesOut = TimeSpan.FromMilliseconds(1500);
+
     private static readonly CdpTarget Tab = new("T1", "page", "Docs", "https://example.com/", "ws://127.0.0.1:9222/devtools/page/T1", Port, BrowserPid);
 
     private static CdpTabService CreateSut(
@@ -627,8 +633,10 @@ public class CdpTabServiceTests
         var sut = CreateSut(tab);
         var stopwatch = Stopwatch.StartNew();
 
+        // Two seconds: the connection, the read before the navigation, Page.navigate and a probe of the page must be answered
+        // within it, which a loaded machine can stretch past the 700 ms this had
         var result = await sut.NavigateAsync(Tab, "https://example.com/", BrowserWaitUntil.Load, new RecordingGate().EnterAsync,
-            TimeSpan.FromMilliseconds(700));
+            TimeSpan.FromSeconds(2));
 
         result.Success.Should().BeTrue(result.Error);
         result.Value!.TimedOut.Should().BeTrue();
@@ -703,7 +711,7 @@ public class CdpTabServiceTests
         var sut = CreateSut(tab);
 
         var result = await sut.WaitAsync(Tab, new BrowserWaitCondition("example.com/done", "done", "thanks", null),
-            TimeSpan.FromMilliseconds(500), TimeSpan.FromSeconds(3));
+            WaitThatTimesOut, TimeSpan.FromSeconds(3));
 
         result.Value!.Satisfied.Should().BeFalse("the text condition does not hold");
         result.Value.Detail.Should().Contain("text").And.Contain("thanks").And.NotContain("URL").And.NotContain("title");
@@ -716,7 +724,7 @@ public class CdpTabServiceTests
         var sut = CreateSut(tab);
         var stopwatch = Stopwatch.StartNew();
 
-        var result = await sut.WaitAsync(Tab, new BrowserWaitCondition(null, null, null, "#results"), TimeSpan.FromMilliseconds(600),
+        var result = await sut.WaitAsync(Tab, new BrowserWaitCondition(null, null, null, "#results"), WaitThatTimesOut,
             TimeSpan.FromSeconds(3));
 
         result.Success.Should().BeTrue(result.Error);

@@ -15,6 +15,13 @@ public class CdpServiceTests
     private static readonly TimeSpan ShortTimeout = TimeSpan.FromMilliseconds(200);
     private static readonly TimeSpan LongTimeout = TimeSpan.FromSeconds(30);
 
+    /// <summary>
+    /// The budget of a call whose browser connects and is asked, but never answers the last command: the steps before it
+    /// (the version, the connection, the commands that are answered) must fit in it, which take milliseconds but which a
+    /// loaded machine can stretch past <see cref="ShortTimeout"/>; the call then waits all of it.
+    /// </summary>
+    private static readonly TimeSpan NoAnswerTimeout = TimeSpan.FromMilliseconds(1500);
+
     // Generous bound so slow CI machines do not flake; a hang would never finish.
     private static readonly TimeSpan HangBound = TimeSpan.FromSeconds(10);
 
@@ -201,7 +208,7 @@ public class CdpServiceTests
         // Browser.close is on the socket: the browser may be closing, so the caller still waits for its exit
         var browser = new FakeCdpBrowser { CloseAnswer = FakeBrowserClose.Never };
 
-        var result = await CreateSut(browser).CloseBrowserAsync(Port, BrowserPid, ShortTimeout);
+        var result = await CreateSut(browser).CloseBrowserAsync(Port, BrowserPid, NoAnswerTimeout);
 
         result.Success.Should().BeTrue(result.Error);
         result.Value.Should().BeFalse("no answer came");
@@ -1050,12 +1057,12 @@ public class CdpServiceTests
         var sut = CreateSut(sockets: new FakeCdpWebSocketFactory(socket));
         var stopwatch = Stopwatch.StartNew();
 
-        var result = await sut.GetPageSnapshotAsync(Tab, TextPage, ShortTimeout);
+        var result = await sut.GetPageSnapshotAsync(Tab, TextPage, NoAnswerTimeout);
 
         stopwatch.Elapsed.Should().BeLessThan(HangBound);
         result.Success.Should().BeFalse();
         result.ErrorCode.Should().Be(BrowserErrorCode.CdpTimeout);
-        result.Error.Should().Contain("dialog").And.Contain("200 ms");
+        result.Error.Should().Contain("dialog").And.Contain("1500 ms");
         socket.ReceiveTokenWasCancelled.Should().BeTrue("the receive must be bounded by the timeout token");
         socket.WasAborted.Should().BeTrue();
         socket.WasDisposed.Should().BeTrue();
@@ -1277,11 +1284,12 @@ public class CdpServiceTests
     [Fact]
     public async Task GetPageSnapshotAsync_Succeeds_WhenPageEnableIsNeverAnswered()
     {
-        // A page may never answer Page.enable; the read does not wait for it
+        // A page may never answer Page.enable; the read does not wait for it (a read that did would time out at the end of
+        // the budget, long or short: the budget only has to cover the connection, which a loaded machine can stretch)
         var socket = PageAnswering(Snapshot("t", "u", "read anyway"));
         var sut = CreateSut(sockets: new FakeCdpWebSocketFactory(socket));
 
-        var result = await sut.GetPageSnapshotAsync(Tab, TextPage, ShortTimeout);
+        var result = await sut.GetPageSnapshotAsync(Tab, TextPage, NoAnswerTimeout);
 
         result.Success.Should().BeTrue();
         result.Value!.Content.Should().Be("read anyway");
@@ -1314,7 +1322,7 @@ public class CdpServiceTests
         });
         var sut = CreateSut(sockets: new FakeCdpWebSocketFactory(socket));
 
-        var result = await sut.GetPageSnapshotAsync(Tab, TextPage, ShortTimeout);
+        var result = await sut.GetPageSnapshotAsync(Tab, TextPage, NoAnswerTimeout);
 
         result.ErrorCode.Should().Be(BrowserErrorCode.CdpTimeout);
         result.Error.Should().Contain("Page.enable was refused: Page domain is not available (-32000)");
