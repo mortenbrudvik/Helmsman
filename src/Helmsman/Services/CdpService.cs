@@ -408,7 +408,8 @@ public class CdpService : ICdpService
 
         // A refused Page.enable never fails a read that worked; it explains one that did not. Its send is awaited here, not
         // looked at: the connection is closed by now, so the send has its reply or has failed, but its task completes on a
-        // later turn of the thread pool than the reader read the reply on, which a busy machine can put after this point
+        // later turn of the thread pool than the reader read the reply on, which a busy machine can put after this point. A
+        // caller that cancels during that turn gets OperationCanceledException instead of the failure, as it does above
         var enabled = await enable.ConfigureAwait(false);
         if (enabled is { Success: true, Value.Error: { } enableFault })
         {

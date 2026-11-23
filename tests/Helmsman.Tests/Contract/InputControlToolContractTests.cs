@@ -104,9 +104,10 @@ public sealed class InputControlToolContractTests : IDisposable
 
                 // The input control tools are registered as the server registers them: the SDK builds a new
                 // instance from the services for every call, so no state of theirs outlives a call. Only a test
-                // that needs a shorter answer timeout registers one instance instead.
-                _ = answerTimeout is { } timeout
-                    ? builder.WithServerTools(new InputControlTools(session, _hotkey, Permissive.Takeover, securityProbe ?? Permissive.SecurityProbe, timeout) { AnswerClock = clock ?? TimeProvider.System })
+                // that needs a shorter answer timeout or another clock registers one instance instead.
+                _ = answerTimeout != null || clock != null
+                    ? builder.WithServerTools(new InputControlTools(session, _hotkey, Permissive.Takeover, securityProbe ?? Permissive.SecurityProbe,
+                        answerTimeout) { AnswerClock = clock ?? TimeProvider.System })
                     : builder.WithServerTools<InputControlTools>();
             },
             clientOptions: InProcessMcpServer.WithRevision(options, revision),
