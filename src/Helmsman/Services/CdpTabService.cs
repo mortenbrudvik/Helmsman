@@ -215,16 +215,20 @@ public sealed class CdpTabService : ICdpTabService
         CdpResult<IReadOnlyList<CdpTarget>>? listed = null;
         while (true)
         {
-            // Listed once, then again only while a list has time to answer: the pause before it can overrun what was left (a
-            // busy machine fires its timer late), and a list asked for with no time left fails by its own timeout instead of
-            // telling whether the tab is listed, so the list before it stands
+            // Listed once, and after each pause again while any time is left: the pause can overrun what was left (a busy
+            // machine fires its timer late), and then the list before it stands
             var remaining = timeout - stopwatch.Elapsed;
-            if (listed == null || remaining > NewTabListingDelay)
+            if (listed == null || remaining > TimeSpan.Zero)
             {
-                listed = await _cdp.GetOwnedPageTargetsAsync(port, processId, remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero,
+                var list = await _cdp.GetOwnedPageTargetsAsync(port, processId, remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero,
                     cancellationToken).ConfigureAwait(false);
-                if (listed.Success && listed.Value!.FirstOrDefault(t => t.Id == targetId) is { } opened)
+                if (list.Success && list.Value!.FirstOrDefault(t => t.Id == targetId) is { } opened)
                     return CdpResult<CdpTarget>.Ok(opened);
+
+                // A list that ran out of time (the last one may get only what the pause left) does not undo the answer of a
+                // list before it that did not have the tab
+                if (list.ErrorCode != BrowserErrorCode.CdpTimeout || listed is not { Success: true })
+                    listed = list;
             }
 
             // A port that changed hands is not listed again (another program may have it now), nor any port once the time is up
