@@ -76,8 +76,9 @@ public class CaptureFreshnessWarningTests
         capture.Metadata.Warnings.Should().ContainSingle(w => IsUnchanged(w)).Which.Should().Be(
             "CaptureUnchangedAfterInput: the image is identical to the previous capture of this window although input was sent " +
             "to it in between. Either the input changed nothing visible, or this is an older frame (a fullscreen game in " +
-            "front can keep returning one): bring another window to the front and this one back (focus_window), then " +
-            "capture again.");
+            "front can keep returning one). If such a game is in front, call focus_window on your own terminal or chat " +
+            "window (get_server_info host.windows), then capture_window of the game. Your next key, or a click no window " +
+            "covers, with its windowHandle brings it back. No need to ask the user.");
     }
 
     [Fact]
@@ -318,8 +319,9 @@ public class CaptureFreshnessWarningTests
         capture.Metadata.Warnings.Should().ContainSingle(w => IsUnchanged(w)).Which.Should().Be(
             "CaptureUnchangedAfterInput: the image is identical to the previous capture of this region although input was sent " +
             "to it in between. Either the input changed nothing visible, or this is an older frame (a fullscreen game in " +
-            "front can keep returning one): bring another window to the front and this one back (focus_window), then " +
-            "capture again.");
+            "front can keep returning one). If such a game is in front, call focus_window on your own terminal or chat " +
+            "window (get_server_info host.windows), then capture_window of the game. Your next key, or a click no window " +
+            "covers, with its windowHandle brings it back. No need to ask the user.");
     }
 
     [Fact]
@@ -502,7 +504,9 @@ public class CaptureFreshnessWarningTests
         capture.Metadata.Warnings.Should().ContainSingle(w => IsFullscreen(w)).Which.Should().Be(
             "ExclusiveFullscreen: the window in front has its monitor to itself (Windows reports a full-screen 3D app). While " +
             "it stays in front, captures of that monitor can keep returning the frame from when it came to the front: to see " +
-            "the current frame, bring another window to the front and this one back (focus_window), then capture again.");
+            "the current frame, call focus_window on your own terminal or chat window (get_server_info host.windows), then " +
+            "capture_window of the fullscreen window. Your next key, or a click no window covers, with its windowHandle " +
+            "brings it back. No need to ask the user.");
     }
 
     [Fact]

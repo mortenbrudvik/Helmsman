@@ -17,6 +17,17 @@ internal static class CaptureFreshnessWarnings
     internal const int RunningD3DFullScreen = 3;
 
     /// <summary>
+    /// How both warnings tell the agent to see the current frame of <paramref name="target"/>: a capture_window taken while
+    /// another window is in front is current (a screen copy would show the window in front over it). The next key sent with
+    /// the target's handle brings it to the front again; a click does only where no window covers the point, since it is
+    /// refused with TargetOccluded otherwise. An agent told only to bring another window to the front stopped and asked the
+    /// user whether it could, so the text says that it need not ask.
+    /// </summary>
+    private static string FreshFrameRemedy(string target) =>
+        "call focus_window on your own terminal or chat window (get_server_info host.windows), then capture_window of " +
+        $"{target}. Your next key, or a click no window covers, with its windowHandle brings it back. No need to ask the user.";
+
+    /// <summary>
     /// Remembers the capture with <paramref name="freshness"/> and warns when its pixels are identical to the previous capture
     /// of the same target although input was sent to it in between: for a window capture to its top-level window
     /// <paramref name="root"/>, for a screen capture (<paramref name="window"/> zero) to a window over the captured region now.
@@ -53,8 +64,7 @@ internal static class CaptureFreshnessWarnings
         warnings.Add(CaptureWarnings.Format(CaptureWarnings.CaptureUnchangedAfterInput,
             $"the image is identical to the previous capture of this {(window != nint.Zero ? "window" : "region")} although input " +
             "was sent to it in between. Either the input changed nothing visible, or this is an older frame (a fullscreen game " +
-            "in front can keep returning one): bring another window to the front and this one back (focus_window), then " +
-            "capture again."));
+            "in front can keep returning one). If such a game is in front, " + FreshFrameRemedy("the game")));
     }
 
     /// <summary>
@@ -98,7 +108,7 @@ internal static class CaptureFreshnessWarnings
         warnings.Add(CaptureWarnings.Format(CaptureWarnings.ExclusiveFullscreen,
             "the window in front has its monitor to itself (Windows reports a full-screen 3D app). While it stays in front, " +
             "captures of that monitor can keep returning the frame from when it came to the front: to see the current frame, " +
-            "bring another window to the front and this one back (focus_window), then capture again."));
+            FreshFrameRemedy("the fullscreen window")));
     }
 
     /// <summary>Whether <paramref name="warning"/> is an ImageBlank warning.</summary>
