@@ -40,6 +40,7 @@ internal sealed class MainWindow : Window
     private WebViewWindow? _webViewWindow;
     private OverlayWindow? _overlay;
     private CanvasWindow? _canvas;
+    private GlFrameCounterWindow? _glCounter;
     private Label? _changePanel;
     private FrameworkElement? _spinner;
     private readonly RotateTransform _spinnerTurn = new(0, TimedPanelSize / 2.0, TimedPanelSize / 2.0);
@@ -79,7 +80,11 @@ internal sealed class MainWindow : Window
         AddHandler(PreviewMouseUpEvent, new MouseButtonEventHandler(OnPreviewMouseUp), handledEventsToo: true);
         Loaded += OnLoaded;
         ContentRendered += OnContentRendered;
-        Closed += (_, _) => ShuttingDown = true;
+        Closed += (_, _) =>
+        {
+            ShuttingDown = true;
+            _glCounter?.Dispose();
+        };
     }
 
     /// <summary>True once the main window has closed; the document then closes without its save prompt.</summary>
@@ -414,6 +419,10 @@ internal sealed class MainWindow : Window
         {
             OpenCanvas();
         }
+        if (_options.OpenGl != null)
+        {
+            OpenGlCounter(hwnd);
+        }
         if (_options.OpenModal)
         {
             // After the ready event: ShowDialog does not return until the dialog closes.
@@ -632,6 +641,21 @@ internal sealed class MainWindow : Window
         _canvas = new CanvasWindow(_options, _events);
         _canvas.Closed += (_, _) => _canvas = null;
         _canvas.Show();
+    }
+
+    /// <summary>
+    /// Opens the GL frame counter window (<c>--open-gl</c>, see <see cref="GlFrameCounterWindow"/>) on the monitor of
+    /// <paramref name="mainWindow"/>, once: it runs on its own thread and closes itself, at the latest when this window closes.
+    /// </summary>
+    private void OpenGlCounter(nint mainWindow)
+    {
+        if (_glCounter != null)
+        {
+            return;
+        }
+
+        _glCounter = new GlFrameCounterWindow(_options, _events, mainWindow);
+        _glCounter.Start();
     }
 
     private void Log(string name, params (string Key, JsonNode? Value)[] fields)

@@ -48,6 +48,10 @@
     <Compile Include="..\FixtureApp\FixtureContract.cs" Link="FixtureContract\FixtureContract.cs" />
     <Compile Include="..\FixtureApp\FixtureOptions.cs" Link="FixtureContract\FixtureOptions.cs" />
     <Compile Include="..\FixtureApp\FixtureSaveFolder.cs" Link="FixtureContract\FixtureSaveFolder.cs" />
+    <!-- What the GL frame counter window draws, so the tests decode its captures with the layout it was drawn with -->
+    <Compile Include="..\FixtureApp\GlFrameCounterLayout.cs" Link="FixtureContract\GlFrameCounterLayout.cs" />
+    <!-- The GL window's watchdog, so its deadline and decision are tested without starting the fixture -->
+    <Compile Include="..\FixtureApp\GlWindowWatchdog.cs" Link="FixtureContract\GlWindowWatchdog.cs" />
   </ItemGroup>
 
   <ItemGroup>

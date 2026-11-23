@@ -6,8 +6,12 @@
     app, so its desktop tests never act on the developer's own windows.
 
     Never start it from a normal test run: only the E2E harness starts it, and only when a desktop
-    tier is opted in (see TESTING.md, "End-to-end tests against the fixture app"). FixtureContract.cs
-    and FixtureOptions.cs are also compiled into the E2E project, so both sides share one contract.
+    tier is opted in (see TESTING.md, "End-to-end tests against the fixture app"). FixtureContract.cs,
+    FixtureOptions.cs, FixtureSaveFolder.cs, GlFrameCounterLayout.cs and GlWindowWatchdog.cs are also
+    compiled into the E2E project, so both sides share one contract.
+
+    The GL frame counter window (open-gl) is plain Win32 and OpenGL 1.1 through P/Invoke to user32,
+    gdi32 and opengl32: no package.
 
     The WebView2 window (roadmap M3.F4) uses the Microsoft.Web.WebView2 package, which every build
     restores and copies, but it starts WebView2, and so needs the Edge WebView2 runtime, only when the

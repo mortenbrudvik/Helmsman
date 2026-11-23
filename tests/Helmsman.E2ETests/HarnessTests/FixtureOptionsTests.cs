@@ -31,7 +31,9 @@ public class FixtureOptionsTests
             ChangeAfter: TimeSpan.FromMilliseconds(800),
             AnimateFor: TimeSpan.FromMilliseconds(1500),
             OpenOverlay: true,
-            ExcludeOverlayFromCapture: true);
+            ExcludeOverlayFromCapture: true,
+            OpenGl: GlWindowMode.Windowed(640, 360),
+            GlLifetime: TimeSpan.FromSeconds(30));
 
         // Act
         var parsed = FixtureOptions.Parse(options.ToArguments());
@@ -81,6 +83,59 @@ public class FixtureOptionsTests
         options.ExcludeOverlayFromCapture.Should().BeFalse("no window keeps out of captures unless a scenario asks for one");
         options.ChangeAfter.Should().BeNull("the main window's pixels do not change by themselves");
         options.AnimateFor.Should().BeNull();
+        options.OpenGl.Should().BeNull("no GL window unless a scenario asks for one");
+        options.EffectiveGlLifetime.Should().Be(FixtureOptions.DefaultGlLifetime);
+    }
+
+    [Theory]
+    [InlineData("full-monitor", 0, 0)]
+    [InlineData("640x360", 640, 360)]
+    [InlineData("160x7680", 160, 7680)]
+    public void Parse_ReadsTheGlWindowMode_ThatWritesBackAlone(string value, int width, int height)
+    {
+        // Act
+        var options = FixtureOptions.Parse([FixtureOptions.OpenGlOption, value]);
+
+        // Assert
+        options.OpenGl.Should().Be(new GlWindowMode(width, height));
+        options.OpenGl!.IsFullMonitor.Should().Be(value == GlWindowMode.FullMonitorValue);
+        options.ToArguments().Should().Equal(FixtureOptions.InstanceOption, FixtureOptions.DefaultInstance, FixtureOptions.OpenGlOption, value);
+    }
+
+    [Fact]
+    public void Parse_ReadsTheGlLifetime_InSeconds()
+    {
+        var options = FixtureOptions.Parse(["--gl-lifetime-seconds", "45", "--open-gl", "full-monitor"]);
+
+        options.GlLifetime.Should().Be(TimeSpan.FromSeconds(45));
+        options.EffectiveGlLifetime.Should().Be(TimeSpan.FromSeconds(45));
+    }
+
+    [Theory]
+    [InlineData("--open-gl")]
+    [InlineData("--open-gl", "fullscreen")]
+    [InlineData("--open-gl", "640X360")]
+    [InlineData("--open-gl", "640x")]
+    [InlineData("--open-gl", "159x360")]
+    [InlineData("--open-gl", "640x7681")]
+    [InlineData("--open-gl", "-640x360")]
+    [InlineData("--gl-lifetime-seconds", "20")]
+    [InlineData("--open-gl", "640x360", "--gl-lifetime-seconds", "0")]
+    [InlineData("--open-gl", "640x360", "--gl-lifetime-seconds", "121")]
+    [InlineData("--open-gl", "640x360", "--open-gl", "full-monitor")]
+    public void Parse_RejectsAnInvalidGlWindow(params string[] args)
+    {
+        var act = () => FixtureOptions.Parse(args);
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void ToArguments_RejectsAGlWindowSizeTheFixtureWouldRefuse()
+    {
+        var act = () => new FixtureOptions("abc", OpenGl: new GlWindowMode(20, 20)).ToArguments();
+
+        act.Should().Throw<ArgumentException>().WithMessage("*160*");
     }
 
     [Theory]
@@ -288,7 +343,8 @@ public class FixtureOptionsTests
             FixtureContract.TaskDialogTitle("abc"),
             FixtureContract.WebTitle("abc"),
             FixtureContract.CanvasTitle("abc"),
-            FixtureContract.OverlayTitle("abc")
+            FixtureContract.OverlayTitle("abc"),
+            FixtureContract.GlTitle("abc")
         };
 
         // Assert
@@ -353,7 +409,8 @@ public class FixtureOptionsTests
         FixtureContract.MenuTitle(instance),
         FixtureContract.WebTitle(instance),
         FixtureContract.CanvasTitle(instance),
-        FixtureContract.OverlayTitle(instance)
+        FixtureContract.OverlayTitle(instance),
+        FixtureContract.GlTitle(instance)
     ];
 
     /// <summary>

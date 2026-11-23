@@ -61,6 +61,12 @@ public static class FixtureContract
     /// <summary>Start of the overlay's title (roadmap M6.7).</summary>
     public const string OverlayTitlePrefix = "Helmsman Fixture Overlay";
 
+    /// <summary>Start of the GL frame counter window's title (<c>--open-gl</c>).</summary>
+    public const string GlTitlePrefix = "Helmsman Fixture GL Counter";
+
+    /// <summary>How often the GL window reports the frame it last swapped (<see cref="Events.GlFrame"/>).</summary>
+    public const int GlFrameReportIntervalMs = 100;
+
     /// <summary>Number of items in the virtualized list.</summary>
     public const int VirtualListItemCount = 10_000;
 
@@ -100,6 +106,9 @@ public static class FixtureContract
 
     /// <summary>Title of the overlay of fixture instance <paramref name="instance"/>.</summary>
     public static string OverlayTitle(string instance) => $"{OverlayTitlePrefix} {instance}";
+
+    /// <summary>Title of the GL frame counter window of fixture instance <paramref name="instance"/>.</summary>
+    public static string GlTitle(string instance) => $"{GlTitlePrefix} {instance}";
 
     /// <summary>
     /// The lines the canvas window draws (roadmap M6.3), top to bottom, in Segoe UI: pixels only, which UI Automation cannot
@@ -439,12 +448,44 @@ public static class FixtureContract
         public const string AnimationStopped = "animationStopped";
 
         /// <summary>
+        /// The GL frame counter window (<c>--open-gl</c>) is shown and has swapped its first frame. Fields: <c>hwnd</c>,
+        /// <c>title</c>, <c>mode</c> (<c>full-monitor</c> or the windowed size, as <c>--open-gl</c> takes it),
+        /// <c>windowRect</c>, <c>clientRect</c> and <c>monitorRect</c> (the monitor's bounds, taskbar included), rectangles
+        /// as in the ready event; <c>vsync</c> (whether wglSwapIntervalEXT(1) succeeded), <c>vendor</c> and <c>renderer</c>
+        /// (glGetString), <c>lifetimeMs</c>, <c>closeRect</c> (the close block on the screen) and <c>neutralPoint</c> (an
+        /// object with <c>x</c> and <c>y</c>: a screen point where a click changes nothing). What it draws is
+        /// <see cref="GlFrameCounterLayout"/> over the client area.
+        /// </summary>
+        public const string GlOpened = "glOpened";
+
+        /// <summary>
+        /// Every <see cref="GlFrameReportIntervalMs"/> while the GL window is open: the frame it last handed to SwapBuffers.
+        /// Fields: <c>frame</c>. The event's <c>time</c> is when SwapBuffers returned for it; a capture shows that frame or
+        /// an earlier one, as the compositor lags the swap by a frame or a few.
+        /// </summary>
+        public const string GlFrame = "glFrame";
+
+        /// <summary>
+        /// The GL window closed and its thread released the GL context, the device context and the window. Fields:
+        /// <c>reason</c> (lifetime, escape, closeBlock, closed (WM_CLOSE), destroyed, appExit or failed) and <c>frames</c>
+        /// (the last frame it swapped).
+        /// </summary>
+        public const string GlClosed = "glClosed";
+
+        /// <summary>The GL window could not be created or could not set up OpenGL. Fields: <c>message</c>.</summary>
+        public const string GlFailed = "glFailed";
+
+        /// <summary>
         /// The command line had arguments after <see cref="FixtureOptions.EndOfOptions"/>, which the fixture ignored (roadmap
         /// M6.6). Fields: <c>count</c>. Their text is not logged.
         /// </summary>
         public const string ArgumentsIgnored = "argumentsIgnored";
 
-        /// <summary>The fixture is exiting. Fields: <c>reason</c> (closed, parentExited or maxLifetime).</summary>
+        /// <summary>
+        /// The fixture is exiting. Fields: <c>reason</c> (closed, parentExited, maxLifetime, or glWatchdog: the GL frame
+        /// counter window's thread was still alive well after its lifetime, so the process ends to take the window with it;
+        /// then also <c>glThreadAlive</c>).
+        /// </summary>
         public const string Exiting = "exiting";
 
         /// <summary>An exception reached the dispatcher. Fields: <c>message</c>.</summary>

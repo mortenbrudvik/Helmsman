@@ -72,6 +72,17 @@ public sealed record FixtureLaunchOptions
     public bool ExcludeOverlayFromCapture { get; init; }
 
     /// <summary>
+    /// Open the GL frame counter window (<c>--open-gl</c>) right after the main window is ready: OpenGL drawing its frame number
+    /// at every vsync (<see cref="GlFrameCounterLayout"/>), windowed (never activated) or over the main window's whole monitor.
+    /// Wait for its <see cref="FixtureContract.Events.GlOpened"/> event and read it with <see cref="FixtureGlWindow.From"/>.
+    /// Full-monitor needs the <see cref="DesktopTier.Input"/> tier: it covers the user's monitor. Null for none.
+    /// </summary>
+    public GlWindowMode? OpenGl { get; init; }
+
+    /// <summary>How long the GL window stays open (<c>--gl-lifetime-seconds</c>); null for the fixture's 20 s.</summary>
+    public TimeSpan? GlLifetime { get; init; }
+
+    /// <summary>
     /// Arguments the harness plants on the fixture's command line after <see cref="FixtureOptions.EndOfOptions"/>, where
     /// the fixture ignores them (roadmap M6.6: a secret-looking switch only a reader of the command line sees).
     /// </summary>
@@ -205,7 +216,7 @@ public sealed class FixtureAppSession : IDisposable
     /// <summary>
     /// The fixture's command line for a test of <paramref name="tier"/>. Pure, so the rules can be tested:
     /// the fixture always watches the test host and has a maximum lifetime, a no-input test never
-    /// activates it, and a timed change is positive and due at least <see cref="FixtureOptions.TimedChangeMargin"/>
+    /// activates it or opens the full-monitor GL window, and a timed change is positive and due at least <see cref="FixtureOptions.TimedChangeMargin"/>
     /// before the end of that lifetime.
     /// </summary>
     public static FixtureOptions BuildOptions(
@@ -220,6 +231,12 @@ public sealed class FixtureAppSession : IDisposable
         {
             throw new ArgumentException(
                 "A DesktopNoInput test cannot activate the fixture: activation takes the foreground from the user.",
+                nameof(launch));
+        }
+        if (tier == DesktopTier.NoInput && launch.OpenGl is { IsFullMonitor: true })
+        {
+            throw new ArgumentException(
+                "A DesktopNoInput test cannot open the full-monitor GL window: it covers the user's whole monitor.",
                 nameof(launch));
         }
 
@@ -240,10 +257,13 @@ public sealed class FixtureAppSession : IDisposable
             ChangeAfter: launch.ChangeAfter,
             AnimateFor: launch.AnimateFor,
             OpenOverlay: launch.OpenOverlay,
-            ExcludeOverlayFromCapture: launch.ExcludeOverlayFromCapture);
+            ExcludeOverlayFromCapture: launch.ExcludeOverlayFromCapture,
+            OpenGl: launch.OpenGl,
+            GlLifetime: launch.GlLifetime);
 
         // Here, not as the fixture's exit code 2 or a wait that times out after the watchdog ended it
         options.ThrowIfATimedChangeIsInvalid();
+        options.ThrowIfTheGlWindowIsInvalid();
         return options;
     }
 

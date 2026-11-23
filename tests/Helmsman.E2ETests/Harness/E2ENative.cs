@@ -4,7 +4,7 @@ using System.Text;
 namespace Helmsman.E2ETests.Harness;
 
 /// <summary>
-/// Read-only user32 calls the harness uses to check the server's results and to guard its input,
+/// Read-only user32 and shell32 calls the harness uses to check the server's results and to guard its input,
 /// plus the one process-local setup call the server makes at startup (DPI awareness).
 /// Nothing here sends input or changes a window.
 /// </summary>
@@ -30,6 +30,16 @@ internal static class E2ENative
 
     [DllImport("user32.dll")]
     public static extern nint GetForegroundWindow();
+
+    [DllImport("shell32.dll")]
+    private static extern int SHQueryUserNotificationState(out int state);
+
+    /// <summary>
+    /// The shell's notification state (SHQueryUserNotificationState: 3 while a full-screen 3D app is in front), or null when
+    /// it cannot be read. A read, for a test that must look before it starts the fixture (the server's guarded wrapper
+    /// reads the same once a session is running).
+    /// </summary>
+    public static int? GetUserNotificationState() => SHQueryUserNotificationState(out var state) >= 0 ? state : null;
 
     /// <summary>
     /// Posts a message to a window. Only for windows a test provably opened itself (WM_CLOSE to the File Explorer window of

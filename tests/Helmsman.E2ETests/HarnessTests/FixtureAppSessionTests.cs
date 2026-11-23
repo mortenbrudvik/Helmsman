@@ -63,6 +63,47 @@ public class FixtureAppSessionTests
     }
 
     [Fact]
+    public void BuildOptions_ForANoInputTest_RefusesTheFullMonitorGlWindow()
+    {
+        // Arrange - it would cover the user's whole monitor
+        var launch = new FixtureLaunchOptions { OpenGl = GlWindowMode.FullMonitor };
+
+        // Act
+        var act = () => FixtureAppSession.BuildOptions(DesktopTier.NoInput, launch, "abc", "events.jsonl", 1);
+
+        // Assert
+        act.Should().Throw<ArgumentException>().WithMessage("*full-monitor GL window*");
+    }
+
+    [Theory]
+    [InlineData(DesktopTier.NoInput, false)]
+    [InlineData(DesktopTier.Input, false)]
+    [InlineData(DesktopTier.Input, true)]
+    public void BuildOptions_PassesTheGlWindowAndItsLifetime(DesktopTier tier, bool fullMonitor)
+    {
+        // Arrange
+        var mode = fullMonitor ? GlWindowMode.FullMonitor : GlWindowMode.Windowed(640, 360);
+        var launch = new FixtureLaunchOptions { OpenGl = mode, GlLifetime = TimeSpan.FromSeconds(15) };
+
+        // Act
+        var options = FixtureAppSession.BuildOptions(tier, launch, "abc", "events.jsonl", 1);
+
+        // Assert
+        options.OpenGl.Should().Be(mode);
+        options.GlLifetime.Should().Be(TimeSpan.FromSeconds(15));
+        options.NoActivate.Should().BeTrue("the test brings the GL window to the front itself, when it may");
+    }
+
+    [Fact]
+    public void BuildOptions_RefusesAGlLifetimeWithoutTheGlWindow()
+    {
+        var act = () => FixtureAppSession.BuildOptions(
+            DesktopTier.Input, new FixtureLaunchOptions { GlLifetime = TimeSpan.FromSeconds(15) }, "abc", "events.jsonl", 1);
+
+        act.Should().Throw<ArgumentException>().WithMessage("*--open-gl*");
+    }
+
+    [Fact]
     public void BuildOptions_ForAnInputTest_CanActivateTheFixture()
     {
         var options = FixtureAppSession.BuildOptions(

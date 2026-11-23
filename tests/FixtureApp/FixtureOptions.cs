@@ -47,6 +47,12 @@ public enum FixtureDpiAwareness
 /// <param name="ExcludeOverlayFromCapture">Open the overlay, which then sets WDA_EXCLUDEFROMCAPTURE on itself (issue #17), as
 /// apps do to the toasts and overlays they keep out of screen shares: it is on the monitor, and no copy of the screen shows it.
 /// It opens the overlay with or without <paramref name="OpenOverlay"/>.</param>
+/// <param name="OpenGl">Open the GL frame counter window (<see cref="GlWindowMode"/>) right after the main window is ready, on
+/// the main window's monitor: a raw Win32 window on a thread of its own that draws its frame number with OpenGL at every
+/// vsync (<see cref="GlFrameCounterLayout"/>), covering the whole monitor or windowed at a fixed client size; null for none.
+/// It closes itself after <see cref="EffectiveGlLifetime"/>, on Esc, on a click of its close block and when the fixture exits.</param>
+/// <param name="GlLifetime">How long the GL window stays open; null for <see cref="DefaultGlLifetime"/>. Only with
+/// <paramref name="OpenGl"/>, positive and at most <see cref="LongestGlLifetime"/>.</param>
 /// <remarks>
 /// Every argument after <see cref="EndOfOptions"/> is ignored, so a test can plant arguments that only a reader of the
 /// fixture's command line sees (roadmap M6.6: a secret-looking switch the server must redact). Before it, an unknown option
@@ -69,7 +75,9 @@ public sealed record FixtureOptions(
     TimeSpan? ChangeAfter = null,
     TimeSpan? AnimateFor = null,
     bool OpenOverlay = false,
-    bool ExcludeOverlayFromCapture = false)
+    bool ExcludeOverlayFromCapture = false,
+    GlWindowMode? OpenGl = null,
+    TimeSpan? GlLifetime = null)
 {
     public const string InstanceOption = "--instance";
     public const string EventLogOption = "--event-log";
@@ -88,6 +96,8 @@ public sealed record FixtureOptions(
     public const string AnimateForOption = "--animate-for-ms";
     public const string OpenOverlayOption = "--open-overlay";
     public const string ExcludeOverlayFromCaptureOption = "--exclude-overlay-from-capture";
+    public const string OpenGlOption = "--open-gl";
+    public const string GlLifetimeOption = "--gl-lifetime-seconds";
 
     /// <summary>Ends the options: every argument after it is ignored (see the remarks on <see cref="FixtureOptions"/>).</summary>
     public const string EndOfOptions = "--";
@@ -110,10 +120,19 @@ public sealed record FixtureOptions(
     public static readonly TimeSpan TimedChangeMargin =
         TimeSpan.FromSeconds(30) + TimeSpan.FromMilliseconds(FixtureContract.SpinnerIntervalMs);
 
+    /// <summary>How long the GL window stays open when <see cref="GlLifetime"/> is not given.</summary>
+    public static readonly TimeSpan DefaultGlLifetime = TimeSpan.FromSeconds(20);
+
+    /// <summary>The longest <see cref="GlLifetime"/> the fixture accepts: the window may cover the user's whole monitor.</summary>
+    public static readonly TimeSpan LongestGlLifetime = TimeSpan.FromSeconds(120);
+
     private static readonly Regex InstancePattern = new("^[A-Za-z0-9-]{1,32}$");
 
     /// <summary>The lifetime that applies: <see cref="MaxLifetime"/> or <see cref="DefaultMaxLifetime"/>.</summary>
     public TimeSpan EffectiveMaxLifetime => MaxLifetime ?? DefaultMaxLifetime;
+
+    /// <summary>How long the GL window stays open: <see cref="GlLifetime"/> or <see cref="DefaultGlLifetime"/>.</summary>
+    public TimeSpan EffectiveGlLifetime => GlLifetime ?? DefaultGlLifetime;
 
     /// <summary>Reads the command line.</summary>
     /// <exception cref="ArgumentException">An option before <see cref="EndOfOptions"/> is unknown, repeated, missing its
@@ -197,6 +216,12 @@ public sealed record FixtureOptions(
                 case ExcludeOverlayFromCaptureOption:
                     options = options with { ExcludeOverlayFromCapture = true };
                     break;
+                case OpenGlOption:
+                    options = options with { OpenGl = GlWindowMode.Parse(ValueOf(args, ref i)) };
+                    break;
+                case GlLifetimeOption:
+                    options = options with { GlLifetime = TimeSpan.FromSeconds(PositiveInt(name, ValueOf(args, ref i))) };
+                    break;
                 default:
                     throw new ArgumentException(
                         $"Unknown option '{name}'. Arguments the fixture should ignore go after '{EndOfOptions}'.");
@@ -205,7 +230,34 @@ public sealed record FixtureOptions(
 
         // After the loop: the lifetime may come after the timed changes on the command line
         options.ThrowIfATimedChangeIsInvalid();
+        options.ThrowIfTheGlWindowIsInvalid();
         return options;
+    }
+
+    /// <summary>
+    /// Throws when <see cref="OpenGl"/> is a windowed size the fixture would refuse, or <see cref="GlLifetime"/> is given
+    /// without <see cref="OpenGl"/>, is not positive, or is longer than <see cref="LongestGlLifetime"/>.
+    /// </summary>
+    /// <exception cref="ArgumentException">The GL window's mode or lifetime is invalid.</exception>
+    public void ThrowIfTheGlWindowIsInvalid()
+    {
+        if (OpenGl is { IsFullMonitor: false } windowed)
+        {
+            GlWindowMode.Windowed(windowed.Width, windowed.Height);
+        }
+        if (GlLifetime is not { } lifetime)
+        {
+            return;
+        }
+        if (OpenGl == null)
+        {
+            throw new ArgumentException($"{GlLifetimeOption} applies only with {OpenGlOption}.");
+        }
+        if (lifetime <= TimeSpan.Zero || lifetime > LongestGlLifetime)
+        {
+            throw new ArgumentException(
+                $"GlLifetime ({GlLifetimeOption}) must be 1 to {LongestGlLifetime.TotalSeconds:0} seconds, got {lifetime.TotalSeconds} s.");
+        }
     }
 
     /// <summary>
@@ -269,6 +321,7 @@ public sealed record FixtureOptions(
     public IReadOnlyList<string> ToArguments()
     {
         ThrowIfATimedChangeIsInvalid();
+        ThrowIfTheGlWindowIsInvalid();
         var args = new List<string> { InstanceOption, ValidInstance(Instance) };
         if (EventLogPath != null)
         {
@@ -334,6 +387,14 @@ public sealed record FixtureOptions(
         {
             args.Add(ExcludeOverlayFromCaptureOption);
         }
+        if (OpenGl is { } gl)
+        {
+            args.AddRange([OpenGlOption, gl.ToString()]);
+        }
+        if (GlLifetime is { } glLifetime)
+        {
+            args.AddRange([GlLifetimeOption, ((int)Math.Ceiling(glLifetime.TotalSeconds)).ToString(CultureInfo.InvariantCulture)]);
+        }
         return args;
     }
 
@@ -388,4 +449,59 @@ public sealed record FixtureOptions(
             ? value
             : throw new ArgumentException(
                 $"{InstanceOption} must be 1-32 letters, digits or hyphens, got '{value}'.");
+}
+
+/// <summary>
+/// How the GL frame counter window opens (<see cref="FixtureOptions.OpenGl"/>, <c>--open-gl</c>): over the whole monitor the
+/// main window is on (its bounds, taskbar included, as a borderless popup: <c>full-monitor</c>), or windowed at a fixed client
+/// size in physical pixels (<c>640x360</c>), centred on that monitor's work area and always shown without activation.
+/// </summary>
+/// <param name="Width">The client width, or 0 for <see cref="FullMonitor"/>.</param>
+/// <param name="Height">The client height, or 0 for <see cref="FullMonitor"/>.</param>
+public sealed record GlWindowMode(int Width, int Height)
+{
+    /// <summary>The command-line value of <see cref="FullMonitor"/>.</summary>
+    public const string FullMonitorValue = "full-monitor";
+
+    /// <summary>The smallest windowed client side the fixture accepts, in pixels.</summary>
+    public const int MinimumSize = 160;
+
+    /// <summary>The largest windowed client side the fixture accepts, in pixels.</summary>
+    public const int MaximumSize = 7680;
+
+    private static readonly Regex SizePattern = new("^([0-9]{1,5})x([0-9]{1,5})$");
+
+    /// <summary>The whole monitor.</summary>
+    public static GlWindowMode FullMonitor { get; } = new(0, 0);
+
+    /// <summary>Whether it covers the whole monitor.</summary>
+    public bool IsFullMonitor => Width == 0 && Height == 0;
+
+    /// <summary>Windowed at a client size of <paramref name="width"/> by <paramref name="height"/> physical pixels.</summary>
+    /// <exception cref="ArgumentException">A side is outside <see cref="MinimumSize"/> to <see cref="MaximumSize"/>.</exception>
+    public static GlWindowMode Windowed(int width, int height) =>
+        width is >= MinimumSize and <= MaximumSize && height is >= MinimumSize and <= MaximumSize
+            ? new GlWindowMode(width, height)
+            : throw new ArgumentException(
+                $"A windowed GL window must be {MinimumSize} to {MaximumSize} pixels on each side, got {width}x{height}.");
+
+    /// <summary>Reads <c>full-monitor</c> or <c>WIDTHxHEIGHT</c>.</summary>
+    /// <exception cref="ArgumentException">The value is neither.</exception>
+    public static GlWindowMode Parse(string value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        if (value == FullMonitorValue)
+        {
+            return FullMonitor;
+        }
+
+        var size = SizePattern.Match(value);
+        return size.Success
+            ? Windowed(int.Parse(size.Groups[1].Value, CultureInfo.InvariantCulture), int.Parse(size.Groups[2].Value, CultureInfo.InvariantCulture))
+            : throw new ArgumentException($"{FixtureOptions.OpenGlOption} must be {FullMonitorValue} or WIDTHxHEIGHT, got '{value}'.");
+    }
+
+    /// <summary>The command-line value: <c>full-monitor</c> or <c>WIDTHxHEIGHT</c>.</summary>
+    public override string ToString() =>
+        IsFullMonitor ? FullMonitorValue : string.Create(CultureInfo.InvariantCulture, $"{Width}x{Height}");
 }
