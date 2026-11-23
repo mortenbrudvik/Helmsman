@@ -540,23 +540,37 @@ public class CdpTabServiceTests
     [Fact]
     public async Task NavigateAsync_AServerThatIsSlowToAnswer_TimesOut_AsStillLoading_NotAsCdpTimeout()
     {
-        // No Page.navigate reply in time, but the tab answers: the navigation is under way and the server is slow. Of the 5 s,
-        // 4.5 s are kept to ask the tab, not production's half a second (a quarter of 1.5 s here before), so a loaded machine
-        // that is slow to send the check and read its answer still gets it in time
+        // No Page.navigate reply in time, but the tab answers: the navigation is under way and the server is slow. Of the 6 s,
+        // 4 s are kept to ask the tab, not production's half a second (UnansweredProbeTime's own test pins that), so a loaded
+        // machine that is slow to send the check and read its answer still gets it in time; the steps before Page.navigate
+        // have the other 2 s, which is also about how long the test takes
         var tab = new FakeTab { NavigateNeverAnswers = true };
-        var sut = CreateSut(tab, unansweredProbeTime: TimeSpan.FromMilliseconds(4500));
+        var sut = CreateSut(tab, unansweredProbeTime: TimeSpan.FromSeconds(4));
         var stopwatch = Stopwatch.StartNew();
 
         var result = await sut.NavigateAsync(Tab, "https://example.com/slow", BrowserWaitUntil.Load, new RecordingGate().EnterAsync,
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(6));
 
         result.Success.Should().BeTrue(result.Error);
         result.Value!.TimedOut.Should().BeTrue();
         result.Value.LoadState.Should().Be("loading");
         result.Value.Url.Should().BeNull("the tab still shows the old page, which is not the one asked for");
+        tab.NavigatedTo.Should().ContainSingle()
+            .Which.Should().Be("https://example.com/slow", "the navigation was sent, and only its reply did not come");
         // The call ends once Page.navigate's share has passed and the tab answered; the reply never comes, so a call that
         // ignored the limit would not end at all
         stopwatch.Elapsed.Should().BeLessThan(HangBound);
+    }
+
+    [Theory]
+    [InlineData(1500, null, 375)] // production: a quarter of what is left
+    [InlineData(4000, null, 500)] // at most half a second
+    [InlineData(5000, 4500, 4500)] // the time a test keeps
+    [InlineData(3000, 4500, 3000)] // at most what is left
+    public void UnansweredProbeTime_IsAQuarterAtMostHalfASecond_OrTheTimeKept_AtMostWhatIsLeft(int remainingMs, int? keptMs, int expectedMs)
+    {
+        CdpTabService.UnansweredProbeTime(TimeSpan.FromMilliseconds(remainingMs), keptMs is { } kept ? TimeSpan.FromMilliseconds(kept) : null)
+            .Should().Be(TimeSpan.FromMilliseconds(expectedMs));
     }
 
     [Fact]

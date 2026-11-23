@@ -330,8 +330,8 @@ public sealed class CdpTabService : ICdpTabService
                 BrowserErrorCode.CdpTimeout, "The time limit was used up before Page.navigate could be sent. Nothing was changed.");
         }
 
-        var reply = await SendGatedAsync(connection, gate, "Page.navigate", new { url }, left - UnansweredProbeTime(left), cancellationToken)
-            .ConfigureAwait(false);
+        var navigateTime = left - UnansweredProbeTime(left, _unansweredProbeTime);
+        var reply = await SendGatedAsync(connection, gate, "Page.navigate", new { url }, navigateTime, cancellationToken).ConfigureAwait(false);
         if (!reply.Success)
         {
             if (reply.ErrorCode != BrowserErrorCode.CdpTimeout)
@@ -696,12 +696,12 @@ public sealed class CdpTabService : ICdpTabService
         remaining < MaxWindowLookupTime ? remaining / 2 : MaxWindowLookupTime;
 
     /// <summary>
-    /// The part of a navigation's time kept to ask the tab why Page.navigate got no answer: at most half a second or a quarter,
-    /// or the time the constructor was given, at most what is left.
+    /// The part of a navigation's <paramref name="remaining"/> time kept to ask the tab why Page.navigate got no answer: a
+    /// quarter, at most half a second; or <paramref name="kept"/> (the constructor's unansweredProbeTime), at most what is left.
     /// </summary>
-    private TimeSpan UnansweredProbeTime(TimeSpan remaining) =>
-        _unansweredProbeTime is { } kept
-            ? kept < remaining ? kept : remaining
+    public static TimeSpan UnansweredProbeTime(TimeSpan remaining, TimeSpan? kept) =>
+        kept is { } given
+            ? given < remaining ? given : remaining
             : remaining / 4 < MaxUnansweredProbeTime ? remaining / 4 : MaxUnansweredProbeTime;
 
     /// <summary>
