@@ -2980,6 +2980,21 @@ it finds out. Before a release that changes captures, and on any new GPU or driv
    old one. Then focus_window on another window and back on the game, and capture again: the image is current (compare
    with what the monitor shows). Note the game, its graphics API and the GPU.
 
+**First run (2026-11-23).** Check 2 ran once, by hand, with `HELMSMAN_ALLOW_DESKTOP_TESTS=1` on the owner's desktop
+(NVIDIA GeForce RTX 3090, Windows 11 build 10.0.26300, a 3840x2160 primary monitor at 150% (144 DPI) and a second
+monitor, vsync on at about 60 fps) and passed in 3 s with "FROZEN: both captures in front show frame 10 while the
+fixture swapped 60 frames (the first is current, the second an older frame)." With the GL window in front (window,
+client and monitor all 0,0 3840x2160) Windows reported state 3 and every capture warned `ExclusiveFullscreen`: the
+first decoded frame 10 (current range 6..31), the second, about half a second later, frame 10 again (current 53..75).
+After one click on the neutral point the capture still showed frame 10 (current 78..100) and warned
+`CaptureUnchangedAfterInput` as well as `ExclusiveFullscreen`. With the fixture's main window in front the state was 5
+and a capture of the GL window decoded frame 108 (current 101..121) with no warnings; with the GL window back in front
+the first capture decoded frame 126 (current 116..140) and warned `ExclusiveFullscreen`. The capture method was
+PrintWindow throughout; the GL window closed normally after 148 frames and no fixture process was left. So on this
+machine the fixture reproduces what was measured with a real game: captures of the monitor freeze while the
+full-monitor GL window is in front, both warnings fire, and a capture taken once another window is in front is current.
+Other machines, GPUs and drivers are still unchecked.
+
 ### Scenario evaluation (roadmap M7.6)
 
 `ScenarioEvaluationTests` (input tier) do real desktop tasks the way an agent does them, through the in-process MCP server
