@@ -28,24 +28,28 @@ public class InputControlTools
     private readonly TimeSpan _answerTimeout;
     private readonly ITakeoverMonitor _takeover;
     private readonly IProcessSecurityProbe _securityProbe;
+    private readonly TimeProvider _clock;
 
     /// <param name="session">The input session.</param>
     /// <param name="hotkey">The pause hotkey.</param>
     /// <param name="takeover">Takeover detection (roadmap M7.4), whose mode and state get_control_status reports.</param>
     /// <param name="securityProbe">Whether the session is locked, which get_control_status' message adds (issue #18).</param>
     /// <param name="answerTimeout">How long resume_input waits for the user; default <see cref="DefaultAnswerTimeout"/>.</param>
+    /// <param name="clock">The clock of <paramref name="answerTimeout"/>; the system clock by default.</param>
     public InputControlTools(
         IInputSession session,
         IPauseHotkey hotkey,
         ITakeoverMonitor takeover,
         IProcessSecurityProbe securityProbe,
-        TimeSpan? answerTimeout = null)
+        TimeSpan? answerTimeout = null,
+        TimeProvider? clock = null)
     {
         _takeover = takeover ?? throw new ArgumentNullException(nameof(takeover));
         _securityProbe = securityProbe ?? throw new ArgumentNullException(nameof(securityProbe));
         _session = session ?? throw new ArgumentNullException(nameof(session));
         _hotkey = hotkey ?? throw new ArgumentNullException(nameof(hotkey));
         _answerTimeout = answerTimeout ?? DefaultAnswerTimeout;
+        _clock = clock ?? TimeProvider.System;
     }
 
     [McpServerTool(Name = "get_control_status", Title = "Get Input Control Status", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
@@ -217,9 +221,9 @@ public class InputControlTools
         };
 
         ElicitResult answer;
-        using (var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
+        using (var deadline = new CancellationTokenSource(_answerTimeout, _clock))
+        using (var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, deadline.Token))
         {
-            timeout.CancelAfter(_answerTimeout);
             try
             {
                 answer = await server.ElicitAsync(question, timeout.Token).ConfigureAwait(false);

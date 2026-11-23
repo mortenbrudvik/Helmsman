@@ -50,7 +50,8 @@ public sealed class InputControlToolContractTests : IDisposable
         InputSession? session = null,
         FakeInputWrapper? input = null,
         string? revision = null,
-        IProcessSecurityProbe? securityProbe = null)
+        IProcessSecurityProbe? securityProbe = null,
+        TimeProvider? clock = null)
     {
         session ??= _session;
         input ??= _input;
@@ -105,7 +106,7 @@ public sealed class InputControlToolContractTests : IDisposable
                 // instance from the services for every call, so no state of theirs outlives a call. Only a test
                 // that needs a shorter answer timeout registers one instance instead.
                 _ = answerTimeout is { } timeout
-                    ? builder.WithServerTools(new InputControlTools(session, _hotkey, Permissive.Takeover, securityProbe ?? Permissive.SecurityProbe, timeout))
+                    ? builder.WithServerTools(new InputControlTools(session, _hotkey, Permissive.Takeover, securityProbe ?? Permissive.SecurityProbe, timeout, clock))
                     : builder.WithServerTools<InputControlTools>();
             },
             clientOptions: InProcessMcpServer.WithRevision(options, revision),
@@ -462,23 +463,29 @@ public sealed class InputControlToolContractTests : IDisposable
     {
         // Arrange - on the SDK's default revision the question is a request the server cannot take back: the call stays
         // open until the client's handler returns (pinned here, so a change in either direction is seen), and an answer
-        // that comes after the server's answer timeout is not taken as a yes
+        // that comes after the server's answer timeout is not taken as a yes. The answer timeout runs on a clock the user
+        // moves past it once the question has reached them, and only then answers yes: on the system clock, a timeout that
+        // passed before the server had handed the question out made the SDK return the tool's refusal without asking
         _session.Pause(InputControlSources.Hotkey);
+        var clock = new ManualTimerClock();
+        var answerTimeout = TimeSpan.FromMinutes(1);
         var userAnswered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var server = await StartAsync(
-            answer: async (_, token) =>
+            answer: async (_, _) =>
             {
-                await Task.Delay(TimeSpan.FromMilliseconds(300), token);
+                clock.Advance(answerTimeout);
                 userAnswered.TrySetResult();
                 return await Answer("accept", resume: true);
             },
-            answerTimeout: TimeSpan.FromMilliseconds(100));
+            answerTimeout: answerTimeout,
+            clock: clock);
 
         // Act
         var result = Payload(await server.CallToolAsync("resume_input"));
 
         // Assert
         userAnswered.Task.IsCompleted.Should().BeTrue("the call waits for the client's handler on the multi-round-trip revision");
+        _questions.Should().Be(1);
         result.GetProperty("errorCode").GetString().Should().Be(nameof(InputErrorCode.ResumeDeclined));
         result.GetProperty("error").GetString().Should().Contain("did not answer");
         _session.IsPaused.Should().BeTrue("a yes that came after the answer timeout does not resume input");
