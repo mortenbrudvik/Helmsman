@@ -595,17 +595,24 @@ public class ElementSearchScopeTests
             }
         };
         var worker = new UiaWorker(maxStuckCallsPerTarget: 1, maxStuckCalls: 16);
-        var query = new ElementQuery(Main, Name: "Delete", Timeout: TimeSpan.FromMilliseconds(300),
+
+        // The first search must reach the menu before its deadline: the steps before (the window's start, read on a thread of
+        // its own) take milliseconds, but a loaded machine can stretch them past a few hundred, and a search whose deadline
+        // passed before the menu ends without reading it, leaving the stuck read to the second search. Two seconds is far from
+        // both; the search then takes them and the worker's grace of two seconds after them
+        var query = new ElementQuery(Main, Name: "Delete", Timeout: TimeSpan.FromSeconds(2),
             Scope: ElementSearchScope.WindowAndPopups);
 
         try
         {
             // Act - the first search is stuck in the menu; the second comes while that read is still stuck
             var stuck = await CreateSut(worker).FindAsync(query);
+            var stuckCalls = (Menu: worker.StuckCallsFor(400), Window: worker.StuckCallsFor(300));
             var next = await CreateSut(worker).FindAsync(query with { Timeout = TimeSpan.FromSeconds(5) });
 
             // Assert - the stuck read counts against the menu's application, not the window's: the window is still searched
             stuck.ErrorCode.Should().Be(UIElementErrorCode.OperationTimedOut);
+            stuckCalls.Should().Be((1, 0), "the first search's read of the menu was given up on, and counted against the menu's application");
             worker.StuckCallsFor(400).Should().Be(1);
             worker.StuckCallsFor(300).Should().Be(0);
             next.Success.Should().BeTrue(next.Error);
