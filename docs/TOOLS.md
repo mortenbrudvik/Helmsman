@@ -9076,10 +9076,12 @@ Next release (since 4.1.0):
   back, then capture again. Nothing else in a capture changed. capture_window's and capture_with_elements' descriptions
   name the two codes, which adds about 38 tokens to tools/list.
 
-- **Fixed: answered dialogs and new tabs.** browser_navigate, browser_click and browser_type given a dialog answer
+- **Fixed: answered dialogs, new tabs and a page read's timeout.** browser_navigate, browser_click and browser_type given a dialog answer
   could, on a busy machine, return a successful result without the dialog and its answer although the dialog was
   answered; the result now always reports it. browser_navigate with `newTab` could report a new tab that the browser
-  never listed as `CdpTimeout` instead of `CdpTargetNotFound`.
+  never listed as `CdpTimeout` instead of `CdpTargetNotFound`. get_browser_content's `CdpTimeout` for a page that did
+  not answer could, on a busy machine, leave out that the browser had refused to report the page's dialogs
+  (`Page.enable was refused: ...`); it now always says so.
 
 ## Error Codes
 

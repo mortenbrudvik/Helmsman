@@ -1329,6 +1329,68 @@ public class CdpServiceTests
     }
 
     [Fact]
+    public async Task GetPageSnapshotAsync_SaysPageEnableWasRefused_AlsoWhenItsSendCompletesAfterTheReadTimedOut()
+    {
+        // Arrange - the connection read Page.enable's refusal, but the send's task completes on a later turn of the thread
+        // pool, which a busy machine can put after the read's timeout and the close: here it completes only once the
+        // connection has been closed, and the call has gone on from the close on this thread
+        var connection = new RefusedEnableLateConnection();
+        var transport = new Mock<ICdpTransport>();
+        transport.Setup(t => t.ConnectAsync(It.IsAny<Uri>(), Port, BrowserPid, It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CdpResult<ICdpConnection>.Ok(connection));
+        var sut = new CdpService(transport.Object, new FakePortOwnerResolver(BrowserPid));
+
+        // Act
+        var call = Task.Run(() => sut.GetPageSnapshotAsync(Tab, TextPage, LongTimeout));
+        (await connection.Closing.Task.WaitAsync(HangBound)).Should().BeTrue();
+        connection.FinishClose();
+        connection.CompleteEnable();
+        var result = await call.WaitAsync(HangBound);
+
+        // Assert
+        result.ErrorCode.Should().Be(BrowserErrorCode.CdpTimeout);
+        result.Error.Should().Contain("Page.enable was refused: Page domain is not available (-32000)");
+    }
+
+    /// <summary>
+    /// A connection whose Runtime.evaluate times out at once and whose Page.enable is refused, with the refusal's task
+    /// completed by <see cref="CompleteEnable"/>; its close waits for <see cref="FinishClose"/>, whose caller then runs on.
+    /// </summary>
+    private sealed class RefusedEnableLateConnection : ICdpConnection
+    {
+        private readonly TaskCompletionSource<CdpResult<CdpReply>> _enable = new();
+        private readonly TaskCompletionSource _closed = new();
+
+        public TaskCompletionSource<bool> Closing { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public CdpResult<bool>? Closed => null;
+
+        public CdpDialog? OpenDialog => null;
+
+        public void FinishClose() => _closed.SetResult();
+
+        public void CompleteEnable() =>
+            _enable.SetResult(CdpResult<CdpReply>.Ok(new CdpReply(default, new CdpProtocolFault(-32000, "Page domain is not available"))));
+
+        public Task<CdpResult<CdpReply>> SendAsync(
+            string method, object? parameters, TimeSpan timeout, CancellationToken cancellationToken, CdpSendOptions options = CdpSendOptions.None) =>
+            method == "Page.enable"
+                ? _enable.Task
+                : Task.FromResult(CdpResult<CdpReply>.Fail(BrowserErrorCode.CdpTimeout, $"No answer to {method}."));
+
+        public Task<CdpResult<CdpAnsweredDialog>> AnswerNextDialog(bool accept, string? promptText) => throw new NotSupportedException();
+
+        public ICdpEventWaiter ExpectEvent(string method, Func<System.Text.Json.JsonElement, bool>? filter = null) =>
+            throw new NotSupportedException();
+
+        public ValueTask DisposeAsync()
+        {
+            Closing.TrySetResult(true);
+            return new ValueTask(_closed.Task);
+        }
+    }
+
+    [Fact]
     public async Task GetPageSnapshotAsync_RefusesAWebSocketUrlOnAnotherPortThanTheTabsOwn()
     {
         var factory = new FakeCdpWebSocketFactory(PageAnswering(Snapshot("t", "u", "c")));
