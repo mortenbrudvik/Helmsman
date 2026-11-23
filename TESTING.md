@@ -2276,6 +2276,25 @@ the monitor, and no copy of the screen shows it. Its `overlayOpened` event then 
 (`argumentsIgnored`). Before `--` an unknown option is still refused, so a misspelt option fails the start instead of
 being ignored.
 
+**The GL frame counter.** `OpenGl` (`--open-gl full-monitor` or `--open-gl WIDTHxHEIGHT`, with `GlLifetime`,
+`--gl-lifetime-seconds N`, 1 to 120, default 20) opens `Helmsman Fixture GL Counter <instance>` on the main window's
+monitor: a raw Win32 popup on a thread of its own with an OpenGL context (double-buffered RGBA, `wglSwapIntervalEXT(1)`
+when the driver has it), all through P/Invoke to user32, gdi32 and opengl32. Every frame it adds one to a counter and
+draws it as a row of 23 solid cells near the top (`GlFrameCounterLayout`, shared with the tests: a red start marker, 20
+bits most significant first, white 1 and black 0, an even parity bit, a green end marker), with glScissor and glClear only,
+then SwapBuffers. `full-monitor` covers the monitor's bounds as a borderless popup; a size is a fixed client area centred
+on the work area, always shown without activation. It closes itself after its lifetime, on Esc, on a click of the amber
+close block with the dark cross (bottom right) and when the fixture exits, and its thread releases the GL context, the
+device context and the window on every way out. All of those run on the window's own thread, so a watchdog independent
+of it (`GlWindowWatchdog`, a timer armed when the window is requested) ends the whole fixture process, after an `exiting`
+event with reason `glWatchdog`, if that thread is still alive 10 s after the lifetime (a driver stuck in SwapBuffers or in
+setting up the context); the thread disarms it when it ends. It reports `glOpened` (handle, rectangles, monitor, `vsync`, the GL vendor
+and renderer, the close block and a neutral point for a click), `glFrame` every 100 ms (the frame it last swapped; the
+event's `time` says when) and `glClosed` (why, and the last frame), or `glFailed`. `GlFrameDecoder` reads the number back
+from a capture of the client area at any scale and through JPEG noise, and `GlFrameTimeline` interpolates the reported
+frames at a moment, so a test can tell a current capture from an older frame. The harness refuses `full-monitor` in the
+no-input tier: it covers the user's monitor.
+
 **The scenarios.** Each class in `Scenarios/` covers one area; a class can hold tests of both tiers.
 
 | Scenario class | Tier | What it checks against the fixture |
@@ -2315,6 +2334,7 @@ being ignored.
 | `FixtureMouseClickDragTests` | Input | mouse_click: a Ctrl+Shift click reaches the fixture with both modifiers down and neither stays down (a plain click after it sees none); the middle, X1 and X2 buttons arrive as themselves; a triple click is three presses with `clickCount` 1, 2 and 3 at the pixel. drag: a Ctrl+drag presses on one swatch and releases on another, with Ctrl down at both and no other press or release between them, and leaves nothing held; a drop point right of the fixture window is refused before anything is pressed (M4.3). The fixture logs presses and releases with their modifiers (`mouseDown`, `mouseUp`) |
 | `FixtureRunStepsTests` | Input | run_steps through the real MCP pipeline (`ServerHarness.StartMcpServerAsync`, M6.2): a form fill (focus, a click at a found element's clickPoint by `$steps` reference, ctrl+a, typing, a toggle, a wait that verifies the text) in one call, the fixture's events in step order, one audit line per audited step under `<run's id>#<step>`, no modifier left down; a failed step stops the run and the step after it does nothing; a direct element_action made during the run waits for the gate and lands after the run's last step; a pause between steps stops the run with `PausedByUser`; a wait longer than `maxDurationMs` stops it with `OperationTimedOut`; a second fixture, a process of its own, taking the foreground stops it with `TargetNotForeground` and keeps the foreground (the terminal is never touched) |
 | `FixtureDisplayAffinityTests` | No input | Windows that keep out of captures (issue #17): with `--exclude-overlay-from-capture`, capture_region and take_screenshot over the overlay list it in `excludedFromCapture` with `affinity` `excludeFromCapture` and its title, get_window_info's detail 'full' reports its `displayAffinity`, and capture_window of the overlay warns `DisplayAffinity` with every `captureMethod` (the log says what each image held). And a regression guard for the 1.15.0 report of a capture that showed only the wallpaper: capture_region and take_screenshot with monitor 'all' over the WebView2 window (`--open-web-view`) match its Windows.Graphics.Capture frame in the middle; when another window covers it on the screen the test logs which and compares nothing (the no-input tier cannot bring it to the front) |
+| `FixtureGlFrameCounterTests` | Both | Captures of the GL frame counter (`--open-gl`), decoded and compared with the frames the fixture reported: windowed, two captures 300 ms apart both decode, the second is later, both are current and neither warns `ExclusiveFullscreen` (no input); full-monitor in front, skipped when a full-screen 3D app is already in front (before the fixture starts: nothing is opened; once the GL window is open but before it is brought to the front: that window, shown without activation over its monitor, is closed again without having been in front), and skipped (after asserting the window covers its monitor and keeps drawing) unless Windows then reports one (shell state 3): a capture warns `ExclusiveFullscreen`, the log says whether two captures 500 ms apart were FROZEN, live or UNREADABLE; when both show the same older frame, a click follows and the next capture warns `CaptureUnchangedAfterInput` if it shows that frame again, does not warn if it shows another frame (logged as "the click unfroze the capture"), and is not checked if it does not decode; with the main window in front a capture of the GL window is current without the warning, as is the first capture after the GL window is back in front (captured once more when it does not decode) (input). See "Desktop check: fullscreen GL captures" |
 | `FixtureOcrTests` | Both | read_screen_text and find_text_on_screen on the canvas window (M6.3): every line read inside its drawn rectangle at both scales, a find's click point on its word and back through the captureId, a regex; in the input tier a covered canvas still reads, a minimized one is `WindowMinimized`, a click through the captureId lands on the word and is `StaleCapture` once the canvas moved, and a canvas a policy denies is blacked out of a region read. Skipped without an OCR language |
 
 **Running them.** Locally only with an opt-in, as above. On GitHub, `.github/workflows/e2e.yml`
@@ -2790,8 +2810,10 @@ The E2E scenarios ran on the owner's desktop on 2026-10-17 (see Desktop run: M6 
    the time per call. `monitor: "all"` on a virtual screen wider than OCR's limit (about 10,000 pixels: three 4K
    monitors side by side) is read in tiles with an `OcrTiled` warning; nothing smaller is.
 
-Not checkable here, and so untested: RDP and Citrix sessions, games, and GPU or protected windows that PrintWindow draws
-black (they come back with `ImageBlank` and no lines).
+Not checkable here, and so untested: RDP and Citrix sessions, and GPU or protected windows that PrintWindow draws black
+(they come back with `ImageBlank` and no lines). OCR of a game is untested too. What a fullscreen game does to captures
+was measured on one machine (one NVIDIA GPU, Windows 11) and can now be re-checked anywhere with the fixture's GL frame
+counter: see [Desktop check: fullscreen GL captures](#desktop-check-fullscreen-gl-captures).
 
 ### Desktop check: M6.9 resources and prompts
 
@@ -2879,6 +2901,84 @@ owner runs that class and checks:
    wait with `since` set to the `captureId` of a `capture_window` with `output: "metadata"` of a window the check opened
    compares with that capture (`checks` 1 with `timeoutMs` 0 when nothing changed: `WaitTimedOut` and 0 %); without
    `+visual` the tool is not listed.
+
+### Desktop check: fullscreen GL captures
+
+The capture warnings `ExclusiveFullscreen` and `CaptureUnchangedAfterInput`, and the skill's remedy in
+`skills/using-helmsman/screens-and-ocr.md` ("A Capture That Does Not Change"), rest on a measurement on one machine (one
+NVIDIA GPU, Windows 11, a real game and an earlier scratch reproduction, not this fixture): with a full-monitor OpenGL
+window in front, Windows reported a full-screen 3D app (SHQueryUserNotificationState 3) and every capture of that monitor
+stayed at the frame from when the window came to the front, while the app kept swapping at vsync; once another window was
+in front the captures were current. The scratch reproduction (an SDL3 borderless OpenGL window) also stayed live with
+state 5 when it was 2560x1440 on the 3840x2160 monitor, less than the whole monitor; that has not been checked with the
+fixture. The warnings themselves are tested over fakes (`CaptureFreshnessWarningTests`,
+`InputSimulationServiceFreshnessTests`, the element action tests); the decoder, the layout, the frame timeline and the GL
+window's watchdog in `GlFrameCounterTests` and `GlWindowWatchdogTests` (ordinary tests).
+`Scenarios/FixtureGlFrameCounterTests` checks, with the fixture's GL frame counter (`--open-gl`, see "The GL frame counter" above), whether a machine behaves
+that way, in about a minute: whether the fixture's full-monitor window makes Windows report state 3 at all is part of what
+it finds out. Before a release that changes captures, and on any new GPU or driver, the owner checks:
+
+1. **Windowed (no input).** With no fullscreen game or video in front, in PowerShell:
+
+   ```powershell
+   $env:HELMSMAN_ALLOW_DESKTOP_NOINPUT_TESTS = "1"
+   dotnet test tests/Helmsman.E2ETests --filter "FullyQualifiedName~CaptureWindow_WindowedGlCounter_IsLiveAndShowsTheFramesTheFixtureReported" --logger "console;verbosity=detailed"
+   Remove-Item Env:HELMSMAN_ALLOW_DESKTOP_NOINPUT_TESTS
+   ```
+
+   It opens a 640x360 GL window without activating it, captures it twice 300 ms apart and passes when both decode, the
+   second number is higher, both lie in the range of frames the fixture swapped around each capture (the log prints the
+   decoded numbers, that range and the verdict, the fps and the capture method) and neither capture warns
+   `ExclusiveFullscreen`. It logs "Skipped:" and passes without capturing when Windows already reports a full-screen 3D
+   app.
+2. **Full-monitor (input).** At a moment the machine may be used by the test (it takes the foreground and may click the
+   GL window once), with the terminal in front, in PowerShell:
+
+   ```powershell
+   $env:HELMSMAN_ALLOW_DESKTOP_TESTS = "1"
+   dotnet test tests/Helmsman.E2ETests --filter "FullyQualifiedName~CaptureWindow_FullMonitorGlCounterInFront_WarnsExclusiveFullscreen_AndIsCurrentAfterAnotherWindowWasInFront" --logger "console;verbosity=detailed"
+   Remove-Item Env:HELMSMAN_ALLOW_DESKTOP_TESTS
+   ```
+
+   If Windows already reports a full-screen 3D app before the fixture starts, it logs "Skipped: a full-screen 3D app is
+   already in front ..." and opens nothing. It looks again right before it brings the GL window to the front: if the
+   state is 3 by then, the GL window is already open over its monitor (shown without activation), so the test logs the
+   same "Skipped: ..." line with "it is closed again without having been in front" and closes it without bringing it
+   to the front. The GL window covers the main window's monitor (the primary) for up to 45 s; Esc or the amber close
+   block closes it at once, and should its render thread hang, the fixture ends itself 10 s after that lifetime. When
+   Windows does not report state 3 within 5 s of the window coming to the front, the test first checks that the window
+   covers exactly its monitor and is still drawing (the fixture reports a new frame, and its reports since the window
+   came to the front show a frame rate above 0; a fixture that does not fails here), then logs "Skipped: with the
+   full-monitor GL window in front, Windows reports shell state N, not 3 ..." and passes without capturing. Otherwise
+   it takes two captures 500 ms apart, logs each one's decoded frame, the range a current capture shows and the
+   verdict, and then one line:
+   "FROZEN: both captures in front show frame N while the fixture swapped M frames" (the measured behaviour; or
+   "FROZEN: the captures in front show frames A (...) and B (...)" when both decode but are older frames that differ),
+   "live: the captures in front show frames A and B, both current ..." (captures stay current on this driver), or
+   "UNREADABLE: ..." (a capture did not decode or was one color, `ImageBlank`: nothing can be said about freshness).
+   None of the three fails the test; it then asserts the `ExclusiveFullscreen` warning. Only when both captures show
+   the same frame does it click the window's neutral point and take the same capture again (never after UNREADABLE:
+   the server does not warn on a one-color image), and log one line: "the click left the capture at frame N:
+   CaptureUnchangedAfterInput expected." (the capture must then warn `CaptureUnchangedAfterInput`), "the click unfroze
+   the capture: frame A -> B, no CaptureUnchangedAfterInput expected." (the driver presented a new frame on input; the
+   pixels differ, so the capture must not carry the warning), or "the capture after the click is unreadable (...): no
+   CaptureUnchangedAfterInput check.". In every case, with the main window brought to the front, a capture of the GL
+   window must decode, be current and carry no `ExclusiveFullscreen`, and the first capture after the GL window is back
+   in front must show the frame of that moment (when it does not decode, as one frame of the switch back may not, the
+   test logs "back in front: the capture did not decode (...); retried once after 250 ms." and judges a second capture
+   instead). Those two pin the remedy the skill documents: if they fail, the skill is wrong for this machine. Record
+   the GPU (the log's `vendor` and `renderer`), the driver version, the result line and the fps.
+
+   **If it prints "Skipped" because state 3 was not reached:** this window and this GPU driver do not put Windows into
+   the full-screen 3D app state, so the server rightly raises no `ExclusiveFullscreen` and there was nothing to check.
+   That is not a failure of Helmsman; it says nothing about whether a real game on the same machine reaches the state
+   (check 3 does).
+3. **A real fullscreen game, by hand** (no input from the agent beyond what is listed, on a game the owner started and
+   chose): with the game in front in fullscreen or borderless fullscreen, capture_window of the game's window (or
+   take_screenshot of its monitor) warns `ExclusiveFullscreen`. After a mouse_move over it or a click into it that changed
+   the picture, the next capture with the same parameters warns `CaptureUnchangedAfterInput` if the image is still the
+   old one. Then focus_window on another window and back on the game, and capture again: the image is current (compare
+   with what the monitor shows). Note the game, its graphics API and the GPU.
 
 ### Scenario evaluation (roadmap M7.6)
 
