@@ -296,7 +296,7 @@ public sealed class CdpPageService : ICdpPageService
                     return CdpPageResult<CdpInputOutcome>.From(failed);
 
                 unconfirmed |= sent is { Success: false };
-                if (DialogOf(dialogOpened) != null)
+                if (DialogOf(opening.Received) != null)
                 {
                     // A dialog opened on the press (a mousedown handler): the button is released all the same, or the page
                     // would keep it pressed. The page cannot answer while the dialog is open, so the release is not waited for
@@ -311,7 +311,7 @@ public sealed class CdpPageService : ICdpPageService
             }
         }
 
-        var dialog = DialogOf(dialogOpened);
+        var dialog = DialogOf(opening.Received);
         var (answerGiven, answerFailure) = await AnswerOfAsync(dialog, answered, timeout, stopwatch, cancellationToken).ConfigureAwait(false);
         return CdpPageResult<CdpInputOutcome>.Ok(new CdpInputOutcome(info, found.MatchCount, point,
             Dialog: dialog,
@@ -458,12 +458,12 @@ public sealed class CdpPageService : ICdpPageService
                     return CdpPageResult<CdpInputOutcome>.From(failed);
 
                 unconfirmed |= sent is { Success: false };
-                if (DialogOf(dialogOpened) != null)
+                if (DialogOf(opening.Received) != null)
                     break;
             }
         }
 
-        var dialog = DialogOf(dialogOpened);
+        var dialog = DialogOf(opening.Received);
         string? warning = unconfirmed && dialog == null
             ? "The page did not confirm the text within a second (it may be busy); it was sent. Read the field before you type again."
             : null;
@@ -907,9 +907,13 @@ public sealed class CdpPageService : ICdpPageService
             await Task.Delay(Timeout.Infinite).ConfigureAwait(false);
     }
 
-    /// <summary>The dialog an action opened: reported by the page's Page.javascriptDialogOpening, else null.</summary>
-    private static CdpDialog? DialogOf(Task<CdpResult<JsonElement>> dialogOpened) =>
-        dialogOpened is { IsCompletedSuccessfully: true, Result: { Success: true } opened } ? CdpDialogText.FromEvent(opened.Value) : null;
+    /// <summary>
+    /// The dialog an action opened: reported by the page's Page.javascriptDialogOpening (<see cref="ICdpEventWaiter.Received"/>),
+    /// else null. Read from the listener, not from the wait on it: the event comes before the reply to the input that opened
+    /// the dialog, but the wait completes on a later turn of the thread pool, which a busy machine can put after that reply.
+    /// </summary>
+    private static CdpDialog? DialogOf(CdpResult<JsonElement>? opened) =>
+        opened is { Success: true } ? CdpDialogText.FromEvent(opened.Value) : null;
 
     private static Dictionary<string, object> MouseEvent(string type, CssPoint point, string button, int buttons, int clickCount) => new()
     {

@@ -966,6 +966,9 @@ public class CdpPageServiceTests
         private readonly object _lock = new();
         private bool _dialogOpen;
 
+        /// <summary>The id of the input command whose dialog is open: answered when the dialog is closed.</summary>
+        private int? _blockedInput;
+
         public FakePage()
         {
             Socket = new FakeCdpWebSocket(Respond);
@@ -1112,6 +1115,13 @@ public class CdpPageServiceTests
                             _dialogOpen = false;
                             socket.ReplyEmpty(command);
                             socket.EnqueueEvent("Page.javascriptDialogClosed", new { result = true, userInput = "" });
+
+                            // As Chrome does: the input that opened the dialog is answered once the dialog is closed
+                            if (_blockedInput is { } blocked)
+                            {
+                                _blockedInput = null;
+                                socket.Enqueue(JsonSerializer.Serialize(new { id = blocked, result = new { } }));
+                            }
                         }
                         else
                         {
@@ -1188,15 +1198,15 @@ public class CdpPageServiceTests
                         break;
 
                     case "Input.dispatchMouseEvent" when DialogOnPress && p.GetProperty("type").GetString() == "mousePressed":
-                        OpenDialogOnPage(socket);
+                        OpenDialogOnPage(socket, command);
                         break;
 
                     case "Input.dispatchMouseEvent" when DialogOnRelease && p.GetProperty("type").GetString() == "mouseReleased":
-                        OpenDialogOnPage(socket);
+                        OpenDialogOnPage(socket, command);
                         break;
 
                     case "Input.dispatchKeyEvent" when DialogOnEnter && p.GetProperty("type").GetString() == "keyDown":
-                        OpenDialogOnPage(socket);
+                        OpenDialogOnPage(socket, command);
                         break;
 
                     case "Page.captureScreenshot" when CaptureNeverAnswers:
@@ -1274,10 +1284,14 @@ public class CdpPageServiceTests
             }
         }
 
-        /// <summary>The page opens its dialog (<see cref="DialogType"/>): the browser reports it to this connection.</summary>
-        private void OpenDialogOnPage(FakeCdpWebSocket socket)
+        /// <summary>
+        /// The page opens its dialog (<see cref="DialogType"/>) on <paramref name="input"/>: the browser reports it to this
+        /// connection, and answers the input only once the dialog is closed (Page.handleJavaScriptDialog), as Chrome does.
+        /// </summary>
+        private void OpenDialogOnPage(FakeCdpWebSocket socket, JsonElement input)
         {
             _dialogOpen = true;
+            _blockedInput = input.GetProperty("id").GetInt32();
             socket.EnqueueEvent("Page.javascriptDialogOpening",
                 new { url = Tab.Url, message = DialogType == "prompt" ? "Your name?" : "Delete it?", type = DialogType, defaultPrompt = "", hasBrowserHandler = true });
         }
