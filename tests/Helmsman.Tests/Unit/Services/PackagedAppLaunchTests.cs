@@ -554,10 +554,12 @@ public class PackagedAppLaunchTests
     {
         // Review M6.5 #5: each activation that does not return keeps two threads; at the cap, the next one is refused at once
         using var release = new ManualResetEventSlim();
+        using var activating = new SemaphoreSlim(0);
         _apps.Setup(a => a.ActivateApplication(It.IsAny<string>(), It.IsAny<string?>()))
             .Callback<string, string?>((id, arguments) => _activations.Add((id, arguments)))
             .Returns(() =>
             {
+                activating.Release();
                 release.Wait(TimeSpan.FromSeconds(10));
                 return new AppActivationResult(0, ActivatedProcessId);
             });
@@ -571,6 +573,14 @@ public class PackagedAppLaunchTests
         var refused = await sut.LaunchApplicationAsync(new LaunchRequest(Calculator), false, 5000);
         refused.ErrorCode.Should().Be(nameof(LaunchErrorCode.ActivationFailed));
         refused.ErrorMessage.Should().Contain("still");
+
+        // Each activation runs on a thread of its own, which a loaded machine may start after its 30 ms wait ran out: the calls
+        // are counted once every activation that was let through has reached the shell
+        for (var i = 0; i < ApplicationLauncher.MaxHungActivations; i++)
+        {
+            (await activating.WaitAsync(TimeSpan.FromSeconds(10))).Should().BeTrue("activation {0} reaches the shell", i + 1);
+        }
+
         _apps.Verify(a => a.ActivateApplication(It.IsAny<string>(), It.IsAny<string?>()), Times.Exactly(ApplicationLauncher.MaxHungActivations));
 
         // Once they return, activations run again

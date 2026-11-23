@@ -102,11 +102,11 @@ public sealed class FileDialogServiceTests : IDisposable
         }
     }
 
-    private FileDialogService CreateSut(IWindowService? windowService = null) => new(
+    private FileDialogService CreateSut(IWindowService? windowService = null, TimeSpan? writeWait = null) => new(
         _dialogs.Object, _search.Object, _actions.Object, _popups.Object, _windows.Object, _guard.Object, _session.Object, windowService)
     {
         PollInterval = TimeSpan.FromMilliseconds(5),
-        WriteWait = TimeSpan.FromMilliseconds(300)
+        WriteWait = writeWait ?? TimeSpan.FromMilliseconds(300)
     };
 
     private static FoundElement Element(string elementRef, string? name, string automationId, string controlType) =>
@@ -299,14 +299,22 @@ public sealed class FileDialogServiceTests : IDisposable
     {
         var file = ExistingFile();
         File.SetLastWriteTimeUtc(file, DateTime.UtcNow.AddHours(-1));
+        var write = Task.CompletedTask;
         _press = request =>
         {
             _open.Remove(Dialog);
-            _ = Task.Delay(50).ContinueWith(_ => File.WriteAllText(file, "x"), TaskScheduler.Default);
+            write = Task.Delay(50).ContinueWith(_ => File.WriteAllText(file, "x"), TaskScheduler.Default);
             return new ElementActionResult(true, "invoke", request.Ref, (long)Dialog, ElementActionStatus.Done, ElementActionMethod.Invoke);
         };
 
-        var result = await CompleteAsync(file, overwrite: true);
+        // The wait for the write is seconds, not the other tests' 300 ms: the write comes from a timer and a thread-pool
+        // thread, which a loaded machine can delay past 300 ms. The service stops waiting once it sees the write
+        _action = FileDialogAction.Save;
+        var result = await CreateSut(writeWait: TimeSpan.FromSeconds(8))
+            .CompleteAsync(new FileDialogRequest(Dialog, file, FileDialogAction.Save, true, Timeout: TimeSpan.FromSeconds(10)));
+
+        // The service sees the write as it starts; the test's folder is deleted only once the write has ended
+        await write.WaitAsync(TimeSpan.FromSeconds(10));
 
         result.Success.Should().BeTrue(result.Error);
         result.Completed.Should().BeTrue("the file's time changed after the press, although its length did not");

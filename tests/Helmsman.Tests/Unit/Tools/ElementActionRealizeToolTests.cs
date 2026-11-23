@@ -562,9 +562,12 @@ public class ElementActionRealizeToolTests
         var result = await CreateSut().ElementAction(ElementActionKind.Realize, handle: Handle, name: "Old message", maxScrolls: 10,
             timeoutMs: 5000).Payload<ElementActionResult>();
 
-        // Assert - the later pages, their searches and the realize get what is left, not the whole timeout again
+        // Assert - the later pages, their searches and the realize get what is left, not the whole timeout again: the second
+        // page gets at least the first page's second and a half less. Measured against the first page's own budget, not the
+        // whole timeout, so a loaded machine slow to reach the first page does not fail it
         result.Success.Should().BeTrue(result.Error);
-        _requests[0].Timeout.Should().BeGreaterThan(TimeSpan.FromSeconds(4.5));
+        _requests[0].Timeout.Should().BeLessOrEqualTo(TimeSpan.FromSeconds(5))
+            .And.BeGreaterThan(_requests[1].Timeout!.Value + TimeSpan.FromSeconds(1.4));
         _requests.Skip(1).Should().OnlyContain(r => r.Timeout <= TimeSpan.FromSeconds(3.5));
         _queries.Where(q => q.WithinRef == "w1e2").Should().OnlyContain(q => q.Timeout <= TimeSpan.FromSeconds(3.5));
     }

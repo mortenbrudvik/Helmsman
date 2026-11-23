@@ -47,14 +47,16 @@ public class ForegroundThreadTests
         var blockedThread = 0;
         var tokenCancelled = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        // Act - the work blocks like a window call to a thread that does not answer
+        // Act - the work blocks like a window call to a thread that does not answer. The deadline is a second, not 100 ms: the
+        // activation thread must start the work before it, or the work is dropped unrun and never sees its token, and a loaded
+        // machine can take a few hundred milliseconds to start a thread
         var act = () => sut.Run(token =>
         {
             blockedThread = Environment.CurrentManagedThreadId;
             release.Wait(Long);
             tokenCancelled.TrySetResult(token.IsCancellationRequested);
             return 0;
-        }, TimeSpan.FromMilliseconds(100));
+        }, TimeSpan.FromSeconds(1));
 
         // Assert
         act.Should().Throw<TimeoutException>();
