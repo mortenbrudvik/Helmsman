@@ -1,6 +1,6 @@
 {
   "name": "helmsman",
-  "version": "4.1.0",
+  "version": "4.2.0",
   "description": "Comprehensive Windows application and window management from Claude. Launch apps, control windows, snap layouts, and automate desktop workflows.",
   "author": {
     "name": "Morten Brudvik"
