@@ -36,15 +36,28 @@ The capture tools return the image as image content, so you see the picture dire
 
 ## A Capture That Does Not Change
 
-A capture that looks the same after your input is not evidence that the input failed. First read the input result: `success`, `receivingWindow`, `foregroundAfter`. Then get a second signal before you conclude anything: a read (`read_element_text`, `get_desktop_state`) where the app has elements, or a fresh capture (the round trip below) where it has none, such as a game or a canvas.
+A capture that looks the same after your input is not evidence that the input failed. First read the input result: `success`, `receivingWindow`, `foregroundAfter`. Then get a second signal before you conclude anything: a read (`read_element_text`, `get_desktop_state`) where the app has elements, or a fresh capture (the loop below) where it has none, such as a game or a canvas.
 
-- `ExclusiveFullscreen`: the window in front has its monitor to itself. While it stays in front, captures of that monitor can keep returning the frame from when it came to the front. To see the current frame, make the round trip: `focus_window` on another window, then `focus_window` on this one, then capture. A capture taken while the other window is in front is current too. Use your own terminal or chat window as the other window: `focus_window` brings it to the front (only input to it is refused) and touches no other app. Make the two calls directly, not in `run_steps`, which refuses your own window.
-- `CaptureUnchangedAfterInput`: the pixels equal the previous capture of this window although input went to it. Either nothing visible changed, or the frame is old. Make the round trip before you decide which.
+- `ExclusiveFullscreen`: the window in front has its monitor to itself. While it stays in front, captures of that monitor can keep returning the frame from when it came to the front.
+- `CaptureUnchangedAfterInput`: the pixels equal the previous capture of this window although input went to it. Either nothing visible changed, or the frame is old. If your own window was in front when you captured, the frame is current, so the input changed nothing visible. Otherwise take a fresh capture with the loop below before you decide which.
 - With no warning: the capture's `cursor` position disagrees with a pointer the app draws itself in the image. The frame is likely old.
 
-This was seen with a full-monitor OpenGL game on an NVIDIA GPU on Windows 11: every capture showed the old frame while the input reached the game every time. Other fullscreen apps and GPUs may or may not do this.
+A capture taken while another window is in front is current. So for a window with these warnings, this is the normal way to work, one extra call per step:
 
-Never conclude that an app ignores input from captures alone, and do not switch to other input methods on that basis. The round trip takes the foreground from the app for a moment, so make it when you need to look, not after every key.
+1. Click or press keys in the app, with its `windowHandle`.
+2. `focus_window` on your own terminal or chat window (`get_server_info` lists it under `host.windows`). This is allowed; only input to it is refused.
+3. `capture_window` of the app. The image is current.
+4. Your next `press_keys` or `type_text` with the app's `windowHandle` brings it back to the front. A `mouse_click` brings it back too, unless your own window covers the point (one monitor). Then it is refused with `TargetOccluded`: call `focus_window` on the app, then click.
+
+Look after every step whose effect you need to see. In a game that is usually every click, because the next click depends on what the screen shows. You need not look after keys whose effect you do not need to see. Make these calls directly, not in `run_steps`, which refuses your own window.
+
+Bringing your own window to the front for this is part of the task and needs no question to the user. Stopping to ask the user is the wrong response to these warnings.
+
+A borderless-fullscreen window has the same problem, because it still fills its monitor. Only a window smaller than its monitor is captured live, so do not tell the user that borderless fullscreen fixes it. Asking the user to change the app's video settings is a last resort, not the first answer.
+
+This was seen with a full-monitor OpenGL game on an NVIDIA GPU on Windows 11: every capture showed the old frame while the input reached the game every time. Other fullscreen apps and GPUs may or may not do this. The loop was checked with your own window on another monitor. On one monitor, follow step 4's note about `TargetOccluded`. If the capture in step 3 fails with `WindowMinimized`, the app minimizes when it loses the front and this loop does not work for it: tell the user.
+
+Never conclude that an app ignores input from captures alone, and do not switch to other input methods on that basis.
 
 ## See What Is in a Window
 
