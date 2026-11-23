@@ -226,7 +226,10 @@ public class ElementReadFallbackTests
                     [new FoundElement(subjectRef, "Subject", "Edit", "subject", "Edit", null, null, true, false, ["Value"])], 1);
             });
         var worker = new DeadlineWorker();
-        var timeout = TimeSpan.FromMilliseconds(300);
+
+        // A second, the least the read gets after its search: the read's deadline starts when the search ends, and the worker
+        // checks it after a turn of the thread pool, which a loaded machine can delay past a shorter one
+        var timeout = TimeSpan.FromSeconds(1);
 
         // Act
         var result = await CreateSut(worker, search.Object).ReadTextAsync(

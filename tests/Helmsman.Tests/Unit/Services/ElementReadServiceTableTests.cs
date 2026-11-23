@@ -403,7 +403,8 @@ public class ElementReadServiceTableTests
     {
         // Arrange - the third row's first cell does not answer until the call has returned, as a hung application's provider:
         // the real worker abandons it at the deadline, whatever the machine's load (a 400 ms sleep on the inline worker
-        // raced the 200 ms timer and won on a busy CI machine)
+        // raced the 200 ms timer and won on a busy CI machine). The first two rows must be read before the deadline, on the
+        // worker's own thread: a second and a half, not 200 ms, which a loaded machine can spend before that thread reads them
         var cells = Cells(5, 2);
         var stuck = new ManualResetEventSlim();
         ((FakeUiaNode)cells[2][0]!).OnRead = () => stuck.Wait(TimeSpan.FromSeconds(30));
@@ -412,7 +413,7 @@ public class ElementReadServiceTableTests
         try
         {
             // Act
-            var result = await Read(elementRef, timeout: TimeSpan.FromMilliseconds(200), worker: new UiaWorker());
+            var result = await Read(elementRef, timeout: TimeSpan.FromMilliseconds(1500), worker: new UiaWorker());
 
             // Assert - only whole rows are returned
             result.Success.Should().BeTrue();
