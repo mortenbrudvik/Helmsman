@@ -9064,7 +9064,14 @@ the same length, so the tools/list sizes are those of 4.0.0.
   whose right or bottom edge passes 2,147,483,647 (such as `x: 100, width: 2147483647`) captures the part on the screen,
   with `RegionClipped`; 4.0.0 refused it with `RegionOffScreen`, saying no part of it was on the screen.
 
-Next release (since 4.1.0):
+Release 4.2.0 (a warning when a capture may be an older frame, and fixes to answered dialogs, new tabs and a page read's timeout):
+
+The markers mean what they mean for 3.1.0 above, and no bullet has one: no call that worked with 4.1.0 is refused or
+returns something else, and no result field it always sent is left out. A capture can carry two new warnings, and the
+fixes report what 4.1.0 could leave out on a busy machine; the one `errorCode` that changes is that of a new tab the
+browser never listed, `CdpTargetNotFound` where 4.1.0 could say `CdpTimeout`. The default tools/list grows by 38 tokens
+(57,209 to 57,247), and every tool together from 67,311 to 67,349, all of it in capture_window's and
+capture_with_elements' descriptions.
 
 - **New warnings `CaptureUnchangedAfterInput` and `ExclusiveFullscreen`.** While a full-monitor OpenGL game was in
   front (seen on an NVIDIA GPU), every capture of its monitor returned the frame from when the game came to the front,
