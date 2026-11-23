@@ -212,13 +212,20 @@ public sealed class CdpTabService : ICdpTabService
         // listens on the port, since its WebSocket URL is what browser_navigate connects to next. Every failure from here on
         // carries the tab's id: the tab is open, on about:blank. A list's own advice ("Try again") is followed by what to do
         // with that tab, since browser_navigate with newTab again would open a second one
+        CdpResult<IReadOnlyList<CdpTarget>>? listed = null;
         while (true)
         {
+            // Listed once, then again only while a list has time to answer: the pause before it can overrun what was left (a
+            // busy machine fires its timer late), and a list asked for with no time left fails by its own timeout instead of
+            // telling whether the tab is listed, so the list before it stands
             var remaining = timeout - stopwatch.Elapsed;
-            var listed = await _cdp.GetOwnedPageTargetsAsync(port, processId, remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero,
-                cancellationToken).ConfigureAwait(false);
-            if (listed.Success && listed.Value!.FirstOrDefault(t => t.Id == targetId) is { } opened)
-                return CdpResult<CdpTarget>.Ok(opened);
+            if (listed == null || remaining > NewTabListingDelay)
+            {
+                listed = await _cdp.GetOwnedPageTargetsAsync(port, processId, remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero,
+                    cancellationToken).ConfigureAwait(false);
+                if (listed.Success && listed.Value!.FirstOrDefault(t => t.Id == targetId) is { } opened)
+                    return CdpResult<CdpTarget>.Ok(opened);
+            }
 
             // A port that changed hands is not listed again (another program may have it now), nor any port once the time is up
             if (listed.ErrorCode == BrowserErrorCode.CdpPortOwnerMismatch || timeout - stopwatch.Elapsed <= NewTabListingDelay)

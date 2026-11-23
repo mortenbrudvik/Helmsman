@@ -301,7 +301,7 @@ public class CdpTabServiceTests
 
         var result = await sut.OpenTabAsync(Port, BrowserPid, new RecordingGate().EnterAsync, TimeSpan.FromMilliseconds(600));
 
-        result.ErrorCode.Should().Be(BrowserErrorCode.CdpTargetNotFound);
+        result.ErrorCode.Should().Be(BrowserErrorCode.CdpTargetNotFound, result.Error);
         result.OpenedTargetId.Should().Be("NEW1", "the tab was opened, and the result names it");
         stopwatch.Elapsed.Should().BeLessThan(HangBound);
     }
