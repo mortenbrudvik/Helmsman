@@ -5,7 +5,7 @@ namespace Helmsman.Tests.Unit.Services;
 
 /// <summary>
 /// Unit tests for WindowService.
-/// Tests T2.1-T2.12 from BACKLOG-TECHNICAL.md.
+/// Tests T2.1-T2.12 of the backlog.
 ///
 /// Note: WindowService uses P/Invoke for window management.
 /// Read-only tests (enumerating and querying windows) use the real NativeWindowWrapper to

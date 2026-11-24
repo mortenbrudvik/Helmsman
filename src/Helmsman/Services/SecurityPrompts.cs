@@ -32,7 +32,7 @@ public static class SecurityPrompts
     /// Cancel button, and the six controls here already set the template apart. Windows' "Windows Security Warning"
     /// (template 4437: a file that was blocked, with only OK) reuses IDs 4417, 4419 and 4431 with other classes, and does
     /// not match. The IDs were read from the dialog templates, not from a prompt on screen; get_ui_elements on the prompt
-    /// lists each control's ID as its automationId, which confirms them (BACKLOG.md, M3.F5).
+    /// lists each control's ID as its automationId, which confirms them (the backlog, M3.F5).
     /// </summary>
     public static IReadOnlyList<(int Id, string ClassName)> OpenFileSecurityWarningControls { get; } =
     [

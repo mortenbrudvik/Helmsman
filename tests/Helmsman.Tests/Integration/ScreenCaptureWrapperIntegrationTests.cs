@@ -2,7 +2,7 @@ namespace Helmsman.Tests.Integration;
 
 /// <summary>
 /// Integration tests for ScreenCaptureWrapper - the native GDI capture layer.
-/// Tests T9.1 from BACKLOG-TECHNICAL.md.
+/// Tests T9.1 of the backlog.
 ///
 /// These are integration tests that run against the actual Windows display system.
 /// Validation logic tests (dimensions, handle) are deterministic.

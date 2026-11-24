@@ -3,7 +3,7 @@ namespace Helmsman.Tests.Unit.Services;
 /// <summary>
 /// Unit tests for InputValidationService.
 /// Tests security validation for executable paths and working directories.
-/// Task 7.1 from BACKLOG.md - Input validation for launch_application.
+/// Task 7.1 of the backlog - Input validation for launch_application.
 /// </summary>
 public class InputValidationServiceTests
 {

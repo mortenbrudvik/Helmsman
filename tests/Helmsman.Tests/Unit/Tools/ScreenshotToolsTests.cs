@@ -9,7 +9,7 @@ using Helmsman.Tools;
 /// <summary>
 /// Unit tests for ScreenshotTools: what reaches the screenshot service, and the shape of the MCP
 /// result (an image block followed by a metadata text block, isError on failure).
-/// Tests T9.3 from BACKLOG-TECHNICAL.md.
+/// Tests T9.3 of the backlog.
 /// </summary>
 public class ScreenshotToolsTests
 {

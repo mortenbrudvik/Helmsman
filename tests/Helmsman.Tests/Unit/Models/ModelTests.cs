@@ -4,7 +4,7 @@ namespace Helmsman.Tests.Unit.Models;
 
 /// <summary>
 /// Unit tests for model records.
-/// Tests T6.1-T6.3 from BACKLOG-TECHNICAL.md.
+/// Tests T6.1-T6.3 of the backlog.
 /// </summary>
 public class ModelTests
 {

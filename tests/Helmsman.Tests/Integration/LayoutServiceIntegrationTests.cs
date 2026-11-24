@@ -2,7 +2,7 @@ namespace Helmsman.Tests.Integration;
 
 /// <summary>
 /// Integration tests for LayoutService.
-/// Tests T7.1 from BACKLOG-TECHNICAL.md.
+/// Tests T7.1 of the backlog.
 ///
 /// These tests verify end-to-end workflows with real LayoutService
 /// behavior (file I/O, caching) combined with mocked window/monitor services.

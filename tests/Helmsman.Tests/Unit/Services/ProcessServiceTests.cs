@@ -6,7 +6,7 @@ namespace Helmsman.Tests.Unit.Services;
 
 /// <summary>
 /// Unit tests for ProcessService.
-/// Tests T4.1-T4.5 from BACKLOG-TECHNICAL.md.
+/// Tests T4.1-T4.5 of the backlog.
 ///
 /// Desktop safety: every ProcessService in this class is built by <see cref="CreateSut"/> with a
 /// mocked <see cref="INativeProcessWrapper"/>, the only code that starts, closes or kills

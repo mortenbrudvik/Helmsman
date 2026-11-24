@@ -6,7 +6,7 @@ using Helmsman.Tools;
 
 /// <summary>
 /// Unit tests for UIElementTools.
-/// Tests Task 11.2 from BACKLOG-TECHNICAL.md.
+/// Tests Task 11.2 of the backlog.
 /// </summary>
 public class UIElementToolsTests
 {

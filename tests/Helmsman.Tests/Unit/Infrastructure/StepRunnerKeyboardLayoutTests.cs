@@ -7,7 +7,7 @@ using Helmsman.Infrastructure;
 namespace Helmsman.Tests.Unit.Infrastructure;
 
 /// <summary>
-/// run_steps' rule that a step closes nothing, on the keyboard layout of the window a step's keys go to (BACKLOG.md RF.F11).
+/// run_steps' rule that a step closes nothing, on the keyboard layout of the window a step's keys go to (the backlog, RF.F11).
 /// A send_keys or press_keys step maps a chord's character on that window's layout, so a character the layout types on a
 /// closing key is that chord: ctrl+ц is Ctrl+W on a Russian layout, and ctrl+; Ctrl+Q on a Greek one, which the check
 /// before the run, on the invariant layout, sees as a character with no key. Such keys refuse the run before anything

@@ -2,7 +2,7 @@ namespace Helmsman.Tests.Unit.Services;
 
 /// <summary>
 /// Unit tests for ScreenshotService: what is captured, the reported screen origin and transform,
-/// and the error codes. Tests T9.2 from BACKLOG-TECHNICAL.md.
+/// and the error codes. Tests T9.2 of the backlog.
 /// </summary>
 public class ScreenshotServiceTests
 {

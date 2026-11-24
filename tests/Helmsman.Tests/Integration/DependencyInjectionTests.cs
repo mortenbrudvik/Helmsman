@@ -9,7 +9,7 @@ namespace Helmsman.Tests.Integration;
 
 /// <summary>
 /// Integration tests for DI container configuration.
-/// Tests T7.3 from BACKLOG-TECHNICAL.md.
+/// Tests T7.3 of the backlog.
 ///
 /// The container is built with the same registration methods Program.cs uses
 /// (<see cref="ServiceRegistration"/>), so these tests cover what the server really registers.
@@ -141,7 +141,7 @@ public class DependencyInjectionTests : IDisposable
     [Fact]
     public void RunSteps_GetsTheKeyboardLayoutQueries()
     {
-        // A step's keys are read on the layout of the window they go to (BACKLOG.md RF.F11): built without the queries, the
+        // A step's keys are read on the layout of the window they go to (the backlog, RF.F11): built without the queries, the
         // runner would read them on the invariant layout only, where ctrl+ц is no Ctrl+W
         static object? Field(object service, string name) =>
             service.GetType().GetField(name, BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(service);

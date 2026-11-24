@@ -3053,7 +3053,7 @@ After M7.4 (2.3.0), the input tier ran `FixtureTakeoverTests`, `FixtureSessionTe
 
 ### Desktop check: 3.0.0 review fixes and issues #8 to #11
 
-The fixes of the 3.0.0 review and of GitHub issues #8 to #11 (BACKLOG.md, "3.0.0 review fixes") are tested over fakes;
+The fixes of the 3.0.0 review and of GitHub issues #8 to #11 (the backlog, group "3.0.0 review fixes") are tested over fakes;
 none of what follows has run on a real desktop. Before the release that carries them, the owner checks the items below.
 Every debug browser follows the rules of [Desktop check: M5 browser bridge](#desktop-check-m5-browser-bridge). Keys go
 only to windows the check opened, named by their handle: the check's debug browser, on a listener page with a text
@@ -3069,7 +3069,7 @@ does.
    checked by its own process. Run the release gate with both engines
    ([Release gate: the UI Automation engines](#release-gate-the-ui-automation-engines)); a provider that fails its cached
    reads with the extra property shows as a scenario that fails, with one engine or with both. Record every scenario
-   that fails now and passed in the last gate (BACKLOG.md M3.F1).
+   that fails now and passed in the last gate (the backlog, M3.F1).
 2. **The browser bridge.** The steps the review added to the M5 blocks: **Refused url** (M5.1), **Same titles**
    (M5.2), **The tab the window shows** (M5.3), **Cancelled launch** (M5.4), and **A page that lies** and **Isolated
    world** (M5.8), on a real Edge and a real Chrome.
@@ -3093,7 +3093,7 @@ does.
    afterwards). If `FileDialog_SaveWithOverwrite_AnswersTheReplacePromptYes_AndTheFileIsRewritten` fails with
    `DialogNotCompleted`, the prompt showed neither the file's name with its extension nor its full path (file_dialog no
    longer takes the name without its extension). The test's output gives the prompt's title and text (`prompt`,
-   `promptText`): record the Confirm Save As prompt's text for BACKLOG.md (RF.F4). (b) A non-modal dialog: in a window
+   `promptText`): record the Confirm Save As prompt's text for the backlog (RF.F4). (b) A non-modal dialog: in a window
    the check opens itself that shows an owned non-modal dialog (for example a throwaway PowerShell WinForms form that
    opens a second form with `Show(owner)`), respond_to_dialog with the main window's handle and a `button` returns
    `DialogNotFound` naming the open dialog's handle, and nothing is pressed; by the dialog's own handle the press goes
@@ -3279,7 +3279,7 @@ as the server binds them.
 The objects inside the arguments are bound as strictly (3.0.0 review). `Contract/NestedArgumentContractTests` checks
 that every object in a tool's input schema refuses a member it does not take (save_layout's placements excepted: the
 server checks a placement and its `launch` itself, InvalidPlacement, while their `position` and `normalPosition` ignore
-a member they do not take, BACKLOG.md RF.F15) and still binds its members in any letter case, that no schema offers null for a required
+a member they do not take; see RF.F15 in the backlog) and still binds its members in any letter case, that no schema offers null for a required
 member, that a set_windows_bounds_batch item without a coordinate or size fails alone, that launch placement bounds
 missing a member are refused with nothing launched, that a binding error names its place in the arguments
 (`steps[1]`, `placement.bounds`), and that `BoundInteger` reads exactly what the SDK binds to an integer parameter (the

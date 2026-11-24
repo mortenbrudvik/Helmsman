@@ -2,7 +2,7 @@ namespace Helmsman.Tests.Unit.Services;
 
 /// <summary>
 /// Unit tests for LayoutService.
-/// Tests T5.1-T5.6 from BACKLOG-TECHNICAL.md.
+/// Tests T5.1-T5.6 of the backlog.
 /// </summary>
 public class LayoutServiceTests : IDisposable
 {

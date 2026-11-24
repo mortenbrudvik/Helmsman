@@ -2,7 +2,7 @@ namespace Helmsman.Tests.Unit.Services;
 
 /// <summary>
 /// Unit tests for MonitorService.
-/// Tests T3.1, T3.2, T3.6 from BACKLOG-TECHNICAL.md.
+/// Tests T3.1, T3.2, T3.6 of the backlog.
 ///
 /// Note: MonitorService uses P/Invoke for monitor enumeration.
 /// The snap calculation is tested in SnapMathTests;

@@ -4,7 +4,7 @@ namespace Helmsman.Tests.Integration;
 
 /// <summary>
 /// Integration tests for file persistence behavior.
-/// Tests T7.2 from BACKLOG-TECHNICAL.md.
+/// Tests T7.2 of the backlog.
 ///
 /// These tests verify JSON file I/O, path handling, and concurrent operations.
 /// </summary>
